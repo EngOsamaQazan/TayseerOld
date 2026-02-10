@@ -1,0 +1,10 @@
+image: atlassian/default-image:2
+
+pipelines:
+  branches:
+    master:
+      - step:
+          name: Deploy
+          deployment: production
+          script:
+              - ssh root@54.38.236.112 "./install.sh"

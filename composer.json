@@ -1,0 +1,73 @@
+{
+    "name": "yiisoft/yii2-app-advanced",
+    "description": "osama Project",
+    "keywords": ["yii2", "framework", "advanced", "project template"],
+    "homepage": "http://www.yiiframework.com/",
+    "type": "project",
+    "license": "BSD-3-Clause",
+    "support": {
+        "issues": "https://github.com/yiisoft/yii2/issues?state=open",
+        "forum": "http://www.yiiframework.com/forum/",
+        "wiki": "http://www.yiiframework.com/wiki/",
+        "irc": "irc://irc.freenode.net/yii",
+        "source": "https://github.com/yiisoft/yii2"
+    },
+    "minimum-stability": "stable",
+    "require": {
+        "php": ">=7.4",
+        "yiisoft/yii2": "~2.0.14",
+        "yiisoft/yii2-bootstrap": "~2.0.0",
+        "yiisoft/yii2-swiftmailer": "~2.0.0 || ~2.1.0",
+        "dektrium/yii2-user": "^0.9.14",
+        "johnitvn/yii2-ajaxcrud": "*",
+        "dmstr/yii2-adminlte-asset": "^2.1",
+        "kartik-v/yii2-widget-datepicker": "@dev",
+
+        "noam148/yii2-image-manager": "*",
+        "kartik-v/yii2-field-range": "*",
+        "kartik-v/yii2-widget-timepicker": "*",
+        "dogrocker/yii2-dynamicform": "*",
+        "kartik-v/yii2-tabs-x": "@dev",
+        "microinginer/yii2-dropdown-action-column": "dev-master",
+        "bizley/migration": "^3.6",
+        "kartik-v/yii2-widget-select2": "@dev",
+        "kartik-v/yii2-money": "dev-master",
+        "kartik-v/yii2-widget-fileinput": "dev-master",
+        "yiisoft/yii2-jui": "^2.0",
+        "kartik-v/yii2-date-range": "dev-master",
+        "mdmsoft/yii2-admin": "~2.0",
+        "yii2tech/ar-softdelete": "^1.0",
+        "2amigos/yii2-tinymce-widget": "~1.1",
+        "phpoffice/phpexcel": "dev-develop",
+        "yiisoft/yii2-queue": "^2.3",
+        "php-amqplib/php-amqplib": "^2.7",
+        "yiisoft/yii2-redis": "~2.0.0"
+    },
+    "require-dev": {
+        "yiisoft/yii2-debug": "~2.1.0",
+        "yiisoft/yii2-gii": "^2.2",
+        "yiisoft/yii2-faker": "~2.0.0",
+        "codeception/codeception": "^4.0",
+        "codeception/module-asserts": "^1.0",
+        "codeception/module-yii2": "^1.0",
+        "codeception/module-filesystem": "^1.0",
+        "codeception/verify": "~0.5.0 || ~1.1.0",
+        "symfony/browser-kit": ">=2.7 <=4.2.4",
+        "borales/yii2-phone-input": "*"
+    },
+    "config": {
+        "process-timeout": 1800,
+        "fxp-asset": {
+            "enabled": false
+        },
+        "allow-plugins": {
+            "yiisoft/yii2-composer": true
+        }
+    },
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://asset-packagist.org"
+        }
+    ]
+}
