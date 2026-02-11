@@ -4,49 +4,51 @@ namespace backend\modules\contracts\controllers;
 
 use Yii;
 use yii\helpers\Html;
-use \yii\web\Response;
+use yii\web\Response;
 use yii\web\Controller;
-use backend\models\Model;
 use yii\filters\VerbFilter;
 use yii\helpers\ArrayHelper;
-
 use yii\filters\AccessControl;
-
 use yii\web\NotFoundHttpException;
+
+use backend\models\Model;
 use common\components\notificationComponent;
 use backend\modules\followUp\models\FollowUp;
 use backend\modules\customers\models\Customers;
-use  backend\modules\contracts\models\Contracts;
-use backend\modules\notification\models\Notification;
-use  backend\modules\contracts\models\ContractsSearch;
-use  backend\modules\customers\models\ContractsCustomers;
+use backend\modules\contracts\models\Contracts;
+use backend\modules\contracts\models\ContractsSearch;
+use backend\modules\customers\models\ContractsCustomers;
 use backend\modules\followUp\models\FollowUpConnectionReports;
 use backend\modules\inventoryItems\models\ContractInventoryItem;
-use backend\modules\contractDocumentFile\models\ContractDocumentFile;
+use backend\modules\inventoryItems\models\InventoryItems;
+use backend\modules\inventoryItems\models\InventorySerialNumber;
 use backend\modules\inventoryItemQuantities\models\InventoryItemQuantities;
 use backend\modules\inventoryStockLocations\models\InventoryStockLocations;
+use backend\modules\contractDocumentFile\models\ContractDocumentFile;
+use backend\modules\notification\models\Notification;
+use backend\modules\companies\models\Companies;
+use backend\modules\contracts\models\PromissoryNote;
 
-/**
- * ContractsController implements the CRUD actions for contracts model.
- */
 class ContractsController extends Controller
 {
-
-    /**
-     * @inheritdoc
-     */
     public function behaviors()
     {
         return [
             'access' => [
                 'class' => AccessControl::class,
                 'rules' => [
+                    ['actions' => ['login', 'error'], 'allow' => true],
                     [
-                        'actions' => ['login', 'error'],
-                        'allow' => true,
-                    ],
-                    [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'is-connect','is-not-connect', 'print-first-page', 'print-second-page', 'finish', 'finish-contract', 'cancel', 'cancel-contract', 'legal-department', 'to-legal-department', 'return-to-continue', 'view', 'index-legal-department', 'convert-to-manager', 'is-read', 'chang-follow-up'],
+                        'actions' => [
+                            'logout', 'index', 'update', 'create', 'delete',
+                            'is-connect', 'is-not-connect',
+                            'print-first-page', 'print-second-page', 'print-preview',
+                            'finish', 'finish-contract', 'cancel', 'cancel-contract',
+                            'legal-department', 'to-legal-department', 'return-to-continue',
+                            'view', 'index-legal-department', 'convert-to-manager',
+                            'is-read', 'chang-follow-up',
+                            'lookup-serial',
+                        ],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -54,561 +56,306 @@ class ContractsController extends Controller
             ],
             'verbs' => [
                 'class' => VerbFilter::class,
-                'actions' => [
-                    'logout' => ['post'],
-                ],
+                'actions' => ['logout' => ['post'], 'delete' => ['post']],
             ],
         ];
     }
 
-    /**
-     * Lists all contracts models.
-     * @return mixed
-     */
+    /* ══════════════════════════════════════════════════════════════
+     *  قوائم — Index
+     * ══════════════════════════════════════════════════════════════ */
+
     public function actionIndex()
     {
-
         $searchModel = new ContractsSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $dataCount = $searchModel->searchcounter(Yii::$app->request->queryParams);
-     
+
         return $this->render('index', [
-            'searchModel' => $searchModel,
+            'searchModel'  => $searchModel,
             'dataProvider' => $dataProvider,
-            'dataCount' => $dataCount
+            'dataCount'    => $dataCount,
         ]);
     }
 
     public function actionIndexLegalDepartment()
     {
-
         $searchModel = new ContractsSearch();
         $dataProvider = $searchModel->searchLegalDepartment(Yii::$app->request->queryParams);
         $dataCount = $searchModel->searchLegalDepartmentCount(Yii::$app->request->queryParams);
+
         return $this->render('index-legal-department', [
-            'searchModel' => $searchModel,
+            'searchModel'  => $searchModel,
             'dataProvider' => $dataProvider,
-            'dataCount' => $dataCount
+            'dataCount'    => $dataCount,
         ]);
     }
 
     public function actionLegalDepartment()
     {
-        $searchModel = new ContractsSearch();
-        $dataProvider = $searchModel->searchLegalDepartment(Yii::$app->request->queryParams);
-
-        $dataCount = $searchModel->searchLegalDepartmentCount(Yii::$app->request->queryParams);
-
-        return $this->render('index-legal-department', [
-            'searchModel' => $searchModel,
-            'dataProvider' => $dataProvider,
-            'dataCount' => $dataCount
-        ]);
+        return $this->actionIndexLegalDepartment();
     }
 
-    /**
-     * Displays a single contracts model.
-     * @param integer $id
-     * @return mixed
-     */
+    /* ══════════════════════════════════════════════════════════════
+     *  عرض — View
+     * ══════════════════════════════════════════════════════════════ */
+
     public function actionView($id)
     {
         $request = Yii::$app->request;
         if ($request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
             return [
-                'title' => "contracts #" . $id,
-                'content' => $this->renderAjax('view', [
-                    'model' => $this->findModel($id),
-                ]),
-                'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                    Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
+                'title'   => "العقد #$id",
+                'content' => $this->renderAjax('view', ['model' => $this->findModel($id)]),
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal'])
+                           . Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
             ];
-        } else {
-            return $this->render('view', [
-                'model' => $this->findModel($id),
-            ]);
         }
+        return $this->render('view', ['model' => $this->findModel($id)]);
     }
 
-    /**
-     * Creates a new contracts model.
-     * For ajax request will return json object
-     * and for non-ajax request if creation is successful, the browser will be redirected to the 'view' page.
-     * @return mixed
-     */
+    /* ══════════════════════════════════════════════════════════════
+     *  إنشاء عقد — Create
+     * ══════════════════════════════════════════════════════════════ */
+
     public function actionCreate()
     {
-        $request = Yii::$app->request;
-        $model = new contracts();
-        $customers_model = new Customers();
-        $contracts_customers = new ContractsCustomers();
-        $modelContractInventoryItem = [new ContractInventoryItem];
-        $transaction = \Yii::$app->db->beginTransaction();
-        $model->status = $model::STATUS_ACTIVE;
+        $model = new Contracts();
+        $model->status    = Contracts::STATUS_ACTIVE;
         $model->seller_id = Yii::$app->user->id;
-        if ($model->load($request->post()) && $model->save(false)) {
-            $modelContractInventoryItem = Model::createMultiple(ContractInventoryItem::class);
-            Model::loadMultiple($modelContractInventoryItem, Yii::$app->request->post());
-            $valid = $model->validate();
-            $valid = Model::validateMultiple($modelContractInventoryItem) && $valid;
-            if (1) {
-                $transaction = \Yii::$app->db->beginTransaction();
-                try {
-                    if ($flag = $model->save(false)) {
-                        foreach ($modelContractInventoryItem as $modelsContractInventoryItem) {
-                            $modelsContractInventoryItem->contract_id = $model->id;
-                            if (!($flag = $modelsContractInventoryItem->save(false))) {
-                                $transaction->rollBack();
-                                break;
-                            }
-                            $localtion = InventoryStockLocations::find()->andWhere(['company_id' => $model->company_id])->one();
-                            $inventory_item_quantity = new InventoryItemQuantities();
-                            $inventory_item_quantity->item_id = $modelsContractInventoryItem->item_id;
-                            $inventory_item_quantity->suppliers_id = $model->company_id;
-                            $inventory_item_quantity->locations_id = isset($localtion->id) ? $localtion->id : 0;
-                            $inventory_item_quantity->quantity = 1;
-                            $inventory_item_quantity->save(false);
-                        }
-                    }
-                    if ($flag) {
-                        $transaction->commit();
-                    }
-                } catch (Exception $e) {
-                    $transaction->rollBack();
-                }
+        $model->type      = 'normal';
+        $model->Date_of_sale = date('Y-m-d');
+
+        if (defined('\backend\modules\contracts\models\Contracts::DEFAUULT_TOTAL_VALUE'))
+            $model->total_value = Contracts::DEFAUULT_TOTAL_VALUE;
+        if (defined('\backend\modules\contracts\models\Contracts::MONTHLY_INSTALLMENT_VALE'))
+            $model->monthly_installment_value = Contracts::MONTHLY_INSTALLMENT_VALE;
+
+        if (!Yii::$app->request->isPost) {
+            return $this->render('create', $this->buildFormParams($model));
+        }
+
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            if (!$model->load(Yii::$app->request->post()) || !$model->save(false)) {
+                throw new \Exception('فشل حفظ العقد');
             }
 
-            if ($model->type == 'solidarity') {
-                foreach ($model->customers_ids as $customer) {
-                    $contracts_customers->id = NULL;
-                    $contracts_customers->isNewRecord = true;
-                    $contracts_customers->contract_id = $model->id;
-                    $contracts_customers->customer_id = $customer;
-                    $contracts_customers->customer_type = 'client';
+            // ── حفظ الأجهزة (سيريال) ──
+            $this->saveSerialItems($model);
 
-                    if (!$contracts_customers->save()) {
-                        $transaction->rollBack();
-                        echo '1 .<pre>';
-                        var_dump($contracts_customers->getErrors());
-                        echo '</pre>';
-                        die();
-                    }
+            // ── حفظ الأجهزة (يدوي — بدون سيريال) ──
+            $this->saveManualItems($model);
 
-                }
-            } else {
+            // ── حفظ العملاء والكفلاء ──
+            $this->saveContractCustomers($model);
 
-                $contracts_customers->contract_id = $model->id;
-                $contracts_customers->customer_id = $model->customer_id;
-                $contracts_customers->customer_type = 'client';
-                if (!$contracts_customers->save()) {
-                    $transaction->rollBack();
-                    echo '2<pre>';
-                    var_dump($contracts_customers->getErrors());
-                    echo '</pre>';
-                    die();
-                }
+            // ── إنشاء متابعة أولية ──
+            $this->createInitialFollowUp($model);
 
-                $contracts_customers = new ContractsCustomers();
-                if (!empty($model->guarantors_ids)) {
-                    foreach ($model->guarantors_ids as $guarantor) {
-                        $contracts_customers->id = NULL;
-                        $contracts_customers->isNewRecord = true;
-                        $contracts_customers->contract_id = $model->id;
-                        $contracts_customers->customer_id = $guarantor;
-                        $contracts_customers->customer_type = 'guarantor';
-                        if (!$contracts_customers->save()) {
-                            $transaction->rollBack();
-                        }
-                    }
-                }
+            // ── إنشاء ملف مستندات ──
+            $docFile = new ContractDocumentFile();
+            $docFile->document_type = 'contract file';
+            $docFile->contract_id = $model->id;
+            $docFile->save(false);
 
-//                $total = $model->total_value;
-//                $installment_model = new Installment();
-//                $time = strtotime($model->first_installment_date);
-//                $final = $time;
-//                while ($total !== 0) {
-//                    $installment_model->id = NULL;
-//                    $installment_model->isNewRecord = true;
-//                    $installment_model->contract_id = $model->id;
-//                    $installment_model->total = 0;
-//                    $installment_model->date = $final;
-//                    if (!$installment_model->save()) {
-//                        $transaction->rollBack();
-//                        echo '4<pre>';
-//                        var_dump($installment_model->getErrors());
-//                        echo '</pre>';
-//                        die();
-//                    }
-//                    if ($total < $model->monthly_installment_value) {
-//                        $time = $time - $model->monthly_installment_value;
-//                    } else {
-//                        $total = 0;
-//                    }
-//                    $final = date("Y-m-d", strtotime("+1 month", $time));
-//                }
-            }
+            // ── إشعار ──
+            Yii::$app->notifications->sendByRule(
+                ['Manager'],
+                'contracts/update?id=' . $model->id,
+                Notification::GENERAL,
+                Yii::t('app', 'إنشاء عقد رقم'),
+                Yii::t('app', 'إنشاء عقد رقم') . $model->id,
+                Yii::$app->user->id
+            );
 
-            $image_manager_model = new \noam148\imagemanager\models\ImageManager();
-            $image_manager_model->contractId = $model->id;
-            $image_manager_model->save();
+            // ── تحديث الكاش ──
+            $this->refreshContractCaches();
 
-//                var_dump($image_manager_model->updateAll(['contractId' => $model->id], ['contractId' => $model->image_manager_id]));die();
-//            if (!$image_manager_model->updateAll(['contractId' => $model->id], ['contractId' => $model->image_manager_id])) {
-//
-//                var_dump($image_manager_model->errors);die('tyu');
-//                die($model->image_manager_id);
-//            }
             $transaction->commit();
 
             if (isset($_POST['print'])) {
-                return $this->redirect(['print-first-page', 'id' => $model->id]);
+                return $this->redirect(['print-preview', 'id' => $model->id]);
             }
-            $followUpModel = new FollowUp();
-            $followUpModel->contract_id = $model->id;
-            $followUpModel->date_time = date('Y-m-d h:m:s');
-            $followUpModel->notes = 'اضافة اليه';
-            $followUpModel->feeling = 'normal';
-            $followUpModel->connection_goal = 1;
-            $followUpModel->reminder = $model->first_installment_date;
-            $followUpModel->created_by = Yii::$app->user->id;
-            $followUpModel->save();
-            Yii::$app->notifications->sendByRule(['Manager'], 'contracts/update?id=' . $model->id, Notification::GENERAL, Yii::t('app', 'إنشاء عقد رقم'), Yii::t('app', 'إنشاء عقد رقم') . $model->id, Yii::$app->user->id);
-            $modelContractDocumentFile = new ContractDocumentFile;
-            $modelContractDocumentFile->document_type = 'contract file';
-            $modelContractDocumentFile->contract_id = $model->id;
-            $modelContractDocumentFile->save();
-            Yii::$app->cache->set(Yii::$app->params['key_contract_id'],Yii::$app->db->createCommand(Yii::$app->params['contract_id_query'])->queryAll(), Yii::$app->params['time_duration']);
-            Yii::$app->cache->set(Yii::$app->params['key_contract_status'],Yii::$app->db->createCommand(Yii::$app->params['contract_status_query'])->queryAll(), Yii::$app->params['time_duration']);
+            return $this->redirect(['index']);
 
-            return $this->redirect(['contracts/index']);
-        } else {
+        } catch (\Exception $e) {
             $transaction->rollBack();
-            return $this->render('create', [
-                'model' => $model,
-                'customers_model' => $customers_model,
-                'modelContractInventoryItem' => (empty($modelContractInventoryItem)) ? [new ContractInventoryItem] : $modelContractInventoryItem
-            ]);
+            Yii::$app->session->setFlash('error', 'حدث خطأ: ' . $e->getMessage());
+            return $this->render('create', $this->buildFormParams($model));
         }
     }
 
-    /**
-     * Updates an existing contracts model.
-     * For ajax request will return json object
-     * and for non-ajax request if update is successful, the browser will be redirected to the 'view' page.
-     * @param integer $id
-     * @return mixed
-     */
+    /* ══════════════════════════════════════════════════════════════
+     *  تعديل عقد — Update
+     * ══════════════════════════════════════════════════════════════ */
+
     public function actionUpdate($id, $notificationID = 0)
     {
-        if ($notificationID != 0) {
+        if ($notificationID) {
             Yii::$app->notifications->setReaded($notificationID);
         }
-        $request = Yii::$app->request;
+
         $model = $this->findModel($id);
-        $modelContractInventoryItem = ContractInventoryItem::find()->where(['contract_id' => $id])->all();
-        $newContractsCustomerModle = new ContractsCustomers();
 
-
-        $transaction = \Yii::$app->db->beginTransaction();
-        if ($model->load($request->post())) {
-            $oldIDs = yii\helpers\ArrayHelper::map($modelContractInventoryItem, 'id', 'id');
-            $modelContractInventoryItem = Model::createMultiple(ContractInventoryItem::class, $modelContractInventoryItem);
-            Model::loadMultiple($modelContractInventoryItem, Yii::$app->request->post());
-            $deletedIDs = array_diff($oldIDs, array_filter(yii\helpers\ArrayHelper::map($modelContractInventoryItem, 'id', 'id')));
-            $valid = $model->validate();
-            $valid = Model::validateMultiple($modelContractInventoryItem) && $valid;
-            if (1) {
-                $transaction = \Yii::$app->db->beginTransaction();
-                try {
-                    if ($flag = $model->save(false)) {
-                        if (!empty($deletedIDs)) {
-                            FollowUpConnectionReports::deleteAll(['id' => $deletedIDs]);
-                        }
-                        foreach ($modelContractInventoryItem as $modelContractInventoryItem) {
-                            $modelContractInventoryItem->contract_id = $model->id;
-
-                            if (!($addressFlag = $modelContractInventoryItem->save(false))) {
-
-                                $transaction->rollBack();
-                                break;
-                            }
-                            $localtion = InventoryStockLocations::find()->andWhere(['company_id' => $model->company_id])->one();
-                            $inventory_item_quantity = new InventoryItemQuantities();
-                            $inventory_item_quantity->item_id = $modelContractInventoryItem->item_id;
-                            $inventory_item_quantity->suppliers_id = $model->company_id;
-                            $inventory_item_quantity->locations_id = isset($localtion->id) ? $localtion->id : 0;
-                            $inventory_item_quantity->quantity = 1;
-                            $inventory_item_quantity->save(false);
-                        }
-                    }
-                    if ($flag) {
-                        $transaction->commit();
-                    }
-                } catch (Exception $e) {
-                    $transaction->rollBack();
-                }
-            }
-            if (ContractsCustomers::deleteAll(['contract_id' => $id])) {
-            }
-            if ($model->type == 'solidarity') {
-                foreach ($model->customers_ids as $customer) {
-                    $newContractsCustomerModle->id = NULL;
-                    $newContractsCustomerModle->isNewRecord = true;
-                    $newContractsCustomerModle->contract_id = $id;
-                    $newContractsCustomerModle->customer_id = $customer;
-                    $newContractsCustomerModle->customer_type = 'client';
-                    if (!$newContractsCustomerModle->save()) {
-                        $transaction->rollBack();
-                    }
-                }
-            } else {
-                $newContractsCustomerModle->contract_id = $id;
-                $newContractsCustomerModle->customer_id = $model->customer_id;
-                $newContractsCustomerModle->customer_type = 'client';
-                if (!$newContractsCustomerModle->save()) {
-                    $transaction->rollBack();
-                }
-                $newContractsCustomerModle = new ContractsCustomers();
-                if (!empty($model->guarantors_ids)) {
-                    foreach ($model->guarantors_ids as $guarantor) {
-                        $newContractsCustomerModle->id = NULL;
-                        $newContractsCustomerModle->isNewRecord = true;
-                        $newContractsCustomerModle->contract_id = $id;
-                        $newContractsCustomerModle->customer_id = $guarantor;
-                        $newContractsCustomerModle->customer_type = 'guarantor';
-                        if (!$newContractsCustomerModle->save()) {
-                            $transaction->rollBack();
-                        }
-                    }
-                }
-            }
-//            $total = $model->total_value;
-//            $installment_model = new Installment();
-//            $installment_model->deleteAll(['contract_id' => $id]);
-//            $time = strtotime($model->first_installment_date);
-//            $final = $time;
-//            while ($total !== 0) {
-//                $installment_model->id = NULL;
-//                $installment_model->isNewRecord = true;
-//                $installment_model->total = $model->monthly_installment_value;
-//                $installment_model->contract_id = $model->id;
-//                $installment_model->date = $final;
-//                if (!$installment_model->save()) {
-//                    $transaction->rollBack();
-//                    echo '<pre>';
-//                    var_dump($installment_model->getErrors());
-//                    echo '</pre>';
-//                }
-//                if ($total > $model->monthly_installment_value) {
-//                    $total = $total - $model->monthly_installment_value;
-//                } else {
-//                    $total = 0;
-//                }
-//                $final = date("Y-m-d", strtotime("+1 month", $time));
-//            }
-            $transaction->commit();
-            if (isset($_POST['print'])) {
-                return $this->redirect(['print-first-page', 'id' => $model->id]);
-            }
-            Yii::$app->notifications->sendByRule(['Manager'], 'contracts/update?id=' . $model->id, Notification::GENERAL, Yii::t('app', ' تم تعديل عقد رقم') . $model->id . Yii::t('app', ' من قبل' . Yii::$app->user->identity['username']), Yii::t('app', 'تعديل عقد رقم') . $model->id, Yii::$app->user->id);
-
-            return $this->redirect(['update', 'id' => $model->id]);
-        } else {
-            if ($model->type == 'solidarity') {
+        if (!Yii::$app->request->isPost) {
+            // تحميل بيانات العملاء الحالية
+            if ($model->type === 'solidarity') {
                 $model->customers_ids = $model->customers;
-            } elseif ($model->type == 'normal') {
+            } else {
                 $model->customer_id = $model->customers;
-                $model->guarantors_ids = $model->getGuarantor();
+                $model->guarantors_ids = $model->guarantor;
+            }
+            return $this->render('update', $this->buildFormParams($model));
+        }
+
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            if (!$model->load(Yii::$app->request->post()) || !$model->save(false)) {
+                throw new \Exception('فشل حفظ العقد');
             }
 
-            $model->guarantors_ids = $model->guarantor;
-            Yii::$app->cache->set(Yii::$app->params['key_contract_id'],Yii::$app->db->createCommand(Yii::$app->params['contract_id_query'])->queryAll(), Yii::$app->params['time_duration']);
-            Yii::$app->cache->set(Yii::$app->params['key_contract_status'],Yii::$app->db->createCommand(Yii::$app->params['contract_status_query'])->queryAll(), Yii::$app->params['time_duration']);
+            // ── تحديث الأجهزة (إزالة القديمة + إضافة الجديدة) ──
+            $this->updateSerialItems($model);
 
-            return $this->render('update', [
-                'model' => $model,
-                'modelContractInventoryItem' => (empty($modelContractInventoryItem)) ? [new ContractInventoryItem] : $modelContractInventoryItem,
-            ]);
+            // ── تحديث الأجهزة اليدوية ──
+            $this->updateManualItems($model);
+
+            // ── تحديث العملاء والكفلاء ──
+            ContractsCustomers::deleteAll(['contract_id' => $id]);
+            $this->saveContractCustomers($model);
+
+            // ── إشعار ──
+            Yii::$app->notifications->sendByRule(
+                ['Manager'],
+                'contracts/update?id=' . $model->id,
+                Notification::GENERAL,
+                Yii::t('app', 'تم تعديل عقد رقم') . $model->id,
+                Yii::t('app', 'تعديل عقد رقم') . $model->id . ' من قبل ' . Yii::$app->user->identity['username'],
+                Yii::$app->user->id
+            );
+
+            $this->refreshContractCaches();
+            $transaction->commit();
+
+            if (isset($_POST['print'])) {
+                return $this->redirect(['print-preview', 'id' => $model->id]);
+            }
+            return $this->redirect(['update', 'id' => $model->id]);
+
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::$app->session->setFlash('error', 'حدث خطأ: ' . $e->getMessage());
+            if ($model->type === 'solidarity') {
+                $model->customers_ids = $model->customers;
+            } else {
+                $model->customer_id = $model->customers;
+                $model->guarantors_ids = $model->guarantor;
+            }
+            return $this->render('update', $this->buildFormParams($model));
         }
     }
 
-    /**
-     * Delete an existing contracts model.
-     * For ajax request will return json object
-     * and for non-ajax request if deletion is successful, the browser will be redirected to the 'index' page.
-     * @param integer $id
-     * @return mixed
-     */
+    /* ══════════════════════════════════════════════════════════════
+     *  البحث بالرقم التسلسلي — AJAX
+     * ══════════════════════════════════════════════════════════════ */
+
+    public function actionLookupSerial($serial = '')
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $serial = trim($serial);
+
+        if ($serial === '') {
+            return ['success' => false, 'message' => 'أدخل الرقم التسلسلي'];
+        }
+
+        $model = InventorySerialNumber::find()
+            ->where(['serial_number' => $serial])
+            ->with('item')
+            ->one();
+
+        if (!$model) {
+            return ['success' => false, 'message' => 'الرقم التسلسلي غير موجود في النظام'];
+        }
+
+        if ($model->status !== InventorySerialNumber::STATUS_AVAILABLE) {
+            $labels = InventorySerialNumber::getStatusList();
+            return ['success' => false, 'message' => 'الجهاز غير متاح — الحالة: ' . ($labels[$model->status] ?? $model->status)];
+        }
+
+        return [
+            'success' => true,
+            'data'    => [
+                'id'            => $model->id,
+                'serial_number' => $model->serial_number,
+                'item_id'       => $model->item_id,
+                'item_name'     => $model->item ? $model->item->item_name : 'غير معروف',
+                'status'        => $model->status,
+            ],
+        ];
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+     *  حذف — Delete
+     * ══════════════════════════════════════════════════════════════ */
+
     public function actionDelete($id)
     {
-        $request = Yii::$app->request;
         $this->findModel($id)->delete();
 
-        if ($request->isAjax) {
-            /*
-             *   Process for ajax request
-             */
+        if (Yii::$app->request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
             return ['forceClose' => true, 'forceReload' => '#crud-datatable-pjax'];
-        } else {
-            /*
-             *   Process for non-ajax request
-             */
-            return $this->redirect(['index']);
         }
+        return $this->redirect(['index']);
     }
 
-    /**
-     * Delete multiple existing contracts model.
-     * For ajax request will return json object
-     * and for non-ajax request if deletion is successful, the browser will be redirected to the 'index' page.
-     * @param integer $id
-     * @return mixed
-     */
     public function actionBulkdelete()
     {
-        $request = Yii::$app->request;
-        $pks = explode(',', $request->post('pks')); // Array or selected records primary keys
+        $pks = explode(',', Yii::$app->request->post('pks'));
         foreach ($pks as $pk) {
-            $model = $this->findModel($pk);
-            $model->delete();
+            $this->findModel($pk)->delete();
         }
-
-        if ($request->isAjax) {
-            /*
-             *   Process for ajax request
-             */
+        if (Yii::$app->request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
             return ['forceClose' => true, 'forceReload' => '#crud-datatable-pjax'];
-        } else {
-            /*
-             *   Process for non-ajax request
-             */
-            return $this->redirect(['index']);
         }
+        return $this->redirect(['index']);
     }
 
-    public function actionCustomers()
-    {
-        $model = new Customers();
-        return $this->renderAjax('_customers', [
-            'model' => $model,
-        ]);
-    }
+    /* ══════════════════════════════════════════════════════════════
+     *  إجراءات العقد — Status Actions
+     * ══════════════════════════════════════════════════════════════ */
 
-    public function actionPrintFirstPage($id)
-    {
-        $request = Yii::$app->request;
-        $this->layout = '/print-template-1';
-        if ($request->isAjax) {
-            Yii::$app->response->format = Response::FORMAT_JSON;
-            return [
-                'title' => "contracts #" . $id,
-                'content' => $this->renderAjax('_contract_print', [
-                    'model' => $this->findModel($id),
-                    'id' => $id
-                ]),
-                'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                    Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
-            ];
-        } else {
-            return $this->render('_contract_print', [
-                'model' => $this->findModel($id),
-            ]);
-        }
-    }
-
-    public function actionPrintSecondPage($id)
-    {
-        $request = Yii::$app->request;
-        $this->layout = '/print-template-1';
-        if ($request->isAjax) {
-            Yii::$app->response->format = Response::FORMAT_JSON;
-            return [
-                'title' => "contracts #" . $id,
-                'content' => $this->renderAjax('_draft_print', [
-                    'model' => $this->findModel($id),
-                ]),
-                'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                    Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
-            ];
-        } else {
-            return $this->render('_draft_print', [
-                'model' => $this->findModel($id),
-            ]);
-        }
-    }
-
-    /**
-     * Finds the contracts model based on its primary key value.
-     * If the model is not found, a 404 HTTP exception will be thrown.
-     * @param integer $id
-     * @return contracts the loaded model
-     * @throws NotFoundHttpException if the model cannot be found
-     */
-    protected function findModel($id)
-    {
-        if (($model = contracts::findOne($id)) !== null) {
-            return $model;
-        } else {
-            throw new NotFoundHttpException('The requested page does not exist.');
-        }
-    }
-
-    /**
-     * Finish an existing contracts model.
-     * For ajax request will return json object
-     * and for non-ajax request if deletion is successful, the browser will be redirected to the 'index' page.
-     * @param integer $contract_ids
-     * @return mixed
-     */
     public function actionFinish()
     {
-        $contract_id = Yii::$app->request->post('contract_id');
-        $this->findModel($contract_id)->finish();
-        Yii::$app->session->addFlash('success', 'Contract has been Finished');
+        $id = Yii::$app->request->post('contract_id');
+        $this->findModel($id)->finish();
+        Yii::$app->session->addFlash('success', 'تم إنهاء العقد بنجاح');
         return $this->redirect(['index']);
     }
 
     public function actionFinishContract($contract_id)
     {
         $this->findModel($contract_id)->finish();
-        Yii::$app->session->addFlash('success', 'Contract has been Finished');
+        Yii::$app->session->addFlash('success', 'تم إنهاء العقد بنجاح');
         return $this->redirect(['index']);
     }
 
-    /**
-     * Finish an existing contracts model.
-     * For ajax request will return json object
-     * and for non-ajax request if deletion is successful, the browser will be redirected to the 'index' page.
-     * @param integer $contract_ids
-     * @return mixed
-     */
     public function actionCancel()
     {
-
-        $contract_id = Yii::$app->request->post('contract_id');
-        if (Contracts::updateAll(['status' => 'canceled'], ['id' => $contract_id])) {
-            Yii::$app->session->addFlash('success', 'Contract has been Cancled');
-            return $this->redirect(['index']);
-        } else {
-            Yii::$app->session->addFlash('success', 'Contract has not been Cancled');
-            return $this->redirect(['index']);
-        }
+        $id = Yii::$app->request->post('contract_id');
+        Contracts::updateAll(['status' => 'canceled'], ['id' => $id]);
+        Yii::$app->session->addFlash('success', 'تم إلغاء العقد');
+        return $this->redirect(['index']);
     }
 
     public function actionCancelContract($contract_id)
     {
-
-
-        if (Contracts::updateAll(['status' => 'canceled'], ['id' => $contract_id])) {
-            Yii::$app->session->addFlash('success', 'Contract has been Cancled');
-            return $this->redirect(['index']);
-        } else {
-            Yii::$app->session->addFlash('success', 'Contract has not been Cancled');
-            return $this->redirect(['index']);
-        }
+        Contracts::updateAll(['status' => 'canceled'], ['id' => $contract_id]);
+        Yii::$app->session->addFlash('success', 'تم إلغاء العقد');
+        return $this->redirect(['index']);
     }
 
     public function actionReturnToContinue($id)
@@ -616,46 +363,355 @@ class ContractsController extends Controller
         if ($id > 0) {
             Contracts::updateAll(['status' => 'active'], ['id' => $id]);
         }
-        $this->redirect(['/follow-up-report/index']);
+        return $this->redirect(['/follow-up-report/index']);
     }
 
     public function actionToLegalDepartment($id)
     {
         $this->findModel($id)->legalDepartment();
-        Yii::$app->session->addFlash('success', 'Contract has been transferred to legal Department');
-        Yii::$app->notifications->sendByRule(['Manager'], '/follow-up?contract_id=' . $id, Notification::GENERAL, Yii::t('app', 'تحويل عقد الى الدائره القانونيه'), Yii::t('app', 'تحويل عقد' . $id . ' الى الدائره القانونيه'), Yii::$app->user->id);
-
+        Yii::$app->session->addFlash('success', 'تم تحويل العقد إلى الدائرة القانونية');
+        Yii::$app->notifications->sendByRule(
+            ['Manager'], '/follow-up?contract_id=' . $id,
+            Notification::GENERAL,
+            Yii::t('app', 'تحويل عقد الى الدائره القانونيه'),
+            Yii::t('app', 'تحويل عقد ' . $id . ' الى الدائره القانونيه'),
+            Yii::$app->user->id
+        );
         return $this->redirect(['index']);
     }
 
     public function actionConvertToManager($id)
     {
-        Yii::$app->notifications->sendByRule(['Manager'], '/follow-up?contract_id=' . $id, Notification::GENERAL, Yii::t('app', 'مراجعة متابعه'), Yii::t('app', 'مراجعة متابعه للعقد رقم') . $id, Yii::$app->user->id);
-
+        Yii::$app->notifications->sendByRule(
+            ['Manager'], '/follow-up?contract_id=' . $id,
+            Notification::GENERAL,
+            Yii::t('app', 'مراجعة متابعه'),
+            Yii::t('app', 'مراجعة متابعه للعقد رقم') . $id,
+            Yii::$app->user->id
+        );
         return $this->redirect(['index']);
     }
 
     public function actionChangFollowUp()
     {
-        $id = @Yii::$app->request->post('id');
-        $followedBy = @Yii::$app->request->post('followedBy');
-        Contracts::updateAll(['followed_by' => (int)($followedBy)], ['id' => (int)($id)]);
+        $id = Yii::$app->request->post('id');
+        $followedBy = Yii::$app->request->post('followedBy');
+        Contracts::updateAll(['followed_by' => (int)$followedBy], ['id' => (int)$id]);
     }
 
-    function actionIsNotConnect($contract_id)
+    public function actionIsNotConnect($contract_id)
     {
         Yii::$app->db->createCommand()
-            ->update('{{%contracts}}', ['is_can_not_contact' => 1], 'id = ' . $contract_id)
+            ->update('{{%contracts}}', ['is_can_not_contact' => 1], 'id = ' . (int)$contract_id)
             ->execute();
-
-        $this->redirect(['/followUp/follow-up/index', 'contract_id'=> $contract_id]);
+        return $this->redirect(['/followUp/follow-up/index', 'contract_id' => $contract_id]);
     }
-    function actionIsConnect($contract_id)
+
+    public function actionIsConnect($contract_id)
     {
         Yii::$app->db->createCommand()
-            ->update('{{%contracts}}', ['is_can_not_contact' => 0], 'id = ' . $contract_id)
+            ->update('{{%contracts}}', ['is_can_not_contact' => 0], 'id = ' . (int)$contract_id)
             ->execute();
+        return $this->redirect(['/followUp/follow-up/index', 'contract_id' => $contract_id]);
+    }
 
-        $this->redirect(['/followUp/follow-up/index', 'contract_id'=> $contract_id]);
+    /* ══════════════════════════════════════════════════════════════
+     *  الطباعة — Print
+     * ══════════════════════════════════════════════════════════════ */
+
+    public function actionPrintPreview($id)
+    {
+        $this->layout = false;
+        $model = $this->findModel($id);
+
+        /* إنشاء 3 كمبيالات للعقد تلقائياً إذا لم تكن موجودة */
+        $kambAmount = ($model->total_value ?: 0) * 1.15;
+        $notes = PromissoryNote::ensureNotesExist($model->id, $kambAmount, $model->due_date);
+
+        return $this->renderPartial('_print_preview', [
+            'model' => $model,
+            'notes' => $notes,
+        ]);
+    }
+
+    public function actionPrintFirstPage($id)
+    {
+        $this->layout = false;
+        $model = $this->findModel($id);
+        if (Yii::$app->request->isAjax) {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+            return [
+                'title'   => "العقد #$id",
+                'content' => $this->renderAjax('_contract_print', ['model' => $model]),
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal'])
+                           . Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
+            ];
+        }
+        return $this->renderPartial('_contract_print', ['model' => $model]);
+    }
+
+    public function actionPrintSecondPage($id)
+    {
+        $this->layout = false;
+        $model = $this->findModel($id);
+        if (Yii::$app->request->isAjax) {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+            return [
+                'title'   => "العقد #$id",
+                'content' => $this->renderAjax('_draft_print', ['model' => $model]),
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal'])
+                           . Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
+            ];
+        }
+        return $this->renderPartial('_draft_print', ['model' => $model]);
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+     *  دوال مساعدة — Helpers
+     * ══════════════════════════════════════════════════════════════ */
+
+    /**
+     * بناء مصفوفة البيانات اللازمة للفورم
+     */
+    private function buildFormParams($model)
+    {
+        // العملاء يتم تحميلهم عبر AJAX — لا حاجة لتحميلهم هنا
+        $companies = ArrayHelper::map(Companies::find()->asArray()->all(), 'id', 'name');
+        $inventoryItems = ArrayHelper::map(InventoryItems::find()->asArray()->all(), 'id', 'item_name');
+
+        // تحميل الأرقام التسلسلية المربوطة بالعقد (لوضع التعديل)
+        $scannedSerials = [];
+        if (!$model->isNewRecord) {
+            $items = ContractInventoryItem::find()
+                ->where(['contract_id' => $model->id])
+                ->andWhere(['IS NOT', 'serial_number_id', null])
+                ->all();
+            foreach ($items as $item) {
+                $serial = InventorySerialNumber::findOne($item->serial_number_id);
+                if ($serial) {
+                    $invItem = InventoryItems::findOne($serial->item_id);
+                    $scannedSerials[] = [
+                        'id'            => $serial->id,
+                        'serial_number' => $serial->serial_number,
+                        'item_name'     => $invItem ? $invItem->item_name : '',
+                        'item_id'       => $serial->item_id,
+                    ];
+                }
+            }
+        }
+
+        return [
+            'model'          => $model,
+            'companies'      => $companies,
+            'inventoryItems' => $inventoryItems,
+            'scannedSerials' => $scannedSerials,
+        ];
+    }
+
+    /**
+     * حفظ بنود السيريال عند إنشاء عقد
+     */
+    private function saveSerialItems($model)
+    {
+        $serialIds = Yii::$app->request->post('serial_ids', []);
+        foreach ($serialIds as $serialId) {
+            $serial = InventorySerialNumber::findOne((int)$serialId);
+            if (!$serial || $serial->status !== InventorySerialNumber::STATUS_AVAILABLE) continue;
+
+            $ci = new ContractInventoryItem();
+            $ci->contract_id = $model->id;
+            $ci->item_id = $serial->item_id;
+            $ci->serial_number_id = $serial->id;
+            $ci->code = $serial->serial_number;
+            $ci->save(false);
+
+            // تحديث حالة السيريال إلى "مباع"
+            $serial->status = InventorySerialNumber::STATUS_SOLD;
+            $serial->contract_id = $model->id;
+            $serial->sold_at = time();
+            $serial->save(false);
+
+            // تحديث كمية المخزون
+            $this->deductInventoryQuantity($model, $serial->item_id);
+        }
+    }
+
+    /**
+     * حفظ بنود يدوية (بدون سيريال)
+     */
+    private function saveManualItems($model)
+    {
+        $manualItemIds = Yii::$app->request->post('manual_item_ids', []);
+        foreach ($manualItemIds as $itemId) {
+            $ci = new ContractInventoryItem();
+            $ci->contract_id = $model->id;
+            $ci->item_id = (int)$itemId;
+            $ci->save(false);
+
+            $this->deductInventoryQuantity($model, (int)$itemId);
+        }
+    }
+
+    /**
+     * تحديث بنود السيريال عند تعديل عقد
+     */
+    private function updateSerialItems($model)
+    {
+        $newSerialIds = array_map('intval', Yii::$app->request->post('serial_ids', []));
+
+        // الأرقام التسلسلية الحالية
+        $oldItems = ContractInventoryItem::find()
+            ->where(['contract_id' => $model->id])
+            ->andWhere(['IS NOT', 'serial_number_id', null])
+            ->all();
+
+        $oldSerialIds = array_map(function($i) { return (int)$i->serial_number_id; }, $oldItems);
+
+        // إزالة السيريالات اللي اتشالت
+        $toRelease = array_diff($oldSerialIds, $newSerialIds);
+        foreach ($toRelease as $sid) {
+            $serial = InventorySerialNumber::findOne($sid);
+            if ($serial) {
+                $serial->status = InventorySerialNumber::STATUS_AVAILABLE;
+                $serial->contract_id = null;
+                $serial->sold_at = null;
+                $serial->save(false);
+            }
+            ContractInventoryItem::deleteAll([
+                'contract_id' => $model->id,
+                'serial_number_id' => $sid,
+            ]);
+        }
+
+        // إضافة السيريالات الجديدة
+        $toAdd = array_diff($newSerialIds, $oldSerialIds);
+        foreach ($toAdd as $sid) {
+            $serial = InventorySerialNumber::findOne($sid);
+            if (!$serial || $serial->status !== InventorySerialNumber::STATUS_AVAILABLE) continue;
+
+            $ci = new ContractInventoryItem();
+            $ci->contract_id = $model->id;
+            $ci->item_id = $serial->item_id;
+            $ci->serial_number_id = $serial->id;
+            $ci->code = $serial->serial_number;
+            $ci->save(false);
+
+            $serial->status = InventorySerialNumber::STATUS_SOLD;
+            $serial->contract_id = $model->id;
+            $serial->sold_at = time();
+            $serial->save(false);
+
+            $this->deductInventoryQuantity($model, $serial->item_id);
+        }
+    }
+
+    /**
+     * تحديث بنود يدوية عند التعديل
+     */
+    private function updateManualItems($model)
+    {
+        // حذف البنود اليدوية القديمة
+        ContractInventoryItem::deleteAll([
+            'contract_id' => $model->id,
+            'serial_number_id' => null,
+        ]);
+        // إضافة الجديدة
+        $this->saveManualItems($model);
+    }
+
+    /**
+     * خصم كمية من المخزون
+     */
+    private function deductInventoryQuantity($model, $itemId)
+    {
+        $location = InventoryStockLocations::find()
+            ->andWhere(['company_id' => $model->company_id])
+            ->one();
+
+        $qty = new InventoryItemQuantities();
+        $qty->item_id = $itemId;
+        $qty->suppliers_id = $model->company_id;
+        $qty->locations_id = $location ? $location->id : 0;
+        $qty->quantity = 1;
+        $qty->save(false);
+    }
+
+    /**
+     * حفظ العملاء والكفلاء
+     */
+    private function saveContractCustomers($model)
+    {
+        if ($model->type === 'solidarity') {
+            foreach ((array)$model->customers_ids as $customerId) {
+                $cc = new ContractsCustomers();
+                $cc->contract_id = $model->id;
+                $cc->customer_id = $customerId;
+                $cc->customer_type = 'client';
+                $cc->save(false);
+            }
+        } else {
+            // العميل الأساسي
+            $cc = new ContractsCustomers();
+            $cc->contract_id = $model->id;
+            $cc->customer_id = $model->customer_id;
+            $cc->customer_type = 'client';
+            $cc->save(false);
+
+            // الكفلاء
+            if (!empty($model->guarantors_ids)) {
+                foreach ((array)$model->guarantors_ids as $gid) {
+                    $gc = new ContractsCustomers();
+                    $gc->contract_id = $model->id;
+                    $gc->customer_id = $gid;
+                    $gc->customer_type = 'guarantor';
+                    $gc->save(false);
+                }
+            }
+        }
+    }
+
+    /**
+     * إنشاء متابعة أولية
+     */
+    private function createInitialFollowUp($model)
+    {
+        $fu = new FollowUp();
+        $fu->contract_id = $model->id;
+        $fu->date_time = date('Y-m-d H:i:s');
+        $fu->notes = 'إضافة آلية';
+        $fu->feeling = 'normal';
+        $fu->connection_goal = 1;
+        $fu->reminder = $model->first_installment_date;
+        $fu->created_by = Yii::$app->user->id;
+        $fu->save(false);
+    }
+
+    /**
+     * تحديث كاش العقود
+     */
+    private function refreshContractCaches()
+    {
+        Yii::$app->cache->set(
+            Yii::$app->params['key_contract_id'],
+            Yii::$app->db->createCommand(Yii::$app->params['contract_id_query'])->queryAll(),
+            Yii::$app->params['time_duration']
+        );
+        Yii::$app->cache->set(
+            Yii::$app->params['key_contract_status'],
+            Yii::$app->db->createCommand(Yii::$app->params['contract_status_query'])->queryAll(),
+            Yii::$app->params['time_duration']
+        );
+    }
+
+    /**
+     * إيجاد موديل العقد
+     */
+    protected function findModel($id)
+    {
+        $model = Contracts::findOne($id);
+        if ($model === null) {
+            throw new NotFoundHttpException('الصفحة المطلوبة غير موجودة.');
+        }
+        return $model;
     }
 }

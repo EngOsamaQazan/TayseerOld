@@ -2,37 +2,28 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
-use yii\helpers\ArrayHelper;
-use common\models\User;
-
-/* @var $model */
 
 ?>
-<div class="questions-bank box box-primary">
-
+<div class="fin-filter" style="margin-bottom:16px">
     <?php $form = ActiveForm::begin([
         'id' => '_search',
         'method' => 'get',
         'action' => ['index'],
+        'options' => ['class' => 'fin-filter-main'],
     ]); ?>
-    <div class="row">
-        <div class="col-lg-6">
-            <?= $form->field($model, 'item_name')->textInput(['maxlength' => true]) ?>
-        </div>
-        <div class="col-lg-6">
-            <?= $form->field($model, 'item_barcode')->textInput(['maxlength' => true]) ?>
-        </div>
+
+    <div class="fin-f-field fin-f--grow">
+        <label><i class="fa fa-cube"></i> اسم الصنف</label>
+        <?= Html::activeTextInput($model, 'item_name', ['class' => 'form-control fin-f-input', 'placeholder' => 'بحث بالاسم...']) ?>
     </div>
-    <div class="row">
-        <div class="col-lg-6">
-            <?= $form->field($model, 'number_row')->textInput(['maxlength' => true]) ?>
-        </div>
+    <div class="fin-f-field fin-f--grow">
+        <label><i class="fa fa-barcode"></i> الباركود</label>
+        <?= Html::activeTextInput($model, 'item_barcode', ['class' => 'form-control fin-f-input', 'placeholder' => 'بحث بالباركود...']) ?>
     </div>
-        <div class="form-group">
-            <?= Html::submitButton(Yii::t('app','Search'),['class'=>'btn btn-primary']) ?>
-        </div>
+    <div class="fin-f-btns">
+        <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class' => 'fin-btn fin-btn--search']) ?>
+        <?= Html::a('<i class="fa fa-times"></i> مسح', ['index'], ['class' => 'fin-btn fin-btn--reset']) ?>
+    </div>
+
     <?php ActiveForm::end(); ?>
-
-
 </div>

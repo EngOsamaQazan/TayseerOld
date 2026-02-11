@@ -19,6 +19,7 @@ use backend\modules\phoneNumbers\models\PhoneNumbers;
 use backend\modules\customers\models\CustomersDocument;
 use yii\web\UploadedFile;
 use yii\filters\AccessControl;
+use backend\modules\customers\components\RiskEngine;
 
 /**
  * Default controller for the `reports` module
@@ -39,7 +40,7 @@ class CustomersController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'update-contact', 'customer-data'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'update-contact', 'customer-data', 'search-customers', 'calculate-risk', 'check-duplicate'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -414,6 +415,51 @@ class CustomersController extends Controller
     }
 
     /**
+     * بحث احترافي عن العملاء — AJAX
+     * يدعم: الاسم (كلمات متعددة) · الرقم الوطني · رقم الهاتف · رقم العميل
+     * mode=id   → يُرجع id كمُعرّف   (لحقول customer_id)
+     * mode=name → يُرجع name كمُعرّف  (لحقول customer_name)
+     */
+    public function actionSearchCustomers($q = '', $mode = 'id')
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $q = trim($q);
+
+        if (mb_strlen($q) < 1) {
+            return ['results' => []];
+        }
+
+        $query = Customers::find()
+            ->select(['id', 'name', 'id_number', 'primary_phone_number'])
+            ->andWhere(['is_deleted' => 0]);
+
+        $words = preg_split('/\s+/u', $q, -1, PREG_SPLIT_NO_EMPTY);
+
+        foreach ($words as $word) {
+            $query->andWhere(['or',
+                ['like', 'name', $word],
+                ['like', 'id_number', $word],
+                ['like', 'primary_phone_number', $word],
+                is_numeric($word) ? ['=', 'id', (int)$word] : '0=1',
+            ]);
+        }
+
+        $customers = $query->orderBy(['name' => SORT_ASC])->limit(20)->asArray()->all();
+
+        $results = [];
+        foreach ($customers as $c) {
+            $results[] = [
+                'id'   => $mode === 'name' ? $c['name'] : $c['id'],
+                'text' => $c['name'],
+                'id_number' => $c['id_number'] ?? '',
+                'phone' => $c['primary_phone_number'] ?? '',
+            ];
+        }
+
+        return ['results' => $results];
+    }
+
+    /**
      * Updates an existing PhoneNumbers model.
      * For ajax request will return json object
      * and for non-ajax request if update is successful, the browser will be redirected to the 'view' page.
@@ -475,4 +521,68 @@ class CustomersController extends Controller
         }
     }
 
+    /**
+     * AJAX: Calculate risk score live
+     * @return array JSON risk assessment
+     */
+    public function actionCalculateRisk()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (!Yii::$app->request->isPost) {
+            return ['success' => false, 'error' => 'POST only'];
+        }
+
+        $data = Yii::$app->request->post('data', []);
+        if (empty($data)) {
+            return ['success' => false, 'error' => 'No data'];
+        }
+
+        try {
+            $assessment = RiskEngine::assess($data);
+            return ['success' => true, 'assessment' => $assessment];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * AJAX: Check for duplicate customer by ID number or phone
+     * @return array JSON result
+     */
+    public function actionCheckDuplicate()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (!Yii::$app->request->isPost) {
+            return ['found' => false];
+        }
+
+        $field = Yii::$app->request->post('field');
+        $value = Yii::$app->request->post('value');
+
+        if (!$field || !$value) return ['found' => false];
+
+        $query = Customers::find()->where(['is_deleted' => 0]);
+
+        if ($field === 'id_number') {
+            $query->andWhere(['id_number' => $value]);
+        } elseif ($field === 'phone') {
+            $query->andWhere(['primary_phone_number' => $value]);
+        } else {
+            return ['found' => false];
+        }
+
+        $customer = $query->one();
+
+        if ($customer) {
+            return [
+                'found' => true,
+                'customer_id' => $customer->id,
+                'customer_name' => $customer->name,
+            ];
+        }
+
+        return ['found' => false];
+    }
 }

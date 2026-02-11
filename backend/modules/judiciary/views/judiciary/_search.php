@@ -12,11 +12,20 @@ use backend\modules\lawyers\models\Lawyers;
 use backend\modules\judiciaryType\models\JudiciaryType;
 use backend\modules\judiciaryActions\models\JudiciaryActions;
 
-/* بيانات مرجعية */
-$courts = ArrayHelper::map(Court::find()->asArray()->all(), 'id', 'name');
-$types = ArrayHelper::map(JudiciaryType::find()->asArray()->all(), 'id', 'name');
-$lawyers = ArrayHelper::map(Lawyers::find()->asArray()->all(), 'id', 'name');
-$actions = ArrayHelper::map(JudiciaryActions::find()->asArray()->all(), 'id', 'name');
+/* بيانات مرجعية — مع كاش لمدة ساعة */
+$cache = Yii::$app->cache;
+$courts = $cache->getOrSet('lookup_courts', function () {
+    return ArrayHelper::map(Court::find()->asArray()->all(), 'id', 'name');
+}, 3600);
+$types = $cache->getOrSet('lookup_judiciary_types', function () {
+    return ArrayHelper::map(JudiciaryType::find()->asArray()->all(), 'id', 'name');
+}, 3600);
+$lawyers = $cache->getOrSet('lookup_lawyers', function () {
+    return ArrayHelper::map(Lawyers::find()->asArray()->all(), 'id', 'name');
+}, 3600);
+$actions = $cache->getOrSet('lookup_judiciary_actions', function () {
+    return ArrayHelper::map(JudiciaryActions::find()->asArray()->all(), 'id', 'name');
+}, 3600);
 ?>
 
 <div class="box box-primary jadal-search-box">

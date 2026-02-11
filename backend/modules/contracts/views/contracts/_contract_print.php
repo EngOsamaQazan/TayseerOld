@@ -1,267 +1,265 @@
 <?php
-
+/**
+ * صفحة طباعة العقد — صفحة A4 واحدة
+ * تصميم ذكي: يُظهر فقط الكفلاء الموجودين فعلياً
+ * رقم العقد بارز بخط أحمر كبير
+ */
 use common\components\CompanyChecked;
 use yii\helpers\Html;
 use yii\helpers\Url;
-$CompanyChecked = new CompanyChecked();
-$primary_company = $CompanyChecked->findPrimaryCompany();
-if ($primary_company == '') {
-    $logo = $logo = Yii::$app->params['companies_logo'];
-    $compay_name = '';
-    $compay_banks = '';
 
-} else {
+$cc = new CompanyChecked();
+$primary = $cc->findPrimaryCompany();
+$logo = ($primary && $primary->logo) ? $primary->logo : (Yii::$app->params['companies_logo'] ?? '');
+$companyName = $primary ? $primary->name : '';
+$companyBanks = $primary ? $cc->findPrimaryCompanyBancks() : '';
 
-    $logo = $primary_company->logo;
+$total = $model->total_value ?: 0;
+$first = $model->first_installment_value ?: 0;
+$monthly = $model->monthly_installment_value ?: 0;
+$afterFirst = $total - $first;
+/* due_date تُحسب تلقائياً في afterFind() */
 
-    $compay_name = $primary_company->name;
-    $compay_banks = $CompanyChecked->findPrimaryCompanyBancks();
+/* جمع بيانات الأطراف */
+$allPeople = $model->customersAndGuarantor; // المدين + الكفلاء
+$guarantors = $model->guarantor;            // الكفلاء فقط
+$gCount = count($guarantors);
+$hasGuarantors = $gCount > 0;
 
-}
-
+/* أسماء الكفلاء بالترتيب */
+$gLabels = ['الأول','الثاني','الثالث','الرابع','الخامس'];
 ?>
-    <!doctype html>
-    <html lang="en">
-    <head>
-        <!-- Required meta tags -->
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <!-- Bootstrap CSS -->
-        <link rel="stylesheet" href="/css-new/bootstrap.min.css">
-        <link rel="stylesheet" href="/css-new/style.css">
-        <title>Contract</title>
-    </head>
-    <body>
-    <section class="contract-header">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-2 col-md-2 col-sm-2 col-2" >
-                    <?=  Html::img(Url::to(['/' . $logo]), ['style' => 'width:155px;height:200px; object-fit: contain; margin-top: 20px']); ?>
-                </div>
-                <div class="col-lg-10 col-md-10 col-sm-10 col-10" >
-                    <?php foreach ($model->contractsCustomers as $contractsCustomers) {
-                        if ($contractsCustomers->customer->selectedImagePath) {
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>عقد بيع #<?= $model->id ?></title>
+<style>
+/* ═══ A4 Print ═══ */
+@page { size: A4 portrait; margin: 8mm 10mm 8mm 10mm; }
+*{ margin:0; padding:0; box-sizing:border-box; }
+body{ direction:rtl; font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif; color:#1a1a1a; font-size:13.5px; line-height:1.6; background:#fff; }
+@font-face{font-family:'DinNextRegular';src:url('/css-new/fonts/din-next/regular/DinNextRegular.woff2') format('woff2'),url('/css-new/fonts/din-next/regular/DinNextRegular.woff') format('woff'),url('/css-new/fonts/din-next/regular/DinNextRegular.ttf') format('truetype');}
+@font-face{font-family:'DinNextBold';src:url('/css-new/fonts/din-next/bold/DinNextBold.woff2') format('woff2'),url('/css-new/fonts/din-next/bold/DinNextBold.woff') format('woff'),url('/css-new/fonts/din-next/bold/DinNextBold.ttf') format('truetype');}
+@font-face{font-family:'DinNextMedium';src:url('/css-new/fonts/din-next/medium/DinNextMedium.woff2') format('woff2'),url('/css-new/fonts/din-next/medium/DinNextMedium.woff') format('woff'),url('/css-new/fonts/din-next/medium/DinNextMedium.ttf') format('truetype');}
+b,strong,.b{font-family:'DinNextBold',sans-serif!important;}
 
-                            ?>
+.page{ width:100%; max-width:190mm; margin:0 auto; }
 
-                            <div class="col-lg-2 col-md-2 col-sm-2 col-2" style="float: left ; display: inline-block ;padding-right: 1px !important;padding-left: 1px !important;">
-                                <img src="<?= $contractsCustomers->customer->selectedImagePath ?>"  class="signutre-div">
-                            </div>
-                        <?php } ?>
-                    <?php } ?>
+/* ═══ Header ═══ */
+.hdr{ display:flex; align-items:flex-start; gap:12px; padding-bottom:10px; border-bottom:4px solid #4caf50; margin-bottom:10px; position:relative; }
+.hdr-logo{ width:130px; flex-shrink:0; }
+.hdr-logo img{ width:130px; height:auto; object-fit:contain; }
+.hdr-center{ flex:1; text-align:center; padding-top:8px; }
+.hdr-center h2{ font-size:20px; color:#2e7d32; margin:0 0 4px; font-family:'DinNextBold',sans-serif; }
+.hdr-center .hdr-date{ font-size:12px; color:#666; margin-top:2px; }
 
-                </div>
+/* رقم العقد — أحمر كبير بارز */
+.contract-num{ position:absolute; top:0; left:0; background:#e53935; color:#fff; font-family:'DinNextBold',sans-serif; font-size:28px; padding:6px 18px 4px; border-radius:0 0 12px 0; line-height:1.2; letter-spacing:1px; }
+.contract-num small{ display:block; font-size:10px; font-family:'DinNextRegular',sans-serif; letter-spacing:0; opacity:.85; }
 
-            </div>
+/* صور العملاء */
+.ppl-photos{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; justify-content:center; }
+.ppl-photo{ width:85px; height:105px; object-fit:cover; border:2px solid #ddd; border-radius:6px; }
+
+/* ═══ Parties ═══ */
+.parties{ margin-bottom:8px; font-size:14px; }
+.party-row{ display:flex; gap:6px; margin-bottom:3px; }
+.party-label{ font-family:'DinNextBold',sans-serif; min-width:90px; color:#2e7d32; }
+
+/* ═══ Terms ═══ */
+.terms{ background:#f9faf8; border:1px solid #e0e5db; border-radius:6px; padding:10px 14px; margin-bottom:10px; }
+.terms p{ margin-bottom:4px; font-size:12.5px; line-height:1.6; text-align:justify; }
+.terms p:last-child{ margin-bottom:0; }
+.terms .num{ font-family:'DinNextBold',sans-serif; color:#2e7d32; }
+
+/* ═══ Contract Body — Grid ═══ */
+.body-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:10px; }
+.info-box{ border:1px solid #ddd; border-radius:6px; padding:10px 12px; }
+.info-box h4{ font-size:13px; font-family:'DinNextBold',sans-serif; color:#2e7d32; margin:0 0 6px; border-bottom:2px solid #e8f5e9; padding-bottom:4px; }
+.info-row{ display:flex; justify-content:space-between; margin-bottom:4px; font-size:12.5px; }
+.info-row .lbl{ color:#555; }
+.info-row .val{ font-family:'DinNextBold',sans-serif; }
+.info-row .val.money{ color:#1565c0; }
+
+/* ═══ Signatures — ذكية ═══ */
+.sigs{ margin-top:10px; }
+.sig-grid{ display:grid; gap:8px; margin-bottom:8px; }
+/* عدد أعمدة التوقيع يتغير ديناميكياً */
+.sig-grid.cols-1{ grid-template-columns:1fr; }
+.sig-grid.cols-2{ grid-template-columns:1fr 1fr; }
+.sig-grid.cols-3{ grid-template-columns:1fr 1fr 1fr; }
+.sig-grid.cols-4{ grid-template-columns:1fr 1fr 1fr 1fr; }
+
+.sig-card{ border:1px solid #c8e6c9; border-radius:6px; overflow:hidden; }
+.sig-card-hd{ background:#e8f5e9; color:#2e7d32; font-family:'DinNextBold',sans-serif; font-size:11px; padding:5px 8px; text-align:center; border-bottom:1px solid #c8e6c9; }
+.sig-card-body{ height:65px; } /* مساحة فعلية للتوقيع بالقلم */
+
+/* صف البائع + ملاحظات */
+.footer-row{ display:flex; gap:12px; align-items:flex-start; margin-top:8px; }
+.seller-sig{ width:120px; flex-shrink:0; }
+.seller-sig .sig-card-body{ height:50px; }
+.notes-area{ flex:1; font-size:12px; color:#555; border:1px solid #eee; border-radius:6px; padding:8px 10px; min-height:50px; }
+.notes-area b{ color:#333; }
+
+/* ═══ Print ═══ */
+@media print {
+    body{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .no-print{ display:none!important; }
+}
+@media screen {
+    body{ padding:10px; background:#eee; }
+    .page{ background:#fff; padding:20px; box-shadow:0 2px 10px rgba(0,0,0,.15); }
+    .print-btn{ position:fixed; top:15px; left:15px; z-index:999; background:#2e7d32; color:#fff; border:0; padding:10px 24px; border-radius:6px; font-size:14px; cursor:pointer; font-family:'DinNextBold',sans-serif; }
+    .print-btn:hover{ background:#1b5e20; }
+}
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">🖨️ طباعة العقد</button>
+
+<div class="page">
+
+<!-- ═══ Header ═══ -->
+<div class="hdr">
+    <!-- شعار الشركة — كبير -->
+    <div class="hdr-logo">
+        <?php if ($logo): ?>
+            <?= Html::img(Url::to(['/' . $logo]), ['style' => 'width:130px;height:auto;']) ?>
+        <?php endif; ?>
+    </div>
+
+    <!-- عنوان + تاريخ -->
+    <div class="hdr-center">
+        <h2>عقد بيع بالتقسيط</h2>
+        <div class="hdr-date">تاريخ البيع: <b><?= $model->Date_of_sale ?></b></div>
+
+        <!-- صور جميع العملاء والكفلاء -->
+        <div class="ppl-photos">
+            <?php foreach ($allPeople as $person): ?>
+                <?php if ($person->selectedImagePath): ?>
+                    <img class="ppl-photo" src="<?= $person->selectedImagePath ?>" alt="<?= Html::encode($person->name) ?>">
+                <?php endif; ?>
+            <?php endforeach; ?>
         </div>
-    </section>
-    <hr>
-    <!-- End Contract Header -->
+    </div>
 
-    <!-- Contract Info -->
-    <section class="contract-info">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12 col-md-12 col-sm-12 col-12">
-                    <div class="form-group">
-                        <label> الطرف الأول : </label>
-                        <span><?= $compay_name ?></span>
-                    </div>
-                    <div class="form-group">
-                        <label> الطرف الثاني : </label>
-                        <?php $count = 1;
-                        foreach ($model->customersAndGuarantor as $customer) {
-                            if ($count++ != 1) { ?>
-                                و
-                            <?php } ?>
-                            <span class=""><?= $customer->name ?>  </span>
-                        <?php } ?>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-lg-12 col-md-12 col-sm-12 col-12">
-                    <div class="info-div">
-                        <p>تعتبر هذه المقدمة جزء من العقد ونقر نحن المشتري والكفلاء بموافقتنا على البنود التالية وعددها
-                            5</p>
-                        <p>1- حالة البضاعة : إننا استلمنا البضاعة الموصوفة بعد المعاينة سليمة وخالية من المشاكل
-                            والعيوب</p>
-                        <p>2- الالتزام بالدفع : يلتزم المشتري والكفلاء متضامنين ومتكافلين بدفع ثمن البضاعة المذكورة
-                            بالعقد وتحمل كافة المصاريف القضائية وغير القضائية في حالة تخلفنا عن دفع اي قسط من الأقساط
-                            المذكورة ويعتبر كامل المبلغ مستحق.</p>
-                        <p>3-طريقة الدفع : نلتزم بدفع الأقساط في موعدها من خلال eFAWATEERcom تبويب تمويل وخدمات مالية
-                            - <?= $compay_name ?> - تسديد قسط - ادخال الرقم ( <span><?= $model->id ?></span>) ثم اتمام
-                            الدفع او في حساب الشركة في <span><?= $compay_banks ?></span></p>
-                        <p> 4- كفالة وارجاع البضاعة : كفالة الوكيل حسب الشركة الموزعة والبضاعة المباعة لاترد ولاتستبدل
-                            ونلتزم بخسارة
-                            <span style="width: 20px;font-weight: 900">(<?= $model->loss_commitment ? $model->loss_commitment : 'صفر' ?>)</span>
-                            دينار إذا أردنا إرجاع البضاعة بمدة لاتزيد عن 24 ساعة من تاريخ البيع
-                            ولا يمكن ارجاع البضاعه بعد مضي
-                            24
-                            ساعه مهما كانت الاحوال
-                        </p>
-                        <p>5- الشركة غير مسئولة عن : سعر البضاعة خارج فروعها وعن أي اتفاقية أو مبلغ غير موثق في
-                            العقد</p>
-                    </div>
-                </div>
-            </div>
+    <!-- رقم العقد — أحمر كبير بارز في الزاوية -->
+    <div class="contract-num">
+        <small>رقم العقد</small>
+        #<?= $model->id ?>
+    </div>
+</div>
+
+<!-- ═══ Parties ═══ -->
+<div class="parties">
+    <div class="party-row">
+        <span class="party-label">الطرف الأول :</span>
+        <span><?= $companyName ?></span>
+    </div>
+    <div class="party-row">
+        <span class="party-label">الطرف الثاني :</span>
+        <span><?php
+            $names = [];
+            foreach ($allPeople as $c) { $names[] = $c->name; }
+            echo implode(' و ', $names);
+        ?></span>
+    </div>
+</div>
+
+<!-- ═══ Terms ═══ -->
+<div class="terms">
+    <p>تعتبر هذه المقدمة جزءاً من العقد ونقر نحن المشتري والكفلاء بموافقتنا على البنود التالية وعددها <b>5</b></p>
+    <p><span class="num">1-</span> <b>حالة البضاعة:</b> إننا استلمنا البضاعة الموصوفة بعد المعاينة سليمة وخالية من المشاكل والعيوب</p>
+    <p><span class="num">2-</span> <b>الالتزام بالدفع:</b> يلتزم المشتري والكفلاء متضامنين ومتكافلين بدفع ثمن البضاعة المذكورة بالعقد وتحمل كافة المصاريف القضائية وغير القضائية في حالة تخلفنا عن دفع أي قسط من الأقساط المذكورة ويعتبر كامل المبلغ مستحق.</p>
+    <p><span class="num">3-</span> <b>طريقة الدفع:</b> نلتزم بدفع الأقساط في موعدها من خلال eFAWATEERcom تبويب تمويل وخدمات مالية - <?= $companyName ?> - تسديد قسط - إدخال الرقم (<b style="color:#e53935"><?= $model->id ?></b>) ثم إتمام الدفع أو في حساب الشركة في <b><?= $companyBanks ?></b></p>
+    <p><span class="num">4-</span> <b>كفالة وإرجاع البضاعة:</b> كفالة الوكيل حسب الشركة الموزعة والبضاعة المباعة لا تُرد ولا تُستبدل ونلتزم بخسارة (<b><?= $model->loss_commitment ?: 'صفر' ?></b>) دينار إذا أردنا إرجاع البضاعة بمدة لا تزيد عن 24 ساعة من تاريخ البيع ولا يمكن إرجاع البضاعة بعد مضي 24 ساعة مهما كانت الأحوال</p>
+    <p><span class="num">5-</span> <b>الشركة غير مسؤولة عن:</b> سعر البضاعة خارج فروعها وعن أي اتفاقية أو مبلغ غير موثق في العقد</p>
+</div>
+
+<!-- ═══ Body — Debtors + Financial ═══ -->
+<div class="body-grid">
+    <!-- بيانات المدين والكفلاء -->
+    <div class="info-box">
+        <h4>بيانات المدين والكفلاء</h4>
+        <?php foreach ($allPeople as $i => $c): ?>
+        <div class="info-row">
+            <span class="lbl"><?= $i === 0 ? 'المدين' : 'كفيل ' . ($gLabels[$i-1] ?? $i) ?></span>
+            <span class="val"><?= $c->name ?></span>
+            <span style="color:#777;font-size:10.5px"><?= $c->id_number ?></span>
         </div>
-    </section>
-    <hr>
+        <?php endforeach; ?>
+    </div>
+    <!-- بيانات العقد المالية -->
+    <div class="info-box">
+        <h4>البيانات المالية</h4>
+        <div class="info-row"><span class="lbl">البائع</span><span class="val"><?= $model->seller ? $model->seller->name : '—' ?></span></div>
+        <div class="info-row"><span class="lbl">نوع العقد</span><span class="val"><?= $model->type === 'normal' ? 'فردي' : 'تضامني' ?></span></div>
+        <div class="info-row"><span class="lbl">المبلغ الإجمالي</span><span class="val money"><?= number_format($total) ?> د.أ</span></div>
+        <div class="info-row"><span class="lbl">الدفعة الأولى</span><span class="val money"><?= number_format($first) ?> د.أ</span></div>
+        <div class="info-row"><span class="lbl">المبلغ بعد الدفعة</span><span class="val money"><?= number_format($afterFirst) ?> د.أ</span></div>
+        <div class="info-row"><span class="lbl">القسط الشهري</span><span class="val money"><?= number_format($monthly) ?> د.أ</span></div>
+        <div class="info-row"><span class="lbl">تاريخ أول قسط</span><span class="val"><?= $model->first_installment_date ?></span></div>
+        <div class="info-row"><span class="lbl">تاريخ الاستحقاق</span><span class="val"><?= $model->due_date ?></span></div>
+    </div>
+</div>
 
-    <!-- Contract Info -->
+<!-- ═══ Signatures — ذكية: تظهر فقط الكفلاء الموجودين ═══ -->
+<div class="sigs">
+    <?php
+    /* حساب عدد أعمدة التوقيع: المدين + الكفلاء الفعليين */
+    $sigCount = 1 + $gCount; /* المدين دائماً + عدد الكفلاء الفعلي */
+    /* تحديد فئة الأعمدة — حد أقصى 4 بالصف */
+    $row1Count = min($sigCount, 4);
+    $row2Count = max($sigCount - 4, 0);
+    ?>
 
-    <!-- Contract Body -->
-    <section class="contract-body">
-        <div class="container">
-
-            <div class="row mb-4">
-                <div class="col-lg-4 col-md-4 col-sm-6 col-12 text-center">
-                    <p class="text-right">اسم المدين</p>
-                    <?php $count = 1;
-                    foreach ($model->customersAndGuarantor as $customer) {
-                        if ($count++ != 1) { ?>
-                        <?php } ?>
-                        <p class="text-right"><?= $customer->name ?></p>
-                    <?php } ?>
-                </div>
-                <div class="col-lg-2 col-md-2 col-sm-3 col-6 text-center">
-                    <p class="text-right">الرقم الوطني</p>
-                    <?php foreach ($model->customersAndGuarantor as $customer) { ?>
-                        <p class="text-right"><?= $customer->id_number ?></p>
-                    <?php } ?>
-                </div>
-                <div class="col-lg-5 col-md-5 col-sm-7 col-12">
-                    <p class="text-center">بيانات العقد</p>
-                    <div class="row">
-                        <div class="col-lg-6 col-md-6 col-sm-12 col-12">
-                            <div class="form-group">
-                                <label>تاريخ البيع : </label>
-                                <label><?= $model->Date_of_sale ?></label>
-                            </div>
-                        </div>
-                        <div class="col-lg-6 col-md-6 col-sm-12 col-12">
-                            <div class="form-group">
-                                <label>البائع : </label>
-                                <label><?= $model->seller->name ?></label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>فئة العقد : </label>
-                        <label><?= $model->type == 'normal' ? 'فردي' : 'متضامين ' ?></label>
-                    </div>
-                    <div class="form-group">
-                        <label class="small-fnt">تاريخ استحقاق أول قسط : </label>
-                        <label class="small-fnt"><?= $model->due_date ?></label>
-                    </div>
-                    <div class="form-group">
-                        <label class="small-fnt">المبلغ بعد الدفعة الأولى : </label>
-                        <label class="small-fnt" id="amount_after_first_installment"></label>
-                    </div>
-                    <div class="form-group">
-                        <label>القسط الشهري : </label>
-                        <label class="small-fnt" id="monthly_installment_value"></label>
-                    </div>
-                    <div class="form-group">
-                        <label>الدفعة الأولى : </label>
-                        <label id="first_installment_value"></label>
-                    </div>
-                </div>
-            </div>
+    <!-- الصف الأول: المدين + أول 3 كفلاء -->
+    <div class="sig-grid cols-<?= $row1Count ?>">
+        <!-- المدين دائماً يظهر -->
+        <div class="sig-card">
+            <div class="sig-card-hd">توقيع المدين</div>
+            <div class="sig-card-body"></div>
         </div>
-    </section>
-    <hr>
-    <!-- Contract Body -->
-    <!-- Contract Footer -->
-    <section class="contract-footer">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12 col-md-12 col-sm-12 col-12">
-                    <table class="table  table-bordered sig-table">
-                        <thead>
-                        <tr>
-                            <th width="30.2%">توقيع المدين</th>
-                            <th width="30.2%">توقيع الكفيل الأول</th>
-                            <th width="30.2%">توقيع الكفيل التاني</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <table class="table  table-bordered sig-table">
-                        <thead>
-                        <tr>
-                            <th width="30.2%">توقيع الكفيل الثالث</th>
-                            <th width="30.2%">توقيع الكفيل الرابع</th>
-                            <th width="30.2%">توقيع الكفيل الخامس</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
+        <?php for ($i = 0; $i < min($gCount, 3); $i++): ?>
+            <div class="sig-card">
+                <div class="sig-card-hd">توقيع الكفيل <?= $gLabels[$i] ?></div>
+                <div class="sig-card-body"></div>
             </div>
-            <div class="row">
-                <div class="col-lg-2 col-md-2 col-sm-3 col-12">
-                    <table class="table table-bordered small-sig-table">
-                        <thead>
-                        <tr>
-                            <th>توقيع البائع</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <td></td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="col-lg-10 col-md-10 col-sm-9 col-12">
-                    <p>ملاحظات</p>
-                </div>
-            </div>
-        </div>
-    </section>
-    <!-- Contract Footer -->
-    <!-- Optional JavaScript -->
-    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="/js-new/jquery-3.3.1.min.js"></script>
-    <script src="/js-new/popper.min.js"></script>
-    <script src="/js-new/bootstrap.min.js"></script>
-    <script src="/js/Tafqeet.js"></script>
+        <?php endfor; ?>
+    </div>
 
-    </body>
-    </html>
-<?php
-$total_value = empty($model->total_value) ? 'لايوجد قيمه'  : $model->total_value;
-$first_installment_value = empty($model->first_installment_value) ? 'لايوجد قيمه'  : (($model->first_installment_value == 0) ? "بدون دفعه" : $model->first_installment_value);
-$monthly_installment_value = empty($model->monthly_installment_value)? 'لايوجد قيمه' : $model->monthly_installment_value ;
-$script = <<< JS
-$(document).ready(function(){
-    $('#amount_after_first_installment').text(tafqeet($total_value)+' دينار اردني فقط لاغير');
-    $('#monthly_installment_value').text(tafqeet($monthly_installment_value)+' دينار اردني فقط لاغير');
-    $('#first_installment_value').text(tafqeet($first_installment_value)+' دينار اردني فقط لاغير');
-}); 
-JS;
-$this->registerJs($script, $this::POS_END);
+    <?php if ($row2Count > 0): ?>
+    <!-- الصف الثاني: كفلاء إضافيون (4 و 5) -->
+    <div class="sig-grid cols-<?= $row2Count ?>">
+        <?php for ($i = 3; $i < $gCount; $i++): ?>
+            <div class="sig-card">
+                <div class="sig-card-hd">توقيع الكفيل <?= $gLabels[$i] ?? ($i+1) ?></div>
+                <div class="sig-card-body"></div>
+            </div>
+        <?php endfor; ?>
+    </div>
+    <?php endif; ?>
+</div>
+
+<!-- البائع + ملاحظات -->
+<div class="footer-row">
+    <div class="seller-sig">
+        <div class="sig-card">
+            <div class="sig-card-hd">توقيع البائع</div>
+            <div class="sig-card-body"></div>
+        </div>
+    </div>
+    <div class="notes-area">
+        <b>ملاحظات:</b> <?= $model->notes ?: 'لا يوجد أي خصومات التزام' ?>
+    </div>
+</div>
+
+</div><!-- .page -->
+
+<script src="/js-new/jquery-3.3.1.min.js"></script>
+<script src="/js/Tafqeet.js"></script>
+</body>
+</html>

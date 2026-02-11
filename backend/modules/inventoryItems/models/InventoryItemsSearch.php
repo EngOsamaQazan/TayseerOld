@@ -21,8 +21,8 @@ class InventoryItemsSearch extends InventoryItems
     public function rules()
     {
         return [
-            [['id', 'created_at', 'updated_at', 'created_by', 'last_update_by', 'number_row'], 'integer'],
-            [['item_name', 'item_barcode', 'is_deleted'], 'safe'],
+            [['id', 'created_at', 'updated_at', 'created_by', 'last_update_by', 'number_row', 'supplier_id', 'company_id'], 'integer'],
+            [['item_name', 'item_barcode', 'is_deleted', 'status', 'serial_number', 'category'], 'safe'],
         ];
     }
 
@@ -75,9 +75,13 @@ class InventoryItemsSearch extends InventoryItems
             'created_by' => $this->created_by,
             'last_update_by' => $this->last_update_by,
         ]);
-        $query->andFilterWhere(['=', 'item_name', $this->item_name])
-            ->andFilterWhere(['=', 'item_barcode', $this->item_barcode])
-            ->andFilterWhere(['=', 'is_deleted', $this->is_deleted])->andwhere(['is_deleted' => false]);;
+        $query->andFilterWhere(['like', 'item_name', $this->item_name])
+            ->andFilterWhere(['like', 'item_barcode', $this->item_barcode])
+            ->andFilterWhere(['like', 'serial_number', $this->serial_number])
+            ->andFilterWhere(['like', 'category', $this->category])
+            ->andFilterWhere(['status' => $this->status])
+            ->andFilterWhere(['supplier_id' => $this->supplier_id])
+            ->andwhere(['is_deleted' => false]);
 
         return $dataProvider;
     }
@@ -134,9 +138,10 @@ class InventoryItemsSearch extends InventoryItems
             'created_by' => $this->created_by,
             'last_update_by' => $this->last_update_by,
         ]);
-        $query->andFilterWhere(['=', 'item_name', $this->item_name])
-            ->andFilterWhere(['=', 'item_barcode', $this->item_barcode])
-            ->andFilterWhere(['=', 'is_deleted', $this->is_deleted])->andwhere(['is_deleted' => false]);;
+        $query->andFilterWhere(['like', 'item_name', $this->item_name])
+            ->andFilterWhere(['like', 'item_barcode', $this->item_barcode])
+            ->andFilterWhere(['status' => $this->status])
+            ->andwhere(['is_deleted' => false]);
 
         return $query->count();
     }

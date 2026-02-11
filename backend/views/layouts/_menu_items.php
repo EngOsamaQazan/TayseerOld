@@ -5,28 +5,10 @@ use common\helper\Permissions;
 
 $mainMenuItems = [
 
-    [
-        'label' => Yii::t('app', 'Reports'),
-        'items' => [
-            ['label' => Yii::t('app', 'Total customer payments'), 'url' => Url::to(['/reports/reports/total-customer-payments-index']), 'privilege' => Permissions::REPORTS],
-            ['label' => Yii::t('app', 'judiciary report'), 'url' => Url::to(['/reports/reports/judiciary-index']), 'privilege' => Permissions::REPORTS],
-            ['label' => Yii::t('app', 'Follow Up Reports'), 'url' => Url::to(['/reports/reports/index2']), 'privilege' => Permissions::REPORTS],
-            ['label' => Yii::t('app', 'customers judiciary actions Report'), 'url' => Url::to(['/reports/reports/customers-judiciary-actions']), 'privilege' => Permissions::REPORTS],
-
-        ],
-    ],
-    [
-        'label' => Yii::t('app', 'Inventory'),
-        'items' => [
-            ['label' => Yii::t('app', 'Inventory Items'), 'url' => Url::to(['/inventoryItems/inventory-items']), 'privilege' => Permissions::INVENTORY_ITEMS],
-            ['label' => Yii::t('app', 'Stock Locations'), 'url' => Url::to(['/inventoryStockLocations/inventory-stock-locations']), 'privilege' => Permissions::INVENTORY_STOCK_LOCATIONS],
-            ['label' => Yii::t('app', 'suppliers'), 'url' => Url::to(['/inventorySuppliers/inventory-suppliers']), 'privilege' => Permissions::INVENTORY_SUPPLIERS],
-          ['label' => Yii::t('app', 'Item Quantities'), 'url' => Url::to(['/inventoryItemQuantities/inventory-item-quantities']), 'privilege' => Permissions::INVENTORY_ITEMS_QUANTITY],
-          ['label' => Yii::t('app', 'Inventory Invoices'), 'url' => Url::to(['/inventoryInvoices/inventory-invoices']), 'privilege' => Permissions::INVENTORY_INVOICES],
-          ['label' => Yii::t('app', 'Inventory Item Query'), 'url' => Url::to(['/inventoryItems/inventory-items/item-query']), 'privilege' => Permissions::INVENTORY_IEMS_QUERY],
-
-        ],
-    ],
+    /* ═══ التقارير — عنصر واحد يشمل التبويبات ═══ */
+    ['label' => 'التقارير', 'icon' => 'bar-chart', 'url' => ['/reports/reports/index'], 'privilege' => Permissions::REPORTS],
+    /* ═══ إدارة المخزون — عنصر واحد يشمل التبويبات (OR logic) ═══ */
+    ['label' => 'إدارة المخزون', 'icon' => 'cubes', 'url' => ['/inventoryItems/inventory-items'], 'privilege' => [Permissions::INVENTORY_ITEMS, Permissions::INVENTORY_INVOICES, Permissions::INVENTORY_SUPPLIERS, Permissions::INVENTORY_STOCK_LOCATIONS, Permissions::INVENTORY_ITEMS_QUANTITY, Permissions::INVENTORY_IEMS_QUERY]],
     [
         'label' => Yii::t('app', 'legal department'),
         'items' => [
@@ -50,14 +32,8 @@ $mainMenuItems = [
             ['label' => Yii::t('app', 'suspended vacations'), 'icon' => 'dashboard', 'url' => ['/leaveRequest/leave-request/suspended-vacations'], 'privilege' => Permissions::LEAVE_REQUEST],
         ],
     ],
-    [
-        'label' => Yii::t('app', 'متابعة الملفات'),
-        'items' => [
-
-            ['label' => Yii::t('app', 'Document Holder'), 'icon' => 'dashboard', 'url' => ['/documentHolder/document-holder'], 'privilege' => Permissions::DOCUMENT_HOLDER],
-            ['label' => Yii::t('app', 'Manager Document Holder'), 'icon' => 'dashboard', 'url' => ['/documentHolder/document-holder/manager-document-holder'], 'privilege' => Permissions::MANAGER],
-        ],
-    ],
+    /* ═══ قسم الديوان — عنصر واحد يشمل التبويبات (OR logic) ═══ */
+    ['label' => 'قسم الديوان', 'icon' => 'archive', 'url' => ['/diwan/diwan/index'], 'privilege' => [Permissions::DIWAN, Permissions::DIWAN_REPORTS]],
     /* ═══ إدارة الصلاحيات — شاشة موحدة ═══ */
     ['label' => 'إدارة الصلاحيات', 'icon' => 'shield', 'url' => ['/permissions-management'], 'privilege' => [Permissions::PERMISSION, Permissions::ROLE, Permissions::ASSIGNMENT]],
 

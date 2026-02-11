@@ -19,7 +19,7 @@ class JudiciaryActionsSearch extends JudiciaryActions
     {
         return [
             [['id'], 'integer'],
-            [['name'], 'safe'],
+            [['name', 'action_type'], 'safe'],
         ];
     }
 
@@ -55,6 +55,7 @@ class JudiciaryActionsSearch extends JudiciaryActions
 
         $query->andFilterWhere([
             'id' => $this->id,
+            'action_type' => $this->action_type,
         ]);
         $query->andFilterWhere(['like', 'name', $this->name]);
 
@@ -78,6 +79,7 @@ class JudiciaryActionsSearch extends JudiciaryActions
 
         $query->andFilterWhere([
             'id' => $this->id,
+            'action_type' => $this->action_type,
         ]);
 
         $query->andFilterWhere(['like', 'name', $this->name]);

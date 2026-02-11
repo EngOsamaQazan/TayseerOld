@@ -14,6 +14,7 @@ use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
+use yii\data\SqlDataProvider;
 use backend\modules\judiciary\models\Judiciary;
 use backend\modules\reports\models\CustomersJudiciaryActionsSearch;
 
@@ -69,64 +70,97 @@ class ReportsController extends Controller
      */
     public function actionIndex()
     {
-        $totalUnpaidInstallment = Yii::$app->db->createCommand("SELECT SUM(Income.total) FROM Income JOIN customers ON Income.customer_id = customers.id WHERE Income.is_made_payment = 0 AND customers.status =1");
-        $totalDueInstallment = Yii::$app->db->createCommand("SELECT SUM(Income.total) FROM Income JOIN customers ON Income.customer_id = customers.id WHERE Income.is_made_payment = 0 AND customers.status =1 AND Income.date < LAST_DAY(CURDATE())");
-        $totalPaidInstallment = Yii::$app->db->createCommand("SELECT SUM(Income.total) FROM Income WHERE Income.is_made_payment = 1");
-        $totalInstallment = Yii::$app->db->createCommand("SELECT SUM(Income.total) FROM Income");
+        $db = Yii::$app->db;
+        $request = Yii::$app->request;
+
+        // فلتر الشهر والسنة — الافتراضي: الشهر الحالي
+        $month = (int)$request->get('month', date('n'));
+        $year  = (int)$request->get('year', date('Y'));
+
+        $dateFilter = "YEAR(i.date) = :yr AND MONTH(i.date) = :mo";
+        $params = [':yr' => $year, ':mo' => $month];
+
+        try {
+            $totalIncome = $db->createCommand(
+                "SELECT COALESCE(SUM(i.amount), 0) FROM os_income i WHERE $dateFilter", $params
+            )->queryScalar();
+        } catch (\Exception $e) { $totalIncome = 0; }
+
+        try {
+            $incomeCount = $db->createCommand(
+                "SELECT COUNT(*) FROM os_income i WHERE $dateFilter", $params
+            )->queryScalar();
+        } catch (\Exception $e) { $incomeCount = 0; }
+
+        try {
+            $followUpCount = $db->createCommand(
+                "SELECT COUNT(*) FROM os_follow_up f WHERE YEAR(f.date_time) = :yr AND MONTH(f.date_time) = :mo", $params
+            )->queryScalar();
+        } catch (\Exception $e) { $followUpCount = 0; }
+
+        try {
+            $judiciaryCount = $db->createCommand(
+                "SELECT COUNT(*) FROM os_judiciary"
+            )->queryScalar();
+        } catch (\Exception $e) { $judiciaryCount = 0; }
+
         return $this->render('index', [
-            'totalUnpaidInstallment' => $totalUnpaidInstallment->queryScalar(),
-            'totalDueInstallment' => $totalDueInstallment->queryScalar(),
-            'totalPaidInstallment' => $totalPaidInstallment->queryScalar(),
-            'totalInstallment' => $totalInstallment->queryScalar(),
+            'totalIncome' => $totalIncome,
+            'incomeCount' => $incomeCount,
+            'followUpCount' => $followUpCount,
+            'judiciaryCount' => $judiciaryCount,
+            'selectedMonth' => $month,
+            'selectedYear' => $year,
         ]);
     }
 
     public function actionMonthlyInstallment()
     {
-
-        $monthly_installment = "SELECT SUM(Income.total) AS SUM ,YEAR(Income.date) AS YEAR, MONTH(Income.date) AS MONTH FROM Income JOIN customers ON Income.customer_id = customers.id WHERE Income.is_made_payment = 0 AND customers.status = 1 GROUP BY YEAR(Income.date), MONTH(Income.date)";
-        $count = count(Yii::$app->db->createCommand($monthly_installment)->queryAll());
-        $monthly_installment_dataProvider = new SqlDataProvider([
-            'sql' => $monthly_installment,
+        $sql = "SELECT COALESCE(SUM(i.amount), 0) AS SUM, YEAR(i.date) AS YEAR, MONTH(i.date) AS MONTH 
+                FROM os_income i 
+                GROUP BY YEAR(i.date), MONTH(i.date) 
+                ORDER BY YEAR DESC, MONTH DESC";
+        $count = count(Yii::$app->db->createCommand($sql)->queryAll());
+        $dataProvider = new SqlDataProvider([
+            'sql' => $sql,
             'totalCount' => $count,
         ]);
         return $this->render('monthly_installment', [
-            'monthly_installment' => $monthly_installment_dataProvider,
+            'monthly_installment' => $dataProvider,
         ]);
     }
 
     public function actionMonthlyInstallmentBeerUser()
     {
-        $monthly_installment_monthly_beer_user = "SELECT SUM(Income.total) AS SUM ,YEAR(Income.date) AS YEAR, MONTH(Income.date) AS MONTH, customers.name AS NAME FROM Income 
-                                JOIN customers 
-                                ON customers.id = Income.customer_id
-                                WHERE Income.is_made_payment = 0
-                                AND customers.`status` =1
-                                GROUP BY YEAR(Income.date), MONTH(Income.date),customers.id";
-        $count = count(Yii::$app->db->createCommand($monthly_installment_monthly_beer_user)->queryAll());
-        $monthly_installment_beer_user_dataProvider = new SqlDataProvider([
-            'sql' => $monthly_installment_monthly_beer_user,
+        $sql = "SELECT COALESCE(SUM(i.amount), 0) AS SUM, YEAR(i.date) AS YEAR, MONTH(i.date) AS MONTH, i._by AS NAME 
+                FROM os_income i 
+                WHERE i._by IS NOT NULL AND i._by != ''
+                GROUP BY YEAR(i.date), MONTH(i.date), i._by 
+                ORDER BY YEAR DESC, MONTH DESC";
+        $count = count(Yii::$app->db->createCommand($sql)->queryAll());
+        $dataProvider = new SqlDataProvider([
+            'sql' => $sql,
             'totalCount' => $count,
         ]);
         return $this->render('monthly_installment_monthly_beer_user', [
-            'monthly_installment_monthly_beer_user' => $monthly_installment_beer_user_dataProvider,
+            'monthly_installment_monthly_beer_user' => $dataProvider,
         ]);
     }
 
     public function actionDueInstallment()
     {
-        $due_installment = "SELECT * , SUM(Income.total) as total_sum,COUNT(Income.id) as total_installment FROM Income
-                            JOIN customers on customers.id =Income.customer_id
-                            WHERE Income.is_made_payment = 0 AND Income.date < CURDATE()
-                            AND customers.status = 1
-                            GROUP BY customers.id";
-        $count = count(Yii::$app->db->createCommand($due_installment)->queryAll());
-        $due_installment_dataProvider = new SqlDataProvider([
-            'sql' => $due_installment,
+        $sql = "SELECT i.*, COALESCE(SUM(i.amount), 0) as total_sum, COUNT(i.id) as total_installment 
+                FROM os_income i 
+                WHERE i.date < CURDATE()
+                GROUP BY i._by 
+                ORDER BY total_sum DESC";
+        $count = count(Yii::$app->db->createCommand($sql)->queryAll());
+        $dataProvider = new SqlDataProvider([
+            'sql' => $sql,
             'totalCount' => $count,
         ]);
         return $this->render('due_installment', [
-            'due_installment' => $due_installment_dataProvider,
+            'due_installment' => $dataProvider,
         ]);
     }
 
@@ -135,14 +169,18 @@ class ReportsController extends Controller
         if ($date == null) {
             $date = date("Y-m-d");
         }
-        $this_month_installments = "SELECT * FROM Income JOIN customers on customers.id =Income.customer_id WHERE Income.is_made_payment = 0 AND customers.status = 1 AND (Income.date between DATE_FORMAT('" . $date . "','%Y-%m-01') AND LAST_DAY('" . $date . "')) GROUP BY customers.id";
-        $count = count(Yii::$app->db->createCommand($this_month_installments)->queryAll());
-        $this_month_installments_dataProvider = new SqlDataProvider([
-            'sql' => $this_month_installments,
+        $sql = "SELECT i.* FROM os_income i 
+                WHERE i.date BETWEEN DATE_FORMAT(:dt,'%Y-%m-01') AND LAST_DAY(:dt2)
+                ORDER BY i.date DESC";
+        $allRows = Yii::$app->db->createCommand($sql, [':dt' => $date, ':dt2' => $date])->queryAll();
+        $count = count($allRows);
+        $dataProvider = new SqlDataProvider([
+            'sql' => $sql,
+            'params' => [':dt' => $date, ':dt2' => $date],
             'totalCount' => $count,
         ]);
         return $this->render('this_month_installments', [
-            'this_month_installments' => $this_month_installments_dataProvider,
+            'this_month_installments' => $dataProvider,
         ]);
     }
 
@@ -193,32 +231,65 @@ class ReportsController extends Controller
     public function actionJudiciaryIndex()
     {
         $request = Yii::$app->request->queryParams;
-        $db = Yii::$app->db;
         $searchModel = new JudiciarySearch();
-        $search = $db->cache(function ($db) use ($searchModel, $request) {
 
-            return $searchModel->reportSearch($request);
-        });
+        // التحقق هل تم تطبيق فلتر فعلاً
+        $hasFilter = false;
+        $filterKeys = ['court_id', 'type_id', 'lawyer_id', 'contract_id', 'from_income_date', 'to_income_date', 'year', 'judiciary_number', 'lawyer_cost', 'case_cost'];
+        $searchClass = (new \ReflectionClass($searchModel))->getShortName();
+        foreach ($filterKeys as $key) {
+            if (!empty($request[$searchClass][$key] ?? null)) {
+                $hasFilter = true;
+                break;
+            }
+        }
 
-
-        $dataProvider = $search['dataProvider'];
-        $counter = $search['count'];
+        if ($hasFilter) {
+            $db = Yii::$app->db;
+            $search = $db->cache(function ($db) use ($searchModel, $request) {
+                return $searchModel->reportSearch($request);
+            });
+            $dataProvider = $search['dataProvider'];
+            $counter = $search['count'];
+        } else {
+            $dataProvider = new \yii\data\ArrayDataProvider(['allModels' => []]);
+            $counter = 0;
+        }
 
         return $this->render('/judiciary/index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
             'counter' => $counter,
+            'hasFilter' => $hasFilter,
         ]);
     }
 
     public function actionCustomersJudiciaryActions()
     {
+        $request = Yii::$app->request->queryParams;
         $searchModel = new CustomersJudiciaryActionsSearch();
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        // التحقق هل تم تطبيق فلتر فعلاً
+        $hasFilter = false;
+        $filterKeys = ['customer_id', 'customer_name', 'court_name'];
+        $searchClass = (new \ReflectionClass($searchModel))->getShortName();
+        foreach ($filterKeys as $key) {
+            if (!empty($request[$searchClass][$key] ?? null)) {
+                $hasFilter = true;
+                break;
+            }
+        }
+
+        if ($hasFilter) {
+            $dataProvider = $searchModel->search($request);
+        } else {
+            $dataProvider = new \yii\data\ArrayDataProvider(['allModels' => []]);
+        }
 
         return $this->render('/customers-judiciary-actions-report/index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
+            'hasFilter' => $hasFilter,
         ]);
     }
 }

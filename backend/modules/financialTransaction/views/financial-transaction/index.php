@@ -109,29 +109,29 @@ $dataProvider->query->with(['company']);
             ]) ?>
         </div>
         <?php endif ?>
-        <?php if ($canExport): ?>
+        <?php if (Yii::$app->user->can(Permissions::FIN_IMPORT)): ?>
         <div class="fin-act-group">
-            <?php if (Yii::$app->user->can(Permissions::FIN_IMPORT)): ?>
             <?= Html::a('<i class="fa fa-file-excel-o"></i> <span>استيراد</span>', ['financial-transaction/import-file'], [
                 'class' => 'fin-btn fin-btn--import', 'title' => 'استيراد حركات من ملف Excel',
             ]) ?>
-            <?php endif ?>
-            <?php if (Yii::$app->user->can(Permissions::FIN_TRANSFER)): ?>
+        </div>
+        <?php endif ?>
+        <?php if (Yii::$app->user->can(Permissions::FIN_TRANSFER)): ?>
+        <div class="fin-act-group">
             <?= Html::a('<i class="fa fa-share-square-o"></i> <span>ترحيل دفعات</span> <b>' . $dataTransfer . '</b>', ['financial-transaction/transfer-data'], [
                 'class' => 'fin-btn fin-btn--transfer', 'title' => 'ترحيل الدفعات الدائنة',
             ]) ?>
             <?= Html::a('<i class="fa fa-share-square-o"></i> <span>ترحيل مصاريف</span> <b>' . $dataTransferExpenses . '</b>', ['financial-transaction/transfer-data-to-expenses'], [
                 'class' => 'fin-btn fin-btn--expense', 'title' => 'ترحيل المصاريف المدينة',
             ]) ?>
-            <?php endif ?>
         </div>
+        <?php endif ?>
         <?php if (Yii::$app->user->can(Permissions::FIN_DELETE)): ?>
         <div class="fin-act-group">
             <button type="button" class="fin-btn fin-btn--undo" id="undoLastImportBtn" title="حذف جميع حركات آخر استيراد">
                 <i class="fa fa-undo"></i> <span>تراجع عن آخر استيراد</span>
             </button>
         </div>
-        <?php endif ?>
         <?php endif ?>
     </section>
 

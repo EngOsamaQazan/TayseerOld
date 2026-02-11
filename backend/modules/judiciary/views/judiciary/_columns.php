@@ -25,17 +25,16 @@ return [
         'value' => fn($m) => Html::a($m->contract_id, ['/followUp/follow-up/index', 'contract_id' => $m->contract_id], ['class' => 'text-burgundy', 'style' => 'font-weight:600']),
     ],
 
-    /* العميل */
+    /* العميل — يستخدم العلاقة المحمّلة مسبقاً (Eager Loaded) بدلاً من استعلام لكل سطر */
     [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'العميل',
         'value' => function ($m) {
-            $customers = \backend\modules\customers\models\ContractsCustomers::find()
-                ->select(['c.name'])->alias('cc')
-                ->innerJoin('{{%customers}} c', 'c.id=cc.customer_id')
-                ->where(['cc.contract_id' => $m->contract_id])
-                ->column();
-            return implode('، ', $customers) ?: '—';
+            $names = [];
+            foreach ($m->customersAndGuarantor as $customer) {
+                $names[] = $customer->name;
+            }
+            return implode('، ', $names) ?: '—';
         },
     ],
 

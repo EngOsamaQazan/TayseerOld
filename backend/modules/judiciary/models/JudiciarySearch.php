@@ -56,103 +56,103 @@ class JudiciarySearch extends Judiciary
      */
     public function search($params)
     {
-        $query = Judiciary::find()->distinct();
-        $query->joinWith('contract');
-        $query->joinWith('lawyer');
-        $query->joinWith('court');
-        $query->joinWith("customersAndGuarantor");
-        $query->innerJoin("{{%jobs}}", '{{%customers}}.job_title = {{%jobs}}.id');
-        $query->innerJoin("{{%jobs_type}}", '{{%jobs}}.job_type = {{%jobs_type}}.id');
+        // ─── استعلام أساسي خفيف بدون JOINs غير ضرورية ───
+        $query = Judiciary::find()
+            ->alias('j')
+            ->with(['court', 'lawyer', 'type', 'customersAndGuarantor']); // Eager load للعرض
 
-        // Subquery to find the last action for each judiciary
-        $subQuery = (new Query())
-            ->select(['judiciary_id', 'max_action_id' => 'MAX(judiciary_actions_id)'])
-            ->from('{{%judiciary_customers_actions}}')
-            ->groupBy('judiciary_id');
+        // ─── شرط أساسي: غير المحذوفة ───
+        $query->andWhere(['j.is_deleted' => false]);
 
-        // Join the main query with the subquery
-        $query->leftJoin(['lastAction' => $subQuery], '{{%judiciary}}.id = lastAction.judiciary_id');
-
-        // Adjust the join with judiciary_actions to only include the last action
-        $query->leftJoin('{{%judiciary_actions}}', '{{%judiciary_actions}}.id = lastAction.max_action_id');
-
-        if (!empty($params['JudiciarySearch']['job_title'])) {
-            $query->andWhere(['{{%customers}}.job_title' => $params['JudiciarySearch']['job_title']]);
-        }
-
-        if (!empty($params['JudiciarySearch']['jobs_type'])) {
-            $query->andWhere(['{{%jobs_type}}.id' => $params['JudiciarySearch']['jobs_type']]);
-        }
-
-        if (!empty($params['JudiciarySearch']['lawyer_cost'])) {
-            $query->andWhere(['{{%judiciary}}.lawyer_cost' => $params['JudiciarySearch']['lawyer_cost']]);
-        }
-
-        if (!empty($params['JudiciarySearch']['case_cost'])) {
-            $query->andWhere(['{{%judiciary}}.case_cost' => $params['JudiciarySearch']['case_cost']]);
-        }
-
+        // ─── فلاتر مباشرة على أعمدة os_judiciary (بدون JOIN) ───
         if (!empty($params['JudiciarySearch']['court_id'])) {
-            $query->andWhere(['{{%court}}.id' => $params['JudiciarySearch']['court_id']]);
+            $query->andWhere(['j.court_id' => $params['JudiciarySearch']['court_id']]);
         }
 
         if (!empty($params['JudiciarySearch']['contract_id'])) {
-            $query->andWhere(['{{%contracts}}.id' => $params['JudiciarySearch']['contract_id']]);
+            $query->andWhere(['j.contract_id' => $params['JudiciarySearch']['contract_id']]);
         }
 
-        if (!empty($params['JudiciarySearch']['from_income_date'])) {
-            $query->where(['>=', 'income_date', $params['JudiciarySearch']['from_income_date']]);
-        }
-        if (!empty($params['JudiciarySearch']['to_income_date'])) {
-            $query->where(['<=', 'income_date', $params['JudiciarySearch']['to_income_date']]);
+        if (!empty($params['JudiciarySearch']['lawyer_cost'])) {
+            $query->andWhere(['j.lawyer_cost' => $params['JudiciarySearch']['lawyer_cost']]);
         }
 
-        if (!empty($params['JudiciarySearch']['year'])) {
-            $query->andWhere(['os_judiciary.year' => $params['JudiciarySearch']['year']]);
-        }
-
-
-        if (!empty($params['JudiciarySearch']['status'])) {
-            if ($params['JudiciarySearch']['status'] == 'Available') {
-                $query->andWhere(['not in', '{{%contracts}}.status', ['canceled', 'finished']]);
-            } elseif ($params['JudiciarySearch']['status'] == 'unAvailable') {
-                $query->andWhere(['in', '{{%contracts}}.status', ['canceled', 'finished']]);
-            }
-        }
-
-        if (!empty($params['JudiciarySearch']['judiciary_actions'])) {
-            $query->andWhere(['{{%judiciary_actions}}.id' => $params['JudiciarySearch']['judiciary_actions']]);
-        }
-
-        if (!empty($params['JudiciarySearch']['number_row'])) {
-            $dataProvider = new ActiveDataProvider([
-                'query' => $query,
-                'pagination' => ['pageSize' => $params['JudiciarySearch']['number_row']],
-            ]);
-        } else {
-            $dataProvider = new ActiveDataProvider(['query' => $query]);
+        if (!empty($params['JudiciarySearch']['case_cost'])) {
+            $query->andWhere(['j.case_cost' => $params['JudiciarySearch']['case_cost']]);
         }
 
         if (!empty($params['JudiciarySearch']['judiciary_number'])) {
-            $query->andWhere(['{{%judiciary}}.judiciary_number' => $params['JudiciarySearch']['judiciary_number']]);
+            $query->andWhere(['j.judiciary_number' => $params['JudiciarySearch']['judiciary_number']]);
         }
 
-        $query->andWhere(['os_judiciary.is_deleted' => false]);
+        if (!empty($params['JudiciarySearch']['year'])) {
+            $query->andWhere(['j.year' => $params['JudiciarySearch']['year']]);
+        }
 
+        // فلتر التاريخ (تم إصلاح باغ: andWhere بدل where)
+        if (!empty($params['JudiciarySearch']['from_income_date'])) {
+            $query->andWhere(['>=', 'j.income_date', $params['JudiciarySearch']['from_income_date']]);
+        }
+        if (!empty($params['JudiciarySearch']['to_income_date'])) {
+            $query->andWhere(['<=', 'j.income_date', $params['JudiciarySearch']['to_income_date']]);
+        }
 
+        // ─── JOIN فقط عند الحاجة: فلتر حالة العقد ───
+        if (!empty($params['JudiciarySearch']['status'])) {
+            $query->innerJoin('{{%contracts}} ct', 'ct.id = j.contract_id');
+            if ($params['JudiciarySearch']['status'] == 'Available') {
+                $query->andWhere(['not in', 'ct.status', ['canceled', 'finished']]);
+            } elseif ($params['JudiciarySearch']['status'] == 'unAvailable') {
+                $query->andWhere(['in', 'ct.status', ['canceled', 'finished']]);
+            }
+        }
 
+        // ─── JOIN فقط عند الحاجة: فلتر الوظيفة ───
+        if (!empty($params['JudiciarySearch']['job_title']) || !empty($params['JudiciarySearch']['jobs_type'])) {
+            $query->innerJoin('{{%contracts_customers}} cc', 'cc.contract_id = j.contract_id');
+            $query->innerJoin('{{%customers}} cust', 'cust.id = cc.customer_id');
+            $query->innerJoin('{{%jobs}} jb', 'cust.job_title = jb.id');
+            $query->innerJoin('{{%jobs_type}} jt', 'jb.job_type = jt.id');
+            $query->distinct();
+
+            if (!empty($params['JudiciarySearch']['job_title'])) {
+                $query->andWhere(['cust.job_title' => $params['JudiciarySearch']['job_title']]);
+            }
+            if (!empty($params['JudiciarySearch']['jobs_type'])) {
+                $query->andWhere(['jt.id' => $params['JudiciarySearch']['jobs_type']]);
+            }
+        }
+
+        // ─── JOIN فقط عند الحاجة: فلتر آخر إجراء ───
+        if (!empty($params['JudiciarySearch']['judiciary_actions'])) {
+            $subQuery = (new Query())
+                ->select(['judiciary_id', 'max_action_id' => 'MAX(judiciary_actions_id)'])
+                ->from('{{%judiciary_customers_actions}}')
+                ->groupBy('judiciary_id');
+            $query->leftJoin(['lastAction' => $subQuery], 'j.id = lastAction.judiciary_id');
+            $query->leftJoin('{{%judiciary_actions}} ja', 'ja.id = lastAction.max_action_id');
+            $query->andWhere(['ja.id' => $params['JudiciarySearch']['judiciary_actions']]);
+        }
+
+        // ─── Pagination مع حد افتراضي ───
+        $pageSize = !empty($params['JudiciarySearch']['number_row'])
+            ? (int) $params['JudiciarySearch']['number_row']
+            : 20;
+
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => ['pageSize' => $pageSize],
+            'sort' => ['defaultOrder' => ['id' => SORT_DESC]],
+        ]);
 
         $this->load($params);
 
         if (!$this->validate()) {
-            // Uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
-            return $dataProvider;
+            return ['dataProvider' => $dataProvider, 'count' => 0];
         }
 
-        // Add more filtering conditions here if needed
-
-        return ['dataProvider' => $dataProvider, 'count' => $query->count()];
+        // استخدام totalCount من DataProvider بدل count() منفصل
+        return ['dataProvider' => $dataProvider, 'count' => $dataProvider->totalCount];
     }
 
     public function reportSearch($params)

@@ -36,6 +36,8 @@ $clonePermsUrl      = Url::to(['permissions-management/clone-permissions']);
 $revokeAllUrl       = Url::to(['permissions-management/revoke-all']);
 $toggleUserUrl      = Url::to(['permissions-management/toggle-user-status']);
 $seedRolesUrl       = Url::to(['permissions-management/seed-roles']);
+$getRolePermsUrl    = Url::to(['permissions-management/get-role-permissions']);
+$ensurePermsUrl     = Url::to(['permissions-management/ensure-permissions']);
 
 /* ─── تحويل المجموعات إلى JSON للجافاسكربت ─── */
 $groupsJson = json_encode($groups, JSON_UNESCAPED_UNICODE);
@@ -883,17 +885,21 @@ $js = <<<'JSBLOCK'
     $(document).on('click', '.btn-edit-role', function(e){
         e.stopPropagation();
         var roleName = $(this).data('role');
-        /* تحميل بيانات الدور */
         showToast('جارٍ تحميل بيانات الدور...', 'info');
-        /* نعتمد على بيانات auth_item_child لجلب الصلاحيات */
         $.ajax({
-            url: GET_USER_PERMS_URL_PLACEHOLDER.replace('get-user-permissions', 'get-user-permissions'),
+            url: GET_ROLE_PERMS_URL_PLACEHOLDER,
             method: 'GET',
-            data: { id: 0 }, /* dummy — سنستخدم endpoint مخصص لاحقاً */
-            success: function(){
-                /* في الوقت الحالي نفتح المودال بدون صلاحيات محملة */
-                openRoleModal('تعديل الدور: ' + roleName, roleName, '', []);
-            }
+            data: { name: roleName },
+            dataType: 'json',
+            success: function(resp){
+                if (resp.success) {
+                    var role = resp.role || {};
+                    openRoleModal('تعديل الدور: ' + roleName, roleName, role.description || '', resp.permissions || []);
+                } else {
+                    showToast(resp.message || 'خطأ في تحميل الدور', 'error');
+                }
+            },
+            error: function(){ showToast('خطأ في الاتصال بالخادم', 'error'); }
         });
     });
 
@@ -1048,6 +1054,8 @@ $js = str_replace('CLONE_PERMS_URL_PLACEHOLDER', "'" . $clonePermsUrl . "'", $js
 $js = str_replace('REVOKE_ALL_URL_PLACEHOLDER', "'" . $revokeAllUrl . "'", $js);
 $js = str_replace('TOGGLE_USER_URL_PLACEHOLDER', "'" . $toggleUserUrl . "'", $js);
 $js = str_replace('SEED_ROLES_URL_PLACEHOLDER', "'" . $seedRolesUrl . "'", $js);
+$js = str_replace('GET_ROLE_PERMS_URL_PLACEHOLDER', "'" . $getRolePermsUrl . "'", $js);
+$js = str_replace('ENSURE_PERMS_URL_PLACEHOLDER', "'" . $ensurePermsUrl . "'", $js);
 
 $this->registerJs($js, \yii\web\View::POS_READY);
 ?>

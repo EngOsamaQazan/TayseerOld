@@ -1,103 +1,179 @@
 <?php
 /**
- * بحث متقدم - العقود
+ * بحث متقدم — العقود — V2
+ * Advanced Search — Contracts — V2 (Grid layout)
  */
+
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
+use yii\helpers\Url;
 use yii\widgets\ActiveForm;
 use kartik\date\DatePicker;
 use kartik\select2\Select2;
 
 $cache = Yii::$app->cache;
-$p = Yii::$app->params;
-$d = $p['time_duration'];
-$db = Yii::$app->db;
+$p     = Yii::$app->params;
+$d     = $p['time_duration'];
+$db    = Yii::$app->db;
 
-$users = $cache->getOrSet($p['key_users'], fn() => $db->createCommand($p['users_query'])->queryAll(), $d);
-$customersName = $cache->getOrSet($p['key_customers_name'], fn() => $db->createCommand($p['customers_name_query'])->queryAll(), $d);
+$users   = $cache->getOrSet($p['key_users'], fn() => $db->createCommand($p['users_query'])->queryAll(), $d);
 $jobType = $cache->getOrSet($p['key_job_type'], fn() => $db->createCommand($p['job_type_query'])->queryAll(), $d);
-$jobs = $cache->getOrSet($p['key_jobs'], fn() => $db->createCommand($p['jobs_query'])->queryAll(), $d);
 
 $statusList = [
-    '' => '-- جميع الحالات --', 'active' => 'نشط', 'pending' => 'معلّق',
-    'legal_department' => 'قانوني', 'judiciary' => 'قضاء', 'settlement' => 'تسوية',
-    'finished' => 'منتهي', 'canceled' => 'ملغي', 'refused' => 'مرفوض',
+    '' => '-- جميع الحالات --',
+    'active' => 'نشط',
+    'pending' => 'معلّق',
+    'legal_department' => 'قانوني',
+    'judiciary' => 'قضاء',
+    'settlement' => 'تسوية',
+    'finished' => 'منتهي',
+    'canceled' => 'ملغي',
+    'refused' => 'مرفوض',
 ];
 ?>
 
-<div class="box box-primary jadal-search-box">
-    <div class="box-header with-border">
-        <h3 class="box-title"><i class="fa fa-search"></i> بحث في العقود</h3>
-        <div class="box-tools pull-left">
-            <button type="button" class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
-        </div>
+<?php $form = ActiveForm::begin([
+    'id'      => 'contracts-search',
+    'method'  => 'get',
+    'action'  => ['index'],
+    'options' => ['class' => 'ct-search-form'],
+]) ?>
+
+<div class="ct-filter-grid">
+
+    <!-- رقم العقد -->
+    <div class="ct-filter-group">
+        <label for="contractssearch-id">رقم العقد</label>
+        <?= $form->field($model, 'id', ['template' => '{input}'])->textInput([
+            'placeholder' => 'أدخل رقم العقد',
+            'type' => 'number',
+            'class' => 'form-control',
+            'aria-label' => 'رقم العقد',
+        ]) ?>
     </div>
-    <div class="box-body">
-        <?php $form = ActiveForm::begin(['id' => 'contracts-search', 'method' => 'get', 'action' => ['index'], 'options' => ['class' => 'jadal-search-form']]) ?>
 
-        <div class="row">
-            <div class="col-md-2">
-                <?= $form->field($model, 'id')->textInput(['placeholder' => 'رقم العقد', 'type' => 'number'])->label('رقم العقد') ?>
-            </div>
-            <div class="col-md-3">
-                <?= $form->field($model, 'customer_name')->widget(Select2::class, [
-                    'data' => ArrayHelper::map($customersName, 'name', 'name'),
-                    'options' => ['placeholder' => 'اسم العميل'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ])->label('العميل') ?>
-            </div>
-            <div class="col-md-2">
-                <?= $form->field($model, 'status')->dropDownList($statusList)->label('الحالة') ?>
-            </div>
-            <div class="col-md-2">
-                <?= $form->field($model, 'from_date')->widget(DatePicker::class, [
-                    'options' => ['placeholder' => 'من تاريخ'],
-                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
-                ])->label('من') ?>
-            </div>
-            <div class="col-md-2">
-                <?= $form->field($model, 'to_date')->widget(DatePicker::class, [
-                    'options' => ['placeholder' => 'إلى تاريخ'],
-                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
-                ])->label('إلى') ?>
-            </div>
-        </div>
+    <!-- العميل -->
+    <div class="ct-filter-group" style="grid-column: span 2">
+        <label for="contractssearch-customer_name">العميل</label>
+        <?= $form->field($model, 'customer_name', ['template' => '{input}'])->widget(Select2::class, [
+            'initValueText' => $model->customer_name,
+            'options' => [
+                'placeholder' => 'ابحث بالاسم أو الرقم الوطني...',
+                'aria-label' => 'بحث العميل',
+            ],
+            'pluginOptions' => [
+                'allowClear' => true,
+                'dir' => 'rtl',
+                'minimumInputLength' => 1,
+                'ajax' => [
+                    'url' => Url::to(['/customers/customers/search-customers', 'mode' => 'name']),
+                    'dataType' => 'json',
+                    'delay' => 250,
+                    'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
+                    'processResults' => 'function(d){return d}',
+                    'cache' => true,
+                ],
+                'templateResult' => new \yii\web\JsExpression(
+                    "function(i){if(i.loading)return i.text;" .
+                    "var h='<div><b>'+i.text+'</b>';" .
+                    "if(i.id_number)h+=' <small style=\"color:#64748b\">· '+i.id_number+'</small>';" .
+                    "if(i.phone)h+=' <small style=\"color:#0891b2\">☎ '+i.phone+'</small>';" .
+                    "return $(h+'</div>')}"
+                ),
+                'templateSelection' => new \yii\web\JsExpression("function(i){return i.text||i.id}"),
+            ],
+        ]) ?>
+    </div>
 
-        <div class="row">
-            <div class="col-md-2">
-                <?= $form->field($model, 'seller_id')->widget(Select2::class, [
-                    'data' => ArrayHelper::map($users, 'id', 'username'),
-                    'options' => ['placeholder' => 'البائع'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ])->label('البائع') ?>
-            </div>
-            <div class="col-md-2">
-                <?= $form->field($model, 'followed_by')->widget(Select2::class, [
-                    'data' => ArrayHelper::map($users, 'id', 'username'),
-                    'options' => ['placeholder' => 'المتابع'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ])->label('المتابع') ?>
-            </div>
-            <div class="col-md-2">
-                <?= $form->field($model, 'phone_number')->textInput(['placeholder' => 'الهاتف'])->label('الهاتف') ?>
-            </div>
-            <div class="col-md-2">
-                <?= $form->field($model, 'job_Type')->widget(Select2::class, [
-                    'data' => ArrayHelper::map($jobType, 'id', 'name'),
-                    'options' => ['placeholder' => 'نوع الوظيفة'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ])->label('نوع الوظيفة') ?>
-            </div>
-            <div class="col-md-1">
-                <?= $form->field($model, 'number_row')->textInput(['placeholder' => 'عدد', 'type' => 'number'])->label('نتائج') ?>
-            </div>
-            <div class="col-md-2">
-                <div class="form-group" style="margin-top:24px">
-                    <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class' => 'btn btn-primary btn-block']) ?>
-                </div>
-            </div>
-        </div>
+    <!-- الحالة -->
+    <div class="ct-filter-group">
+        <label for="contractssearch-status">الحالة</label>
+        <?= $form->field($model, 'status', ['template' => '{input}'])->dropDownList($statusList, [
+            'class' => 'form-control',
+            'aria-label' => 'الحالة',
+        ]) ?>
+    </div>
 
-        <?php ActiveForm::end() ?>
+    <!-- من تاريخ -->
+    <div class="ct-filter-group">
+        <label>من تاريخ</label>
+        <?= $form->field($model, 'from_date', ['template' => '{input}'])->widget(DatePicker::class, [
+            'options' => ['placeholder' => 'من تاريخ', 'aria-label' => 'من تاريخ', 'autocomplete' => 'off'],
+            'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd', 'todayHighlight' => true],
+        ]) ?>
+    </div>
+
+    <!-- إلى تاريخ -->
+    <div class="ct-filter-group">
+        <label>إلى تاريخ</label>
+        <?= $form->field($model, 'to_date', ['template' => '{input}'])->widget(DatePicker::class, [
+            'options' => ['placeholder' => 'إلى تاريخ', 'aria-label' => 'إلى تاريخ', 'autocomplete' => 'off'],
+            'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd', 'todayHighlight' => true],
+        ]) ?>
+    </div>
+
+    <!-- البائع -->
+    <div class="ct-filter-group">
+        <label>البائع</label>
+        <?= $form->field($model, 'seller_id', ['template' => '{input}'])->widget(Select2::class, [
+            'data' => ArrayHelper::map($users, 'id', 'username'),
+            'options' => ['placeholder' => 'اختر البائع', 'aria-label' => 'البائع'],
+            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+        ]) ?>
+    </div>
+
+    <!-- المتابع -->
+    <div class="ct-filter-group">
+        <label>المتابع</label>
+        <?= $form->field($model, 'followed_by', ['template' => '{input}'])->widget(Select2::class, [
+            'data' => ArrayHelper::map($users, 'id', 'username'),
+            'options' => ['placeholder' => 'اختر المتابع', 'aria-label' => 'المتابع'],
+            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+        ]) ?>
+    </div>
+
+    <!-- الهاتف -->
+    <div class="ct-filter-group">
+        <label>الهاتف</label>
+        <?= $form->field($model, 'phone_number', ['template' => '{input}'])->textInput([
+            'placeholder' => 'رقم الهاتف',
+            'class' => 'form-control',
+            'aria-label' => 'الهاتف',
+        ]) ?>
+    </div>
+
+    <!-- نوع الوظيفة -->
+    <div class="ct-filter-group">
+        <label>نوع الوظيفة</label>
+        <?= $form->field($model, 'job_Type', ['template' => '{input}'])->widget(Select2::class, [
+            'data' => ArrayHelper::map($jobType, 'id', 'name'),
+            'options' => ['placeholder' => 'نوع الوظيفة', 'aria-label' => 'نوع الوظيفة'],
+            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+        ]) ?>
+    </div>
+
+    <!-- عدد النتائج -->
+    <div class="ct-filter-group">
+        <label>نتائج/صفحة</label>
+        <?= $form->field($model, 'number_row', ['template' => '{input}'])->textInput([
+            'placeholder' => '20',
+            'type' => 'number',
+            'class' => 'form-control',
+            'min' => 5,
+            'max' => 200,
+            'aria-label' => 'عدد النتائج في الصفحة',
+        ]) ?>
+    </div>
+
+    <!-- Actions -->
+    <div class="ct-filter-actions">
+        <?= Html::submitButton('<i class="fa fa-search"></i> بحث', [
+            'class' => 'ct-btn ct-btn-primary',
+        ]) ?>
+        <a href="<?= Url::to(['index']) ?>" class="ct-btn ct-btn-outline">
+            <i class="fa fa-refresh"></i> <span class="ct-hide-xs">إعادة تعيين</span>
+        </a>
     </div>
 </div>
+
+<?php ActiveForm::end() ?>

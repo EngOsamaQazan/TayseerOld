@@ -156,8 +156,7 @@ return [
             'all' => function ($url, $m, $key) use ($isManager) {
                 $items = [
                     ['label' => '<i class="fa fa-pencil text-primary"></i> تعديل', 'url' => ['update', 'id' => $key]],
-                    ['label' => '<i class="fa fa-print text-info"></i> طباعة العقد', 'url' => ['print-first-page', 'id' => $key]],
-                    ['label' => '<i class="fa fa-file-text text-warning"></i> طباعة الكمبيالة', 'url' => ['print-second-page', 'id' => $key]],
+                    ['label' => '<i class="fa fa-print text-info"></i> طباعة العقد والكمبيالات', 'url' => ['print-preview', 'id' => $key]],
                     '<li class="divider"></li>',
                     ['label' => '<i class="fa fa-money text-success"></i> الدفعات', 'url' => ['/contractInstallment/contract-installment', 'contract_id' => $key]],
                     ['label' => '<i class="fa fa-comments text-primary"></i> المتابعة', 'url' => ['/followUp/follow-up', 'contract_id' => $key]],

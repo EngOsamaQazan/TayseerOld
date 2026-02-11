@@ -40,7 +40,7 @@ class JudiciaryController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['add-print-case', 'print-case', 'logout', 'index', 'update', 'create', 'delete', 'view', 'customer-action', 'delete-customer-action', 'report', 'cases-report', 'export-cases-report'],
+                        'actions' => ['add-print-case', 'print-case', 'logout', 'index', 'update', 'create', 'delete', 'view', 'customer-action', 'delete-customer-action', 'report', 'cases-report', 'cases-report-data', 'export-cases-report', 'print-cases-report', 'refresh-persistence-cache'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -92,18 +92,167 @@ class JudiciaryController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════
-     *  كشف المثابره — يستخدم VIEW بدل الاستعلام الثقيل
+     *  دالة مساعدة: بناء WHERE حسب الفلاتر
+     * ═══════════════════════════════════════════════════════════ */
+    private function buildPersistenceWhere($filter, $search)
+    {
+        $where = [];
+        $params = [];
+
+        /* فلتر اللون */
+        if ($filter === 'red') {
+            $where[] = "persistence_status IN ('red_renew','red_due')";
+        } elseif ($filter === 'orange') {
+            $where[] = "persistence_status = 'orange_due'";
+        } elseif ($filter === 'green') {
+            $where[] = "(persistence_status = 'green_due' OR persistence_status LIKE 'remaining_%')";
+        }
+
+        /* بحث نصي */
+        if ($search !== '') {
+            $where[] = "(customer_name LIKE :q OR court_name LIKE :q OR judiciary_number LIKE :q OR CAST(contract_id AS CHAR) LIKE :q OR lawyer_name LIKE :q)";
+            $params[':q'] = "%{$search}%";
+        }
+
+        $sql = count($where) ? ' WHERE ' . implode(' AND ', $where) : '';
+        return [$sql, $params];
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  كشف المثابره — الصفحة الرئيسية (خفيفة، بدون بيانات)
      * ═══════════════════════════════════════════════════════════ */
     public function actionCasesReport()
     {
-        $rows = Yii::$app->db->createCommand("SELECT * FROM vw_persistence_report")->queryAll();
+        $db = Yii::$app->db;
+
+        /* جلب الإحصائيات فقط من الجدول المادي — لحظي */
+        $stats = $db->createCommand("
+            SELECT
+                COUNT(*) AS total,
+                SUM(persistence_status IN ('red_renew','red_due')) AS cnt_red,
+                SUM(persistence_status = 'orange_due') AS cnt_orange,
+                SUM(persistence_status = 'green_due' OR persistence_status LIKE 'remaining_%') AS cnt_green
+            FROM tbl_persistence_cache
+        ")->queryOne();
+
+        return $this->render('cases_report', [
+            'stats' => $stats,
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  AJAX endpoint — جلب صفحة من البيانات
+     * ═══════════════════════════════════════════════════════════ */
+    public function actionCasesReportData()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $request = Yii::$app->request;
+        $page    = max(1, (int)$request->get('page', 1));
+        $perPage = max(1, min(100, (int)$request->get('per_page', 20)));
+        $filter  = $request->get('filter', 'all');     // all|red|orange|green
+        $search  = trim($request->get('search', ''));
+        $showAll = $request->get('show_all', '0') === '1';
+
+        $db = Yii::$app->db;
+
+        list($whereSql, $params) = $this->buildPersistenceWhere($filter, $search);
+
+        /* عدد السجلات */
+        $total = (int)$db->createCommand("SELECT COUNT(*) FROM tbl_persistence_cache{$whereSql}", $params)->queryScalar();
+
+        /* البيانات */
+        if ($showAll) {
+            $sql = "SELECT * FROM tbl_persistence_cache{$whereSql} ORDER BY court_name, contract_id, judiciary_number";
+            $rows = $db->createCommand($sql, $params)->queryAll();
+        } else {
+            $offset = ($page - 1) * $perPage;
+            $sql = "SELECT * FROM tbl_persistence_cache{$whereSql} ORDER BY court_name, contract_id, judiciary_number LIMIT {$perPage} OFFSET {$offset}";
+            $rows = $db->createCommand($sql, $params)->queryAll();
+        }
+
+        /* تحويل persistence_status */
+        foreach ($rows as &$row) {
+            $this->parsePersistence($row);
+        }
+        unset($row);
+
+        /* إحصائيات مفلترة (للبحث) */
+        $statsParams = [];
+        $statsWhere = '';
+        if ($search !== '') {
+            $statsWhere = " WHERE (customer_name LIKE :q OR court_name LIKE :q OR judiciary_number LIKE :q OR CAST(contract_id AS CHAR) LIKE :q OR lawyer_name LIKE :q)";
+            $statsParams[':q'] = "%{$search}%";
+        }
+        $stats = $db->createCommand("
+            SELECT
+                COUNT(*) AS total,
+                SUM(persistence_status IN ('red_renew','red_due')) AS cnt_red,
+                SUM(persistence_status = 'orange_due') AS cnt_orange,
+                SUM(persistence_status = 'green_due' OR persistence_status LIKE 'remaining_%') AS cnt_green
+            FROM tbl_persistence_cache{$statsWhere}
+        ", $statsParams)->queryOne();
+
+        return [
+            'rows'       => $rows,
+            'total'      => $total,
+            'page'       => $page,
+            'per_page'   => $perPage,
+            'total_pages'=> $showAll ? 1 : (int)ceil($total / $perPage),
+            'stats'      => $stats,
+        ];
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  طباعة كشف المثابره — صفحة مخصصة للطباعة حسب الفلتر
+     * ═══════════════════════════════════════════════════════════ */
+    public function actionPrintCasesReport()
+    {
+        $this->layout = false; // بدون layout — صفحة مستقلة للطباعة
+
+        $request = Yii::$app->request;
+        $filter  = $request->get('filter', 'all');
+        $search  = trim($request->get('search', ''));
+
+        $db = Yii::$app->db;
+        list($whereSql, $params) = $this->buildPersistenceWhere($filter, $search);
+
+        $rows = $db->createCommand(
+            "SELECT * FROM tbl_persistence_cache{$whereSql} ORDER BY court_name, contract_id, judiciary_number",
+            $params
+        )->queryAll();
 
         foreach ($rows as &$row) {
             $this->parsePersistence($row);
         }
         unset($row);
 
-        return $this->render('cases_report', ['rows' => $rows]);
+        /* وصف الفلتر المُطبّق */
+        $filterLabels = [
+            'all' => 'جميع القضايا',
+            'red' => 'بحاجة اهتمام عاجل',
+            'orange' => 'قريب من الاستحقاق',
+            'green' => 'بحالة جيدة',
+        ];
+        $filterLabel = $filterLabels[$filter] ?? 'جميع القضايا';
+        if ($search !== '') {
+            $filterLabel .= " — بحث: \"{$search}\"";
+        }
+
+        return $this->renderPartial('cases_report_print', [
+            'rows'        => $rows,
+            'filterLabel' => $filterLabel,
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  تحديث Cache يدوياً
+     * ═══════════════════════════════════════════════════════════ */
+    public function actionRefreshPersistenceCache()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        Yii::$app->db->createCommand("CALL sp_refresh_persistence_cache()")->execute();
+        return ['success' => true, 'message' => 'تم تحديث البيانات'];
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -116,14 +265,37 @@ class JudiciaryController extends Controller
         $cacheMethod = \PHPExcel_CachedObjectStorageFactory::cache_to_phpTemp;
         \PHPExcel_Settings::setCacheStorageMethod($cacheMethod, ['memoryCacheSize' => '32MB']);
 
-        /* ── جلب البيانات من VIEW ── */
-        $rows = Yii::$app->db->createCommand("SELECT * FROM vw_persistence_report")->queryAll();
+        /* ── جلب الفلاتر من الـ URL ── */
+        $request = Yii::$app->request;
+        $filter  = $request->get('filter', 'all');
+        $search  = trim($request->get('search', ''));
+
+        $db = Yii::$app->db;
+        list($whereSql, $params) = $this->buildPersistenceWhere($filter, $search);
+
+        /* ── جلب البيانات حسب الفلتر النشط ── */
+        $rows = $db->createCommand(
+            "SELECT * FROM tbl_persistence_cache{$whereSql} ORDER BY court_name, contract_id, judiciary_number",
+            $params
+        )->queryAll();
 
         /* ── تحويل حالة المثابرة ── */
         foreach ($rows as &$r) {
             $this->parsePersistence($r);
         }
         unset($r);
+
+        /* ── وصف الفلتر المُطبّق للعنوان ── */
+        $filterLabels = [
+            'all' => 'جميع القضايا',
+            'red' => 'بحاجة اهتمام عاجل',
+            'orange' => 'قريب من الاستحقاق',
+            'green' => 'بحالة جيدة',
+        ];
+        $filterLabel = $filterLabels[$filter] ?? 'جميع القضايا';
+        if ($search !== '') {
+            $filterLabel .= " — بحث: {$search}";
+        }
 
         /* ══════════════════════════════════════════
          *  بناء ملف Excel — تنسيق محسّن بالدُفعات
@@ -147,7 +319,7 @@ class JudiciaryController extends Controller
 
         /* ── صف العنوان الرئيسي (صف 1) ── */
         $sheet->mergeCells("A1:{$lastCol}1");
-        $sheet->setCellValue('A1', 'كشف المثابره — تاريخ: ' . date('Y-m-d'));
+        $sheet->setCellValue('A1', 'كشف المثابره — ' . $filterLabel . ' — تاريخ: ' . date('Y-m-d'));
         $sheet->getStyle("A1")->applyFromArray([
             'font' => ['bold' => true, 'size' => 16, 'color' => ['rgb' => $HFG], 'name' => 'Arial'],
             'fill' => ['type' => \PHPExcel_Style_Fill::FILL_SOLID, 'startcolor' => ['rgb' => $HBG]],
@@ -268,7 +440,8 @@ class JudiciaryController extends Controller
         /* ══════════════════════════════════════════
          *  حفظ مؤقت ثم إرسال
          * ══════════════════════════════════════════ */
-        $filename = 'كشف_المثابره_' . date('Y-m-d') . '.xlsx';
+        $filterSuffix = ($filter !== 'all') ? '_' . $filter : '';
+        $filename = 'كشف_المثابره' . $filterSuffix . '_' . date('Y-m-d') . '.xlsx';
         $tmpFile  = tempnam(sys_get_temp_dir(), 'xl') . '.xlsx';
 
         $writer = \PHPExcel_IOFactory::createWriter($excel, 'Excel2007');

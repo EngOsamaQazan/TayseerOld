@@ -8,93 +8,81 @@ use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveRecord;
 use yii\db\Expression;
 use yii2tech\ar\softdelete\SoftDeleteBehavior;
+use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
 
-/**
- * This is the model class for table "os_inventory_suppliers".
- *
- * @property int $id
- * @property int $company_id
- * @property string $name
- * @property string $adress
- * @property string $phone_number
- * @property int $created_by
- * @property int $created_at
- * @property int $updated_at
- * @property int|null $last_update_by
- * @property int|null $number_row
- * @property int $is_deleted
- */
-class InventorySuppliers extends \yii\db\ActiveRecord {
+class InventorySuppliers extends ActiveRecord
+{
     public $number_row;
+
     public function behaviors()
     {
         return [
             [
-                'class' => BlameableBehavior::className(),
+                'class' => BlameableBehavior::class,
                 'createdByAttribute' => 'created_by',
                 'updatedByAttribute' => 'last_update_by',
             ],
             [
-                'class' => TimestampBehavior::className(),
+                'class' => TimestampBehavior::class,
                 'value' => new Expression('UNIX_TIMESTAMP()'),
             ],
             'softDeleteBehavior' => [
-                'class' => SoftDeleteBehavior::className(),
-                'softDeleteAttributeValues' => [
-                    'is_deleted' => true
-                ],
-
-                'replaceRegularDelete' => true // mutate native `delete()` method
+                'class' => SoftDeleteBehavior::class,
+                'softDeleteAttributeValues' => ['is_deleted' => true],
+                'replaceRegularDelete' => true,
             ],
-
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public static function tableName() {
+    public static function tableName()
+    {
         return '{{%inventory_suppliers}}';
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function rules() {
+    public function rules()
+    {
         return [
-            [['company_id', 'name', 'adress', 'phone_number'], 'required'],
-            [['company_id', 'created_by', 'created_at', 'updated_at', 'last_update_by', 'is_deleted','number_row'], 'integer'],
+            [['name', 'phone_number'], 'required'],
+            [['company_id', 'created_by', 'created_at', 'updated_at', 'last_update_by', 'is_deleted', 'number_row'], 'integer'],
             [['name', 'adress'], 'string', 'max' => 250],
             [['phone_number'], 'string', 'max' => 50],
             [['phone_number'], 'unique'],
             [['name'], 'unique'],
+            [['company_id', 'adress'], 'safe'],
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function attributeLabels() {
+    public function attributeLabels()
+    {
         return [
-            'id' => Yii::t('app', 'ID'),
-            'company_id' => Yii::t('app', 'Company ID'),
-            'name' => Yii::t('app', 'Name'),
-            'adress' => Yii::t('app', 'Adress'),
-            'phone_number' => Yii::t('app', 'Phone Number'),
-            'created_by' => Yii::t('app', 'Created By'),
-            'created_at' => Yii::t('app', 'Created At'),
-            'updated_at' => Yii::t('app', 'Updated At'),
-            'last_update_by' => Yii::t('app', 'Last Update By'),
-            'is_deleted' => Yii::t('app', 'Is Deleted'),
+            'id'             => 'م',
+            'company_id'     => 'الشركة',
+            'name'           => 'اسم المورد',
+            'adress'         => 'العنوان',
+            'phone_number'   => 'رقم الهاتف',
+            'created_by'     => 'أنشئ بواسطة',
+            'created_at'     => 'تاريخ الإنشاء',
+            'updated_at'     => 'آخر تحديث',
+            'last_update_by' => 'آخر تعديل بواسطة',
         ];
     }
 
-    public function getCreatedBy() {
-        return $this->hasOne(\common\models\User::className(), ['id' => 'last_update_by']);
+    /* ── العلاقات (مصلحة) ── */
+    public function getCreatedByUser()
+    {
+        return $this->hasOne(\common\models\User::class, ['id' => 'created_by']);
     }
 
-    public function getCompany() {
-        return $this->hasOne(\backend\modules\companies\models\Companies::className(), ['id' => 'company_id']);
+    public function getCompany()
+    {
+        return $this->hasOne(\backend\modules\companies\models\Companies::class, ['id' => 'company_id']);
     }
 
+    /* ── SoftDelete scope (مصلح — كان ناقص) ── */
+    public static function find()
+    {
+        $query = parent::find();
+        $query->attachBehavior('softDelete', SoftDeleteQueryBehavior::class);
+        return $query->notDeleted();
+    }
 }

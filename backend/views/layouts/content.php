@@ -45,11 +45,10 @@ use yii\widgets\Breadcrumbs;
 <footer class="main-footer" style="text-align: center;">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-direction: row-reverse;">
         <span>
-            <?= Yii::t('app', 'جميع الحقوق محفوظة') ?> &copy; <?= date('Y') ?> -
-            <strong style="color: var(--clr-primary, #800020);">جدل</strong>
+            صُمم بـ <span style="color:#e25555; font-size:14px;">&#10084;</span> على يد الـ Boss &mdash; معمول عشان يسهّل عليك
         </span>
         <span style="color: #999; font-size: 11px;">
-            <?= Yii::t('app', 'نظام إدارة الأعمال') ?>
+            نظام تيــســـر لإدارة شركات التقسيط الإسلامي
         </span>
     </div>
 </footer>

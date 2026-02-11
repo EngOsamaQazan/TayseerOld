@@ -64,7 +64,11 @@ phpunit.phar
 
 # Logs
 *.log
-!docker/*.log
 
 # Docker volumes
 mysql_data/
+
+# Google Cloud credentials — NEVER commit
+backend/config/credentials/
+*.gserviceaccount.json
+tayseerai-*.json

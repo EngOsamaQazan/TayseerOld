@@ -5,74 +5,65 @@ namespace backend\modules\inventoryItems\models;
 use Yii;
 
 /**
- * This is the model class for table "os_contract_inventory_item".
+ * نموذج بند المخزون المرتبط بالعقد
  *
  * @property int $id
  * @property int $contract_id
  * @property int $item_id
+ * @property int|null $serial_number_id
  * @property string|null $code
  * @property string|null $notes
  *
- * @property Contracts $contract
+ * @property \backend\modules\contracts\models\Contracts $contract
  * @property InventoryItems $item
+ * @property InventorySerialNumber $serialNumber
  */
 class ContractInventoryItem extends \yii\db\ActiveRecord
 {
-    /**
-     * {@inheritdoc}
-     */
     public $number_row;
+
     public static function tableName()
     {
         return 'os_contract_inventory_item';
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function rules()
     {
         return [
             [['item_id'], 'required'],
-            [['contract_id', 'item_id'], 'integer'],
+            [['contract_id', 'item_id', 'serial_number_id'], 'integer'],
             [['code'], 'string', 'max' => 250],
             [['notes'], 'string', 'max' => 500],
-            [['contract_id'], 'exist', 'skipOnError' => true, 'targetClass' => \backend\modules\contracts\models\Contracts::className(), 'targetAttribute' => ['contract_id' => 'id']],
-            [['item_id'], 'exist', 'skipOnError' => true, 'targetClass' =>  InventoryItems::className(), 'targetAttribute' => ['item_id' => 'id']],
+            [['contract_id'], 'exist', 'skipOnError' => true, 'targetClass' => \backend\modules\contracts\models\Contracts::class, 'targetAttribute' => ['contract_id' => 'id']],
+            [['item_id'], 'exist', 'skipOnError' => true, 'targetClass' => InventoryItems::class, 'targetAttribute' => ['item_id' => 'id']],
+            [['serial_number_id'], 'exist', 'skipOnError' => true, 'targetClass' => InventorySerialNumber::class, 'targetAttribute' => ['serial_number_id' => 'id']],
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function attributeLabels()
     {
         return [
-            'id' => 'ID',
-            'contract_id' => 'Contract ID',
-            'item_id' => 'Item ID',
-            'code' => 'Code',
-            'notes' => 'Notes',
+            'id'               => 'م',
+            'contract_id'      => 'العقد',
+            'item_id'          => 'الصنف',
+            'serial_number_id' => 'الرقم التسلسلي',
+            'code'             => 'الكود',
+            'notes'            => 'ملاحظات',
         ];
     }
 
-    /**
-     * Gets query for [[Contract]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
     public function getContract()
     {
-        return $this->hasOne(Contracts::className(), ['id' => 'contract_id']);
+        return $this->hasOne(\backend\modules\contracts\models\Contracts::class, ['id' => 'contract_id']);
     }
 
-    /**
-     * Gets query for [[Item]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
     public function getItem()
     {
-        return $this->hasOne(InventoryItems::className(), ['id' => 'item_id']);
+        return $this->hasOne(InventoryItems::class, ['id' => 'item_id']);
+    }
+
+    public function getSerialNumber()
+    {
+        return $this->hasOne(InventorySerialNumber::class, ['id' => 'serial_number_id']);
     }
 }

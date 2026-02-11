@@ -110,6 +110,7 @@ class PermissionsManagementController extends Controller
                     'موردي المخزون',
                     'كمية عناصر المخزون',
                     'فواتير المخزون',
+                    'استعلام عناصر المخزون',
                 ],
             ],
             'reports' => [
@@ -152,6 +153,15 @@ class PermissionsManagementController extends Controller
                     'رد العميل',
                     'انواع الوثائق',
                     'الرسائل',
+                ],
+            ],
+            'diwan' => [
+                'label' => 'قسم الديوان',
+                'icon'  => 'fa-archive',
+                'color' => '#7B1B3A',
+                'permissions' => [
+                    'الديوان',
+                    'تقارير الديوان',
                 ],
             ],
             'other' => [
@@ -198,6 +208,8 @@ class PermissionsManagementController extends Controller
                             'revoke-all',
                             'toggle-user-status',
                             'seed-roles',
+                            'get-role-permissions',
+                            'ensure-permissions',
                         ],
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -321,11 +333,19 @@ class PermissionsManagementController extends Controller
     /* ═══════════════════════════════════════════════════════════
      *  AJAX — حفظ صلاحيات مستخدم
      * ═══════════════════════════════════════════════════════════ */
-    public function actionSaveUserPermissions($id)
+    public function actionSaveUserPermissions($id = null)
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
         $auth = Yii::$app->authManager;
         $request = Yii::$app->request;
+
+        /* دعم الـ id من GET أو POST */
+        if ($id === null) {
+            $id = $request->post('id');
+        }
+        if (empty($id)) {
+            return ['success' => false, 'message' => 'معرّف المستخدم مطلوب'];
+        }
 
         $newPermissions = $request->post('permissions', []);
         if (!is_array($newPermissions)) {
@@ -731,6 +751,94 @@ class PermissionsManagementController extends Controller
     }
 
 
+    /* ═══════════════════════════════════════════════════════════
+     *  AJAX — جلب صلاحيات دور معيّن
+     * ═══════════════════════════════════════════════════════════ */
+    public function actionGetRolePermissions($name)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $auth = Yii::$app->authManager;
+
+        $role = $auth->getRole($name);
+        if (!$role) {
+            return ['success' => false, 'message' => 'الدور غير موجود'];
+        }
+
+        $permissions = [];
+        $children = $auth->getChildren($name);
+        foreach ($children as $child) {
+            $permissions[] = $child->name;
+        }
+
+        return [
+            'success' => true,
+            'role' => [
+                'name'        => $role->name,
+                'description' => $role->description,
+            ],
+            'permissions' => $permissions,
+        ];
+    }
+
+
+    /* ═══════════════════════════════════════════════════════════
+     *  AJAX — ضمان وجود جميع الصلاحيات المسمّاة في قاعدة البيانات
+     * ═══════════════════════════════════════════════════════════ */
+    public function actionEnsurePermissions()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $auth = Yii::$app->authManager;
+
+        /* جمع كل الصلاحيات من المجموعات */
+        $groups = self::getPermissionGroups();
+        $allPerms = [];
+        foreach ($groups as $group) {
+            foreach ($group['permissions'] as $perm) {
+                $allPerms[] = $perm;
+            }
+        }
+        $allPerms = array_unique($allPerms);
+
+        $created = 0;
+        $db = Yii::$app->db;
+        $transaction = $db->beginTransaction();
+
+        try {
+            /* تعطيل STRICT_MODE مؤقتاً لتجنب مشاكل ترميز العربية */
+            $db->createCommand("SET SESSION sql_mode=''")->execute();
+
+            foreach ($allPerms as $permName) {
+                if (!$auth->getPermission($permName)) {
+                    $perm = $auth->createPermission($permName);
+                    $perm->description = $permName;
+                    $auth->add($perm);
+                    $created++;
+                }
+            }
+
+            $transaction->commit();
+            $auth->invalidateCache();
+
+            $totalNamed = (int)$db->createCommand("
+                SELECT COUNT(*) FROM {{%auth_item}}
+                WHERE type = 2 AND name NOT LIKE '/%' AND name NOT LIKE '%/*'
+            ")->queryScalar();
+
+            return [
+                'success' => true,
+                'message' => $created > 0
+                    ? "تم إنشاء {$created} صلاحية جديدة — الإجمالي: {$totalNamed}"
+                    : "جميع الصلاحيات موجودة — الإجمالي: {$totalNamed}",
+                'created' => $created,
+                'total'   => $totalNamed,
+            ];
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            return ['success' => false, 'message' => 'حدث خطأ: ' . $e->getMessage()];
+        }
+    }
+
+
     /* ─── تعريف الأدوار الافتراضية وصلاحياتها ─── */
     public static function getDefaultRoles()
     {
@@ -770,6 +878,8 @@ class PermissionsManagementController extends Controller
                     'الحالات', 'حالات الوثائق', 'الاقارب', 'الجنسيه', 'البنوك',
                     'كيف سمعت عنا', 'المدن', 'طرق الدفع', 'الانفعالات',
                     'طريقة الاتصال', 'رد العميل', 'انواع الوثائق', 'الرسائل',
+                    /* الديوان */
+                    'الديوان', 'تقارير الديوان',
                     /* أخرى */
                     'حامل الوثيقة', 'الاداره', 'تحديد', 'أرشيف', 'التصدير',
                     'صفحة المدير', 'مدير', 'مدير صورة', 'تحميل الملف',

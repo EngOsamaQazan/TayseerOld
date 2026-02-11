@@ -42,10 +42,20 @@ $data = ContractsCustomers::find()
         </div>
         <div class="col-lg-6">
             <?= $form->field($model, 'customers_id')->widget(kartik\select2\Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map($data, 'id', 'name'),
                 'options' => [
-                    'placeholder' => 'Select a customer.',
-                    'type' => 'search'
+                    'placeholder' => 'ابحث بالاسم أو الرقم الوطني...',
+                ],
+                'pluginOptions' => [
+                    'allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
+                    'ajax' => [
+                        'url' => \yii\helpers\Url::to(['/customers/customers/search-customers']),
+                        'dataType' => 'json', 'delay' => 250,
+                        'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
+                        'processResults' => new \yii\web\JsExpression('function(d){return d}'),
+                        'cache' => true,
+                    ],
+                    'templateResult' => new \yii\web\JsExpression("function(i){if(i.loading)return i.text;var h='<div><b>'+i.text+'</b>';if(i.id_number)h+=' <small style=\"color:#64748b\">· '+i.id_number+'</small>';if(i.phone)h+=' <small style=\"color:#0891b2\">☎ '+i.phone+'</small>';return $(h+'</div>')}"),
+                    'templateSelection' => new \yii\web\JsExpression("function(i){return i.text||i.id}"),
                 ],
             ]); ?>
         </div>

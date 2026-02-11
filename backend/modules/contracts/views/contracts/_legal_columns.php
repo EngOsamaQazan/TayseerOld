@@ -102,13 +102,8 @@ return [
 //                                                'visible' => true, // if you want to hide an item based on a condition, use this
 //                                            ],
                                 [
-                                    'label' => '<i class="icon-pencil5"></i>' . \Yii::t('app', 'Print Contract'),
-                                    'url' => ['print-first-page', 'id' => $key],
-                                    'visible' => true,
-                                ],
-                                [
-                                    'label' => '<i class="icon-pencil5"></i>' . \Yii::t('app', 'Print Draft'),
-                                    'url' => ['print-second-page', 'id' => $key],
+                                    'label' => '<i class="icon-pencil5"></i>' . \Yii::t('app', 'Print'),
+                                    'url' => ['print-preview', 'id' => $key],
                                     'visible' => true,
                                 ],
                                 [
@@ -172,13 +167,8 @@ return [
 //                                                'visible' => true, // if you want to hide an item based on a condition, use this
 //                                            ],
                                 [
-                                    'label' => '<i class="icon-pencil5"></i>' . \Yii::t('app', 'Print Contract'),
-                                    'url' => ['print-first-page', 'id' => $key],
-                                    'visible' => true,
-                                ],
-                                [
-                                    'label' => '<i class="icon-pencil5"></i>' . \Yii::t('app', 'Print Draft'),
-                                    'url' => ['print-second-page', 'id' => $key],
+                                    'label' => '<i class="icon-pencil5"></i>' . \Yii::t('app', 'Print'),
+                                    'url' => ['print-preview', 'id' => $key],
                                     'visible' => true,
                                 ],
                                 [

@@ -125,23 +125,23 @@ use app\helper\Permissions;
                                 </ul>
                             </li>
                             <?php }?>
-                            <?php if( Permissions::groupsPermissions('files') ){?>
+                            <!-- ═══ قسم الديوان ═══ -->
                             <li>
                                 <a class="has-arrow" href="javascript:;">
                                     <div class="parent-icon">
-                                        <ion-icon name="copy-sharp" role="img" class="md hydrated"
-                                                  aria-label="copy sharp"></ion-icon>
+                                        <ion-icon name="document-text-sharp" role="img" class="md hydrated"
+                                                  aria-label="document text sharp"></ion-icon>
                                     </div>
-                                    <div class="menu-title"><?= Yii::t('app', 'متابعة الملفات') ?></div>
+                                    <div class="menu-title"><?= Yii::t('app', 'قسم الديوان') ?></div>
                                 </a>
                                 <ul class="mm-collapse">
-                                    <?= Permissions::showItems(Permissions::DOCUMENT_HOLDER, Yii::t('app', 'Document Holder'), '/documentHolder/document-holder') ?>
-                                    <?= Permissions::showItems(Permissions::MANAGER, Yii::t('app', 'Manager Document Holder'), '/documentHolder/document-holder/manager-document-holder') ?>
-
+                                    <li><a href="/diwan/diwan/index"><ion-icon name="speedometer-outline"></ion-icon><?= Yii::t('app', 'لوحة المعلومات') ?></a></li>
+                                    <li><a href="/diwan/diwan/create"><ion-icon name="add-circle-outline"></ion-icon><?= Yii::t('app', 'معاملة جديدة') ?></a></li>
+                                    <li><a href="/diwan/diwan/transactions"><ion-icon name="swap-horizontal-outline"></ion-icon><?= Yii::t('app', 'المعاملات') ?></a></li>
+                                    <li><a href="/diwan/diwan/search"><ion-icon name="search-outline"></ion-icon><?= Yii::t('app', 'بحث الوثائق') ?></a></li>
+                                    <li><a href="/diwan/diwan/reports"><ion-icon name="stats-chart-outline"></ion-icon><?= Yii::t('app', 'التقارير') ?></a></li>
                                 </ul>
-
                             </li>
-                            <?php }?>
                             <?php if( Permissions::groupsPermissions('changing') ){?>
                             <li>
                                 <a class="has-arrow" href="javascript:;">

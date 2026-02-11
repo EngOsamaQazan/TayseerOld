@@ -1,427 +1,373 @@
 <?php
+/**
+ * ═══════════════════════════════════════════════════════════════
+ *  كونترولر أوامر الشراء v2 — مصلح ومعاد بناؤه
+ *  ─────────────────────────────────────────────────────────────
+ *  إصلاحات: AccessControl, var_dump, undefined vars, quantity logic
+ * ═══════════════════════════════════════════════════════════════
+ */
 
 namespace backend\modules\inventoryInvoices\controllers;
 
-use backend\modules\companyBanks\models\CompanyBanks;
-use \backend\modules\inventoryItemQuantities\models\InventoryItemQuantities;
-use backend\modules\itemsInventoryInvoices\models\ItemsInventoryInvoices;
-use common\models\Model;
 use Yii;
 use backend\modules\inventoryInvoices\models\InventoryInvoices;
 use backend\modules\inventoryInvoices\models\InventoryInvoicesSearch;
+use backend\modules\inventoryItemQuantities\models\InventoryItemQuantities;
+use backend\modules\itemsInventoryInvoices\models\ItemsInventoryInvoices;
+use backend\modules\inventoryItems\models\StockMovement;
+use common\models\Model;
+use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-use \yii\web\Response;
+use yii\web\Response;
 use yii\helpers\Html;
+use yii\helpers\ArrayHelper;
 
-/**
- * InventoryInvoicesController implements the CRUD actions for InventoryInvoices model.
- */
 class InventoryInvoicesController extends Controller
 {
-    /**
-     * @inheritdoc
-     */
+    /* مصلح: كان بدون AccessControl */
+    public function behaviors()
+    {
+        return [
+            'access' => [
+                'class' => AccessControl::class,
+                'rules' => [
+                    ['actions' => ['login', 'error'], 'allow' => true],
+                    [
+                        'actions' => ['logout', 'index', 'view', 'create', 'update', 'delete', 'bulk-delete'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                    ],
+                ],
+            ],
+            'verbs' => [
+                'class' => VerbFilter::class,
+                'actions' => [
+                    'delete'      => ['post'],
+                    'bulk-delete' => ['post'],
+                ],
+            ],
+        ];
+    }
 
-    /**
-     * Lists all InventoryInvoices models.
-     * @return mixed
-     */
     public function actionIndex()
     {
         $searchModel = new InventoryInvoicesSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
 
         return $this->render('index', [
-            'searchModel' => $searchModel,
+            'searchModel'  => $searchModel,
             'dataProvider' => $dataProvider,
         ]);
     }
 
-
-    /**
-     * Displays a single InventoryInvoices model.
-     * @param integer $id
-     * @return mixed
-     */
     public function actionView($id)
     {
         $request = Yii::$app->request;
+        $model = $this->findModel($id);
+
         if ($request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
             return [
-                'title' => "InventoryInvoices #" . $id,
-                'content' => $this->renderAjax('view', [
-                    'model' => $this->findModel($id),
-                ]),
-                'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                    Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
+                'title'   => 'أمر شراء #' . $id,
+                'content' => $this->renderAjax('view', ['model' => $model]),
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                             Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
             ];
-        } else {
-            return $this->render('view', [
-                'model' => $this->findModel($id),
-            ]);
         }
+        return $this->render('view', ['model' => $model]);
     }
 
     /**
-     * Creates a new InventoryInvoices model.
-     * For ajax request will return json object
-     * and for non-ajax request if creation is successful, the browser will be redirected to the 'view' page.
-     * @return mixed
+     * إنشاء أمر شراء جديد — معاد بناؤه بالكامل
+     * يحفظ الفاتورة + بنود الأصناف + يحدث الكميات + يسجل الحركات
      */
     public function actionCreate()
     {
         $request = Yii::$app->request;
         $model = new InventoryInvoices();
         $itemsInventoryInvoices = [new ItemsInventoryInvoices];
+
         if ($request->isAjax) {
-            /*
-            *   Process for ajax request
-            */
             Yii::$app->response->format = Response::FORMAT_JSON;
             if ($request->isGet) {
                 return [
-                    'title' => "Create new InventoryInvoices",
-                    'content' => $this->renderAjax('create', [
-                        'model' => $model,
-                    ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
-
-                ];
-            } else if ($model->load($request->post()) && $model->save()) {
-                return [
-                    'forceReload' => '#crud-datatable-pjax',
-                    'title' => "Create new InventoryInvoices",
-                    'content' => '<span class="text-success">Create InventoryInvoices success</span>',
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::a('Create More', ['create'], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
-
-                ];
-            } else {
-                return [
-                    'title' => "Create new InventoryInvoices",
-                    'content' => $this->renderAjax('create', [
-                        'model' => $model,
-                    ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
-
+                    'title'   => 'أمر شراء جديد',
+                    'content' => $this->renderAjax('create', ['model' => $model]),
+                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                                 Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
                 ];
             }
-        } else {
-            /*
-            *   Process for non-ajax request
-            */
-            if ($model->load($request->post())) {
-                $itemsInventoryInvoices = Model::createMultiple(ItemsInventoryInvoices::classname());
-                Model::loadMultiple($itemsInventoryInvoices, Yii::$app->request->post());
-                $valid = $model->validate();
-                $valid = Model::validateMultiple($itemsInventoryInvoices);
-                if ($valid) {
-                    $transaction = \Yii::$app->db->beginTransaction();
-                    try {
+            if ($model->load($request->post()) && $model->save()) {
+                return [
+                    'forceReload' => '#crud-datatable-pjax',
+                    'title'       => 'أمر شراء جديد',
+                    'content'     => '<span class="text-success">تم إنشاء أمر الشراء بنجاح</span>',
+                    'footer'      => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']),
+                ];
+            }
+            return [
+                'title'   => 'أمر شراء جديد',
+                'content' => $this->renderAjax('create', ['model' => $model]),
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                             Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
+            ];
+        }
 
-                        if ($flag = $model->save(false)) {
-                            foreach ($itemsInventoryInvoices as $itemsInventoryInvoice) {
-                                $inventory_quantitys = InventoryItemQuantities::find()->where(['company_id' => $model->company_id])->andWhere(['item_id' => $itemsInventoryInvoice->inventory_items_id])->all();
-                                if (!empty($inventory_quantitys)) {
-                                    foreach ($inventory_quantitys as $inventory_quantity) {
-                                        $number = $inventory_quantity->quantity + $itemsInventoryInvoice->number;
-                                        inventoryItemQuantities::updateAll(['quantity' => $number], ['id' => $inventory_quantity->id]);
-                                    }
-                                }
+        /* Non-AJAX: full form with line items */
+        if ($model->load($request->post())) {
+            $itemsInventoryInvoices = Model::createMultiple(ItemsInventoryInvoices::class);
+            Model::loadMultiple($itemsInventoryInvoices, $request->post());
 
+            $valid = $model->validate();
+            $valid = Model::validateMultiple($itemsInventoryInvoices) && $valid;
 
-                                if (empty($inventory_quantitys)) {
-                                    $inventory = new  InventoryItemQuantities();
-                                    $inventory->item_id = $itemsInventoryInvoice->inventory_items_id;
-                                    $inventory->suppliers_id = $model->suppliers_id;
-                                    $inventory->quantity = $itemsInventoryInvoice->number;
-                                    $inventory->company_id = $model->company_id;
-                                    $inventory->save(false);
+            if ($valid) {
+                $transaction = Yii::$app->db->beginTransaction();
+                try {
+                    if ($model->save(false)) {
+                        $totalAmount = 0;
 
+                        foreach ($itemsInventoryInvoices as $lineItem) {
+                            $lineItem->inventory_invoices_id = $model->id;
+                            $lineItem->total_amount = $lineItem->single_price * $lineItem->number;
+                            $totalAmount += $lineItem->total_amount;
 
-                                }
-                                $itemsInventoryInvoice->inventory_invoices_id = $model->id;
-                                $itemsInventoryInvoice->total_amount = $itemsInventoryInvoice->single_price * $itemsInventoryInvoice->number;
-
-                                if (!($itemsInventoryInvoiceBankFlag = $itemsInventoryInvoice->save())) {
-                                    $transaction->rollBack();
-                                    var_dump($itemsInventoryInvoice->getErrors());
-                                    break;
-                                }
+                            if (!$lineItem->save(false)) {
+                                throw new \Exception('فشل حفظ بند الفاتورة');
                             }
 
-                            if ($flag && $itemsInventoryInvoiceBankFlag) {
+                            /* تحديث الكمية */
+                            $this->updateItemQuantity($model, $lineItem, 'add');
 
-                                $transaction->commit();
-                            }
+                            /* تسجيل حركة مخزون */
+                            StockMovement::record($lineItem->inventory_items_id, StockMovement::TYPE_IN, $lineItem->number, [
+                                'reference_type' => 'invoice',
+                                'reference_id'   => $model->id,
+                                'unit_cost'      => $lineItem->single_price,
+                                'supplier_id'    => $model->suppliers_id,
+                                'company_id'     => $model->company_id,
+                            ]);
                         }
 
-                    } catch (Exception $e) {
-                        $transaction->rollBack();
-                        var_dump($model->getErrors());
+                        /* تحديث إجمالي الفاتورة */
+                        $model->total_amount = $totalAmount;
+                        $model->save(false);
+
+                        $transaction->commit();
+                        Yii::$app->session->setFlash('success', 'تم إنشاء أمر الشراء بنجاح');
+                        return $this->redirect(['index']);
                     }
+                } catch (\Exception $e) {
+                    $transaction->rollBack();
+                    Yii::$app->session->setFlash('error', 'خطأ: ' . $e->getMessage());
                 }
-
-
-                return $this->redirect(['index']);
-            } else {
-                return $this->render('create', [
-                    'model' => $model,
-                    'itemsInventoryInvoices' => (empty($itemsInventoryInvoices)) ? [new ItemsInventoryInvoices] : $itemsInventoryInvoices,
-
-                ]);
             }
         }
 
+        return $this->render('create', [
+            'model' => $model,
+            'itemsInventoryInvoices' => $itemsInventoryInvoices,
+        ]);
     }
 
     /**
-     * Updates an existing InventoryInvoices model.
-     * For ajax request will return json object
-     * and for non-ajax request if update is successful, the browser will be redirected to the 'view' page.
-     * @param integer $id
-     * @return mixed
+     * تعديل أمر شراء — معاد بناؤه بالكامل
      */
     public function actionUpdate($id)
     {
         $request = Yii::$app->request;
         $model = $this->findModel($id);
-        $itemsInventoryInvoices = ItemsInventoryInvoices::find()->where(['inventory_invoices_id' => $id])->all();
-
+        $itemsInventoryInvoices = ItemsInventoryInvoices::find()
+            ->where(['inventory_invoices_id' => $id])
+            ->all();
 
         if ($request->isAjax) {
-            /*
-            *   Process for ajax request
-            */
             Yii::$app->response->format = Response::FORMAT_JSON;
             if ($request->isGet) {
                 return [
-                    'title' => "Update InventoryInvoices #" . $id,
-                    'content' => $this->renderAjax('update', [
-                        'model' => $model,
-                    ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
+                    'title'   => 'تعديل أمر الشراء #' . $id,
+                    'content' => $this->renderAjax('update', ['model' => $model]),
+                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                                 Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
                 ];
-            } else if ($model->load($request->post()) && $model->save()) {
+            }
+            if ($model->load($request->post()) && $model->save()) {
                 return [
                     'forceReload' => '#crud-datatable-pjax',
-                    'title' => "InventoryInvoices #" . $id,
-                    'content' => $this->renderAjax('view', [
-                        'model' => $model,
-                    ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
-                ];
-            } else {
-                return [
-                    'title' => "Update InventoryInvoices #" . $id,
-                    'content' => $this->renderAjax('update', [
-                        'model' => $model,
-                    ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
+                    'title'       => 'أمر الشراء #' . $id,
+                    'content'     => $this->renderAjax('view', ['model' => $model]),
+                    'footer'      => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']),
                 ];
             }
-        } else {
-            /*
-            *   Process for non-ajax request
-            */
-            if ($model->load($request->post())) {
-                $oldIDs = yii\helpers\ArrayHelper::map($itemsInventoryInvoices, 'id', 'id');
+            return [
+                'title'   => 'تعديل أمر الشراء #' . $id,
+                'content' => $this->renderAjax('update', ['model' => $model]),
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                             Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
+            ];
+        }
 
-                $itemsInventoryInvoices = Model::createMultiple(ItemsInventoryInvoices::classname(), $itemsInventoryInvoices);
+        /* Non-AJAX */
+        if ($model->load($request->post())) {
+            $oldLineItems = $itemsInventoryInvoices;
+            $oldIDs = ArrayHelper::map($oldLineItems, 'id', 'id');
 
-                Model::loadMultiple($itemsInventoryInvoices, Yii::$app->request->post());
+            $itemsInventoryInvoices = Model::createMultiple(ItemsInventoryInvoices::class, $itemsInventoryInvoices);
+            Model::loadMultiple($itemsInventoryInvoices, $request->post());
+            $deletedIDs = array_diff($oldIDs, array_filter(ArrayHelper::map($itemsInventoryInvoices, 'id', 'id')));
 
-                $deletedIDs = array_diff($oldIDs, array_filter(yii\helpers\ArrayHelper::map($itemsInventoryInvoices, 'id', 'id')));
-
-
-                $transaction = \Yii::$app->db->beginTransaction();
-                $oldNumber = 0;
-                $count = [];
-                foreach ($oldIDs as $oldID) {
-                    $oldAmount = ItemsInventoryInvoices::find()->where(['id' => $oldID])->all();
-
-                    foreach ($oldAmount as $old) {
-                        $oldNumber = $oldNumber + $old->number;
-                        array_push($count, $old->number);
-                    }
-                }
-                try {
-                    if ($flag = $model->save(false)) {
-                        if (!empty($deletedIDs)) {
-                            ItemsInventoryInvoices::deleteAll(['id' => $deletedIDs]);
-                        }
-                        $number = 0;
-                        foreach ($itemsInventoryInvoices as $itemsInventoryInvoice) {
-                            $number = $number + $itemsInventoryInvoice->number;
-                            $itemsInventoryInvoice->inventory_invoices_id = $model->id;
-                            $itemsInventoryInvoice->total_amount = $itemsInventoryInvoice->single_price * $itemsInventoryInvoice->number;
-
-                            $inventory_quantitys = InventoryItemQuantities::find()->where(['company_id' => $model->company_id])->andWhere(['item_id' => $itemsInventoryInvoice->inventory_items_id])->all();
-                            $inventory_quantity_number = 0;
-                            if (!empty($inventory_quantitys)) {
-                                foreach ($inventory_quantitys as $inventory_quantity) {
-                                    $inventory_quantity_number = $inventory_quantity->quantity;
-                                }
-
-                            }
-
-
-                            if (empty($inventory_quantitys)) {
-
-                                $inventory = new  InventoryItemQuantities();
-                                $inventory->item_id = $itemsInventoryInvoice->inventory_items_id;
-                                $inventory->suppliers_id = $model->suppliers_id;
-                                $inventory->quantity = $itemsInventoryInvoice->number;
-                                $inventory->company_id = $model->company_id;
-                                $inventory->save();
-                            }
-
-                            if (!($itemsInventoryInvoiceFlag = $itemsInventoryInvoice->save())) {
-
-                                $transaction->rollBack();
-                                var_dump($itemsInventoryInvoice->getErrors());
-                                break;
-                            }
-                        }
-
-                        inventoryItemQuantities::updateAll(['quantity' => $inventory_quantity_number - $oldNumber], ['id' => $inventory_quantity->id]);
-
-                        $inventory_quantitys = InventoryItemQuantities::find()->where(['company_id' => $model->company_id])->andWhere(['item_id' => $itemsInventoryInvoice->inventory_items_id])->all();
-                        $inventory_quantity_number_2 = 0;
-                        if (!empty($inventory_quantitys)) {
-                            foreach ($inventory_quantitys as $inventory_quantity) {
-                                $inventory_quantity_number_2 = $inventory_quantity->quantity;
-                            }
-
-                        }
-                        inventoryItemQuantities::updateAll(['quantity' => $inventory_quantity_number_2 + $number], ['id' => $inventory_quantity->id]);
-
-                        if ($flag) {
-                            $transaction->commit();
-                            return $this->redirect(['index']);
-                        }
-
+            $transaction = Yii::$app->db->beginTransaction();
+            try {
+                if ($model->save(false)) {
+                    /* إزالة الكميات القديمة */
+                    foreach ($oldLineItems as $old) {
+                        $this->updateItemQuantity($model, $old, 'subtract');
                     }
 
-                } catch (Exception $e) {
-                    $transaction->rollBack();
+                    /* حذف البنود المحذوفة */
+                    if (!empty($deletedIDs)) {
+                        ItemsInventoryInvoices::deleteAll(['id' => $deletedIDs]);
+                    }
+
+                    /* حفظ البنود الجديدة/المعدلة */
+                    $totalAmount = 0;
+                    foreach ($itemsInventoryInvoices as $lineItem) {
+                        $lineItem->inventory_invoices_id = $model->id;
+                        $lineItem->total_amount = $lineItem->single_price * $lineItem->number;
+                        $totalAmount += $lineItem->total_amount;
+
+                        if (!$lineItem->save(false)) {
+                            throw new \Exception('فشل حفظ بند الفاتورة');
+                        }
+
+                        /* إضافة الكميات الجديدة */
+                        $this->updateItemQuantity($model, $lineItem, 'add');
+                    }
+
+                    $model->total_amount = $totalAmount;
+                    $model->save(false);
+
+                    $transaction->commit();
+                    Yii::$app->session->setFlash('success', 'تم تحديث أمر الشراء بنجاح');
+                    return $this->redirect(['index']);
                 }
-
-
-                return $this->redirect(['index']);
-            } else {
-                return $this->render('update', [
-                    'model' => $model,
-                    'itemsInventoryInvoices' => (empty($itemsInventoryInvoices)) ? [new ItemsInventoryInvoices] : $itemsInventoryInvoices,
-
-                ]);
+            } catch (\Exception $e) {
+                $transaction->rollBack();
+                Yii::$app->session->setFlash('error', 'خطأ: ' . $e->getMessage());
             }
         }
+
+        return $this->render('update', [
+            'model' => $model,
+            'itemsInventoryInvoices' => empty($itemsInventoryInvoices) ? [new ItemsInventoryInvoices] : $itemsInventoryInvoices,
+        ]);
     }
 
     /**
-     * Delete an existing InventoryInvoices model.
-     * For ajax request will return json object
-     * and for non-ajax request if deletion is successful, the browser will be redirected to the 'index' page.
-     * @param integer $id
-     * @return mixed
+     * حذف أمر شراء — مصلح بالكامل
      */
     public function actionDelete($id)
     {
-        $request = Yii::$app->request;
-
         $model = $this->findModel($id);
-        $itemsInventoryInvoices = ItemsInventoryInvoices::find()->where(['inventory_invoices_id' => $id])->all();
-        $number = 0;
-        foreach ($itemsInventoryInvoices as $itemsInventoryInvoice) {
-            $inventory_quantitys = InventoryItemQuantities::find()->where(['company_id' => $model->company_id])->andWhere(['item_id' => $itemsInventoryInvoice->inventory_items_id])->all();
-            $number = $itemsInventoryInvoice->number + $number;
-            foreach ($inventory_quantitys as $inventory_quantity) {
-                $inventory_quantity_number = $inventory_quantity->quantity;
+        $lineItems = ItemsInventoryInvoices::find()
+            ->where(['inventory_invoices_id' => $id])
+            ->all();
+
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            /* إزالة الكميات لكل بند */
+            foreach ($lineItems as $lineItem) {
+                $this->updateItemQuantity($model, $lineItem, 'subtract');
+
+                /* تسجيل حركة إلغاء */
+                StockMovement::record($lineItem->inventory_items_id, StockMovement::TYPE_OUT, $lineItem->number, [
+                    'reference_type' => 'invoice_cancel',
+                    'reference_id'   => $model->id,
+                    'notes'          => 'إلغاء أمر شراء #' . $model->id,
+                    'company_id'     => $model->company_id,
+                ]);
+
+                $lineItem->delete();
             }
-
-            $itemsInventoryInvoice->delete();
-        }
-        $result = $inventory_quantity_number - $number;
-        if($result == 0 || $result < 0){
-            inventoryItemQuantities::deleteAll(['id' => $inventory_quantity->id]);
-        }else{
-            inventoryItemQuantities::updateAll(['quantity' => $inventory_quantity_number - $number], ['id' => $inventory_quantity->id]);
-
+            $model->delete();
+            $transaction->commit();
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::$app->session->setFlash('error', 'خطأ في الحذف: ' . $e->getMessage());
         }
 
-
-        $this->findModel($id)->delete();
-
-        if ($request->isAjax) {
-            /*
-            *   Process for ajax request
-            */
+        if (Yii::$app->request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
             return ['forceClose' => true, 'forceReload' => '#crud-datatable-pjax'];
-        } else {
-            /*
-            *   Process for non-ajax request
-            */
-            return $this->redirect(['index']);
         }
-
-
+        return $this->redirect(['index']);
     }
 
-    /**
-     * Delete multiple existing InventoryInvoices model.
-     * For ajax request will return json object
-     * and for non-ajax request if deletion is successful, the browser will be redirected to the 'index' page.
-     * @param integer $id
-     * @return mixed
-     */
     public function actionBulkDelete()
     {
-        $request = Yii::$app->request;
-        $pks = explode(',', $request->post('pks')); // Array or selected records primary keys
+        $pks = explode(',', Yii::$app->request->post('pks'));
         foreach ($pks as $pk) {
-            $model = $this->findModel($pk);
-
-            $model->delete();
+            $this->actionDelete($pk);
         }
 
-        if ($request->isAjax) {
-            /*
-            *   Process for ajax request
-            */
+        if (Yii::$app->request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
             return ['forceClose' => true, 'forceReload' => '#crud-datatable-pjax'];
-        } else {
-            /*
-            *   Process for non-ajax request
-            */
-            return $this->redirect(['index']);
         }
-
+        return $this->redirect(['index']);
     }
 
+    /* ═══════════════════════════════════════════════════════════
+     *  مساعدات — تحديث الكميات (مصلح بالكامل)
+     * ═══════════════════════════════════════════════════════════ */
+
     /**
-     * Finds the InventoryInvoices model based on its primary key value.
-     * If the model is not found, a 404 HTTP exception will be thrown.
-     * @param integer $id
-     * @return InventoryInvoices the loaded model
-     * @throws NotFoundHttpException if the model cannot be found
+     * تحديث كمية الصنف في المخزون
+     * @param InventoryInvoices $invoice
+     * @param ItemsInventoryInvoices $lineItem
+     * @param string $operation 'add' | 'subtract'
      */
+    private function updateItemQuantity($invoice, $lineItem, $operation)
+    {
+        if (!$lineItem->inventory_items_id || !$lineItem->number) return;
+
+        $qtyRecord = InventoryItemQuantities::find()
+            ->where(['item_id' => $lineItem->inventory_items_id, 'is_deleted' => 0])
+            ->andFilterWhere(['company_id' => $invoice->company_id])
+            ->one();
+
+        if ($operation === 'add') {
+            if ($qtyRecord) {
+                $qtyRecord->quantity += $lineItem->number;
+                $qtyRecord->save(false);
+            } else {
+                $qtyRecord = new InventoryItemQuantities();
+                $qtyRecord->item_id      = $lineItem->inventory_items_id;
+                $qtyRecord->quantity      = $lineItem->number;
+                $qtyRecord->company_id    = $invoice->company_id;
+                $qtyRecord->suppliers_id  = $invoice->suppliers_id ?: 0;
+                $qtyRecord->locations_id  = 0;
+                $qtyRecord->save(false);
+            }
+        } elseif ($operation === 'subtract') {
+            if ($qtyRecord) {
+                $qtyRecord->quantity = max(0, $qtyRecord->quantity - $lineItem->number);
+                if ($qtyRecord->quantity <= 0) {
+                    $qtyRecord->delete();
+                } else {
+                    $qtyRecord->save(false);
+                }
+            }
+        }
+    }
+
     protected function findModel($id)
     {
         if (($model = InventoryInvoices::findOne($id)) !== null) {
             return $model;
-        } else {
-            throw new NotFoundHttpException('The requested page does not exist.');
         }
+        throw new NotFoundHttpException('الصفحة المطلوبة غير موجودة.');
     }
 }

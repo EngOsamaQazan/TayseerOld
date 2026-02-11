@@ -93,6 +93,9 @@ return [
         'judiciary' => [
             'class' => 'backend\modules\judiciary\Judiciary',
         ],
+        'diwan' => [
+            'class' => 'backend\modules\diwan\Diwan',
+        ],
 
         'inventoryStockLocations' => [
             'class' => 'backend\modules\inventoryStockLocations\InventoryStockLocations',

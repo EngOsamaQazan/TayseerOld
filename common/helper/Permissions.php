@@ -41,6 +41,8 @@ class Permissions
     const  ARCHEVE = 'أرشيف';
     const  DOCUMENT_HOLDER = 'حامل الوثيقة';
     const  MANAGER = 'الاداره';
+    const  DIWAN = 'الديوان';
+    const  DIWAN_REPORTS = 'تقارير الديوان';
     const  JOBS = 'الوظائف';
     const  DETERMINATION = 'تحديد';
     const  COLLECTION = 'الحسميات';

@@ -13,8 +13,13 @@ use backend\modules\judiciaryActions\models\JudiciaryActions;
 
 /* بيانات مرجعية */
 $judiciaries = ArrayHelper::map(Judiciary::find()->asArray()->all(), 'id', 'judiciary_number');
-$customers = ArrayHelper::map(Customers::find()->select(['id', 'name'])->asArray()->all(), 'id', 'name');
 $actions = ArrayHelper::map(JudiciaryActions::find()->asArray()->all(), 'id', 'name');
+/* العميل الحالي (لوضع التعديل) */
+$custInitText = '';
+if (!$model->isNewRecord && $model->customers_id) {
+    $c = Customers::findOne($model->customers_id);
+    $custInitText = $c ? $c->name : '';
+}
 $isNew = $model->isNewRecord;
 ?>
 
@@ -33,9 +38,19 @@ $isNew = $model->isNewRecord;
             </div>
             <div class="col-md-4">
                 <?= $form->field($model, 'customers_id')->widget(Select2::class, [
-                    'data' => $customers,
-                    'options' => ['placeholder' => 'اختر العميل'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+                    'initValueText' => $custInitText,
+                    'options' => ['placeholder' => 'ابحث بالاسم أو الرقم الوطني...'],
+                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
+                        'ajax' => [
+                            'url' => \yii\helpers\Url::to(['/customers/customers/search-customers']),
+                            'dataType' => 'json', 'delay' => 250,
+                            'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
+                            'processResults' => new \yii\web\JsExpression('function(d){return d}'),
+                            'cache' => true,
+                        ],
+                        'templateResult' => new \yii\web\JsExpression("function(i){if(i.loading)return i.text;var h='<div><b>'+i.text+'</b>';if(i.id_number)h+=' <small style=\"color:#64748b\">· '+i.id_number+'</small>';if(i.phone)h+=' <small style=\"color:#0891b2\">☎ '+i.phone+'</small>';return $(h+'</div>')}"),
+                        'templateSelection' => new \yii\web\JsExpression("function(i){return i.text||i.id}"),
+                    ],
                 ])->label('العميل') ?>
             </div>
             <div class="col-md-4">

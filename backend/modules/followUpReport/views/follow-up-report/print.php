@@ -79,17 +79,23 @@ $this->registerJsFile('/js/Tafqeet.js');
             <div class="col-sm-12 col-xs-12">
                 <?=
                 $form->field($model, 'guarantors_ids')->widget(Select2::classname(), [
-                    'data' => yii\helpers\ArrayHelper::map(Customers::find()->all(), 'id', 'name'),
-                    'language' => 'en',
-                    'options' => ['placeholder' => Yii::t('app', 'Select guarantors  '),
+                    'options' => ['placeholder' => Yii::t('app', 'ابحث واختر الكفلاء...'),
                         'multiple' => true
                     ],
                     'pluginOptions' => [
-                        'allowClear' => true,
-                        // 'maximumSelectionLength' => 1,
+                        'allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
+                        'ajax' => [
+                            'url' => \yii\helpers\Url::to(['/customers/customers/search-customers']),
+                            'dataType' => 'json', 'delay' => 250,
+                            'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
+                            'processResults' => new \yii\web\JsExpression('function(d){return d}'),
+                            'cache' => true,
+                        ],
+                        'templateResult' => new \yii\web\JsExpression("function(i){if(i.loading)return i.text;var h='<div><b>'+i.text+'</b>';if(i.id_number)h+=' <small style=\"color:#64748b\">· '+i.id_number+'</small>';if(i.phone)h+=' <small style=\"color:#0891b2\">☎ '+i.phone+'</small>';return $(h+'</div>')}"),
+                        'templateSelection' => new \yii\web\JsExpression("function(i){return i.text||i.id}"),
                     ],
                     'pluginEvents' => [
-                        "change" => "function() { getCustomerData($('#contracts-customer_id').select2('data')[0].id) }",
+                        "change" => "function() { if($('#contracts-customer_id').select2('data').length) getCustomerData($('#contracts-customer_id').select2('data')[0].id) }",
                     ],
                 ])->label(Yii::t('app', 'Guarantors search'));
                 ?>
