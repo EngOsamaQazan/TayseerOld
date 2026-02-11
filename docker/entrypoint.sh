@@ -41,6 +41,8 @@ for i in $(seq 1 30); do
         mysql -h mysql -u root -prootpassword namaa_jadal < /var/www/html/docker/materialized_view.sql 2>/dev/null && echo "Cache table populated."
         # Create stored procedures
         php /var/www/html/docker/create_sp.php 2>/dev/null && echo "Stored procedures created."
+        # Apply action-level permissions migration (INSERT IGNORE = safe to re-run)
+        mysql -h mysql -u root -prootpassword namaa_jadal < /var/www/html/docker/migration_permissions.sql 2>/dev/null && echo "Action-level permissions applied."
         break
     fi
     echo "Waiting for MySQL... attempt $i"

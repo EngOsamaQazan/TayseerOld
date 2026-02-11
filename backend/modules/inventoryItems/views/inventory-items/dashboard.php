@@ -252,7 +252,7 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
             <div class="inv-panel-head">
                 <i class="fa fa-shopping-cart" style="color:var(--inv-purple)"></i>
                 آخر أوامر الشراء
-                <a href="<?= Url::to(['/inventoryInvoices/inventory-invoices']) ?>" style="margin-right:auto;font-size:12px;font-weight:600;color:var(--inv-primary)">عرض الكل ←</a>
+                <a href="<?= Url::to(['/inventoryInvoices/inventory-invoices/index']) ?>" style="margin-right:auto;font-size:12px;font-weight:600;color:var(--inv-primary)">عرض الكل ←</a>
             </div>
             <div class="inv-panel-body">
                 <?php if (empty($recentOrders)): ?>

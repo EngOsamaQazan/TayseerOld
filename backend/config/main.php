@@ -309,8 +309,228 @@ return [
         'urlManager' => [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
-            'rules' => [
-            ],
+            'rules' => call_user_func(function () {
+                /*
+                 * URL Shortening Rules
+                 * =====================
+                 * Converts: /module/module/action → /module/action
+                 * Example:  /customers/customers/create → /customers/create
+                 *
+                 * Modules with extra controllers are handled separately
+                 * to avoid conflicts (e.g. /customers/smart-media/upload)
+                 */
+
+                /*
+                 * Layer 1: Old-format backward compatibility (PARSING_ONLY)
+                 * ─────────────────────────────────────────────────────────
+                 * These rules handle the old 3-segment URLs like:
+                 *   /customers/customers/create
+                 *   /financialTransaction/financial-transaction/import-file
+                 * They only parse incoming URLs, never used for URL creation.
+                 * This prevents the shortened rules from incorrectly matching
+                 * the controller name as an action.
+                 */
+
+                $rules = [];
+
+                // --- Multi-controller modules: old-format backward compat ---
+                $multiControllerCompat = [
+                    'customers'  => 'customers',
+                    'contracts'  => 'contracts',
+                    'judiciary'  => 'judiciary',
+                    'reports'    => 'reports',
+                    'court'      => 'court',
+                ];
+                foreach ($multiControllerCompat as $moduleId => $controllerId) {
+                    $rules[] = [
+                        'pattern' => "{$moduleId}/{$controllerId}/<action:[\\w-]+>/<id:\\d+>",
+                        'route'   => "{$moduleId}/{$controllerId}/<action>",
+                        'mode'    => \yii\web\UrlRule::PARSING_ONLY,
+                    ];
+                    $rules[] = [
+                        'pattern' => "{$moduleId}/{$controllerId}/<action:[\\w-]+>",
+                        'route'   => "{$moduleId}/{$controllerId}/<action>",
+                        'mode'    => \yii\web\UrlRule::PARSING_ONLY,
+                    ];
+                    $rules[] = [
+                        'pattern' => "{$moduleId}/{$controllerId}",
+                        'route'   => "{$moduleId}/{$controllerId}/index",
+                        'mode'    => \yii\web\UrlRule::PARSING_ONLY,
+                    ];
+                }
+
+                // --- Single-controller modules definition ---
+                $singleControllerModules = [
+                    // Core business
+                    'collection'            => 'collection',
+                    'financialTransaction'  => 'financial-transaction',
+                    'followUp'              => 'follow-up',
+                    'followUpReport'        => 'follow-up-report',
+                    'loanScheduling'        => 'loan-scheduling',
+                    'diwan'                 => 'diwan',
+
+                    // Customer & contact
+                    'address'               => 'address',
+                    'citizen'               => 'citizen',
+                    'cousins'               => 'cousins',
+                    'phoneNumbers'          => 'phone-numbers',
+                    'contactType'           => 'contact-type',
+                    'connectionResponse'    => 'connection-response',
+                    'feelings'              => 'feelings',
+                    'hearAboutUs'           => 'hear-about-us',
+
+                    // Inventory
+                    'inventoryItems'            => 'inventory-items',
+                    'inventoryItemQuantities'   => 'inventory-item-quantities',
+                    'inventoryInvoices'         => 'inventory-invoices',
+                    'inventoryStockLocations'   => 'inventory-stock-locations',
+                    'inventorySuppliers'        => 'inventory-suppliers',
+                    'itemsInventoryInvoices'    => 'items-inventory-invoices',
+                    'items'                     => 'items',
+                    'invoice'                   => 'invoice',
+
+                    // Legal
+                    'judiciaryType'         => 'judiciary-type',
+                    'JudiciaryInformAddress' => 'judiciary-inform-address',
+                    'lawyers'               => 'lawyers',
+                    'contractDocumentFile'  => 'contract-document-file',
+                    'contractInstallment'   => 'contract-installment',
+                    'documentHolder'        => 'document-holder',
+                    'documentStatus'        => 'document-status',
+                    'documentType'          => 'document-type',
+
+                    // HR
+                    'employee'              => 'employee',
+                    'department'            => 'department',
+                    'designation'           => 'designation',
+                    'attendance'            => 'attendance',
+                    'holidays'              => 'holidays',
+                    'leavePolicy'           => 'leave-policy',
+                    'leaveRequest'          => 'leave-request',
+                    'leaveTypes'            => 'leave-types',
+                    'workdays'              => 'workdays',
+                    'jobs'                  => 'jobs',
+
+                    // Finance
+                    'bancks'                => 'bancks',
+                    'companies'             => 'companies',
+                    'income'                => 'income',
+                    'incomeCategory'        => 'income-category',
+                    'expenses'              => 'expenses',
+                    'expenseCategories'     => 'expense-categories',
+                    'paymentType'           => 'payment-type',
+
+                    // Settings & other
+                    'city'                  => 'city',
+                    'location'              => 'location',
+                    'status'                => 'status',
+                    'movment'               => 'movment',
+                    'notification'          => 'notification',
+                    'sms'                   => 'sms',
+                    'shareholders'          => 'shareholders',
+                    'shares'                => 'shares',
+                    'authAssignment'        => 'auth-assignment',
+                    'rejesterFollowUpType'  => 'rejester-follow-up-type',
+                    'realEstate'            => 'real-estate',
+                ];
+
+                // --- Old-format backward compat for single-controller modules ---
+                foreach ($singleControllerModules as $moduleId => $controllerId) {
+                    $rules[] = [
+                        'pattern' => "{$moduleId}/{$controllerId}/<action:[\\w-]+>/<id:\\d+>",
+                        'route'   => "{$moduleId}/{$controllerId}/<action>",
+                        'mode'    => \yii\web\UrlRule::PARSING_ONLY,
+                    ];
+                    $rules[] = [
+                        'pattern' => "{$moduleId}/{$controllerId}/<action:[\\w-]+>",
+                        'route'   => "{$moduleId}/{$controllerId}/<action>",
+                        'mode'    => \yii\web\UrlRule::PARSING_ONLY,
+                    ];
+                    $rules[] = [
+                        'pattern' => "{$moduleId}/{$controllerId}",
+                        'route'   => "{$moduleId}/{$controllerId}/index",
+                        'mode'    => \yii\web\UrlRule::PARSING_ONLY,
+                    ];
+                }
+
+                // Also handle kebab-case URL backward compat for judiciaryActions / judiciaryCustomersActions
+                $legacyKebabCompat = [
+                    'judiciaryActions'            => 'judiciary-actions',
+                    'judiciaryCustomersActions'   => 'judiciary-customers-actions',
+                ];
+                foreach ($legacyKebabCompat as $moduleId => $controllerId) {
+                    $rules[] = [
+                        'pattern' => "{$moduleId}/{$controllerId}/<action:[\\w-]+>/<id:\\d+>",
+                        'route'   => "{$moduleId}/{$controllerId}/<action>",
+                        'mode'    => \yii\web\UrlRule::PARSING_ONLY,
+                    ];
+                    $rules[] = [
+                        'pattern' => "{$moduleId}/{$controllerId}/<action:[\\w-]+>",
+                        'route'   => "{$moduleId}/{$controllerId}/<action>",
+                        'mode'    => \yii\web\UrlRule::PARSING_ONLY,
+                    ];
+                    $rules[] = [
+                        'pattern' => "{$moduleId}/{$controllerId}",
+                        'route'   => "{$moduleId}/{$controllerId}/index",
+                        'mode'    => \yii\web\UrlRule::PARSING_ONLY,
+                    ];
+                }
+
+                /*
+                 * Layer 2: Shortened URL rules (CREATION + PARSING)
+                 * ──────────────────────────────────────────────────
+                 * These generate clean short URLs and also parse them.
+                 * Old-format URLs are already handled above (PARSING_ONLY),
+                 * so they won't conflict with these rules.
+                 */
+
+                // --- Multi-controller modules: shortened rules ---
+                // customers: has smart-media, test controllers
+                $rules['customers/smart-media/<action:[\w-]+>'] = 'customers/smart-media/<action>';
+                $rules['customers/test/<action:[\w-]+>']        = 'customers/test/<action>';
+                $rules['customers/<action:[\w-]+>/<id:\d+>']    = 'customers/customers/<action>';
+                $rules['customers/<action:[\w-]+>']             = 'customers/customers/<action>';
+                $rules['customers']                             = 'customers/customers/index';
+
+                // contracts
+                $rules['contracts/<action:[\w-]+>/<id:\d+>']    = 'contracts/contracts/<action>';
+                $rules['contracts/<action:[\w-]+>']             = 'contracts/contracts/<action>';
+                $rules['contracts']                             = 'contracts/contracts/index';
+
+                // judiciary
+                $rules['judiciary/<action:[\w-]+>/<id:\d+>']    = 'judiciary/judiciary/<action>';
+                $rules['judiciary/<action:[\w-]+>']             = 'judiciary/judiciary/<action>';
+                $rules['judiciary']                             = 'judiciary/judiciary/index';
+
+                // reports
+                $rules['reports/<action:[\w-]+>/<id:\d+>']      = 'reports/reports/<action>';
+                $rules['reports/<action:[\w-]+>']               = 'reports/reports/<action>';
+                $rules['reports']                               = 'reports/reports/index';
+
+                // court
+                $rules['court/<action:[\w-]+>/<id:\d+>']        = 'court/court/<action>';
+                $rules['court/<action:[\w-]+>']                 = 'court/court/<action>';
+                $rules['court']                                 = 'court/court/index';
+
+                // judiciaryActions (kebab short URL)
+                $rules['judiciary-actions/<action:[\w-]+>/<id:\d+>'] = 'judiciaryActions/judiciary-actions/<action>';
+                $rules['judiciary-actions/<action:[\w-]+>']          = 'judiciaryActions/judiciary-actions/<action>';
+                $rules['judiciary-actions']                          = 'judiciaryActions/judiciary-actions/index';
+
+                // judiciaryCustomersActions (kebab short URL)
+                $rules['judiciary-customers-actions/<action:[\w-]+>/<id:\d+>'] = 'judiciaryCustomersActions/judiciary-customers-actions/<action>';
+                $rules['judiciary-customers-actions/<action:[\w-]+>']          = 'judiciaryCustomersActions/judiciary-customers-actions/<action>';
+                $rules['judiciary-customers-actions']                          = 'judiciaryCustomersActions/judiciary-customers-actions/index';
+
+                // --- Single-controller modules: shortened rules ---
+                foreach ($singleControllerModules as $moduleId => $controllerId) {
+                    $rules["{$moduleId}/<action:[\\w-]+>/<id:\\d+>"] = "{$moduleId}/{$controllerId}/<action>";
+                    $rules["{$moduleId}/<action:[\\w-]+>"]           = "{$moduleId}/{$controllerId}/<action>";
+                    $rules["{$moduleId}"]                            = "{$moduleId}/{$controllerId}/index";
+                }
+
+                return $rules;
+            }),
         ],
         'view' => [
             'theme' => [

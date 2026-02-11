@@ -108,12 +108,12 @@ return [
                                 ],
                                 [
                                     'label' => '<i class="icon-pencil5"></i>' . \Yii::t('app', 'Add Installment'),
-                                    'url' => ['/contractInstallment/contract-installment', 'contract_id' => $key],
+                                    'url' => ['/contractInstallment/contract-installment/index', 'contract_id' => $key],
                                     'visible' => true,
                                 ],
                                 [
                                     'label' => '<i class="icon-pencil5"></i>' . \Yii::t('app', 'Add Follow Up'),
-                                    'url' => ['/followUp/follow-up', 'contract_id' => $key],
+                                    'url' => ['/followUp/follow-up/index', 'contract_id' => $key],
                                     'visible' => true,
                                 ],
                                 [
@@ -173,12 +173,12 @@ return [
                                 ],
                                 [
                                     'label' => '<i class="icon-pencil5"></i>' . \Yii::t('app', 'Add Installment'),
-                                    'url' => ['/contractInstallment/contract-installment', 'contract_id' => $key],
+                                    'url' => ['/contractInstallment/contract-installment/index', 'contract_id' => $key],
                                     'visible' => true,
                                 ],
                                 [
                                     'label' => '<i class="icon-pencil5"></i>' . \Yii::t('app', 'Add Follow Up'),
-                                    'url' => ['/followUp/follow-up', 'contract_id' => $key],
+                                    'url' => ['/followUp/follow-up/index', 'contract_id' => $key],
                                     'visible' => true,
                                 ],
                                 [

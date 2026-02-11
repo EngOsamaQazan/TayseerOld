@@ -135,11 +135,11 @@ use app\helper\Permissions;
                                     <div class="menu-title"><?= Yii::t('app', 'قسم الديوان') ?></div>
                                 </a>
                                 <ul class="mm-collapse">
-                                    <li><a href="/diwan/diwan/index"><ion-icon name="speedometer-outline"></ion-icon><?= Yii::t('app', 'لوحة المعلومات') ?></a></li>
-                                    <li><a href="/diwan/diwan/create"><ion-icon name="add-circle-outline"></ion-icon><?= Yii::t('app', 'معاملة جديدة') ?></a></li>
-                                    <li><a href="/diwan/diwan/transactions"><ion-icon name="swap-horizontal-outline"></ion-icon><?= Yii::t('app', 'المعاملات') ?></a></li>
-                                    <li><a href="/diwan/diwan/search"><ion-icon name="search-outline"></ion-icon><?= Yii::t('app', 'بحث الوثائق') ?></a></li>
-                                    <li><a href="/diwan/diwan/reports"><ion-icon name="stats-chart-outline"></ion-icon><?= Yii::t('app', 'التقارير') ?></a></li>
+                                    <li><a href="<?= Url::to(['/diwan/diwan/index']) ?>"><ion-icon name="speedometer-outline"></ion-icon><?= Yii::t('app', 'لوحة المعلومات') ?></a></li>
+                                    <li><a href="<?= Url::to(['/diwan/diwan/create']) ?>"><ion-icon name="add-circle-outline"></ion-icon><?= Yii::t('app', 'معاملة جديدة') ?></a></li>
+                                    <li><a href="<?= Url::to(['/diwan/diwan/transactions']) ?>"><ion-icon name="swap-horizontal-outline"></ion-icon><?= Yii::t('app', 'المعاملات') ?></a></li>
+                                    <li><a href="<?= Url::to(['/diwan/diwan/search']) ?>"><ion-icon name="search-outline"></ion-icon><?= Yii::t('app', 'بحث الوثائق') ?></a></li>
+                                    <li><a href="<?= Url::to(['/diwan/diwan/reports']) ?>"><ion-icon name="stats-chart-outline"></ion-icon><?= Yii::t('app', 'التقارير') ?></a></li>
                                 </ul>
                             </li>
                             <?php if( Permissions::groupsPermissions('changing') ){?>
@@ -187,7 +187,7 @@ use app\helper\Permissions;
                                         <ion-icon name="people-circle-sharp" role="img" class="md hydrated"
                                                   aria-label="person circle sharp"></ion-icon>
                                     </div>
-                                    <div class="menu-title">'.Yii::t('app','Customers').'</div>',Url::to(['/customers/customers']))?>
+                                    <div class="menu-title">'.Yii::t('app','Customers').'</div>',Url::to(['/customers/customers/index']))?>
 
                                 </li>
                             <?php } ?>
@@ -197,7 +197,7 @@ use app\helper\Permissions;
                                         <ion-icon name="list-sharp" role="img" class="md hydrated"
                                                   aria-label="person circle sharp"></ion-icon>
                                     </div>
-                                    <div class="menu-title">'.Yii::t('app','Companies').'</div>',Url::to(['/companies/companies']))?>
+                                    <div class="menu-title">'.Yii::t('app','Companies').'</div>',Url::to(['/companies/companies/index']))?>
 
                                 </li>
                             <?php } ?>
@@ -207,7 +207,7 @@ use app\helper\Permissions;
                                         <ion-icon name="file-tray-sharp" role="img" class="md hydrated"
                                                   aria-label="person circle sharp"></ion-icon>
                                     </div>
-                                    <div class="menu-title">'.Yii::t('app','Contracts').'</div>',Url::to(['/contracts/contracts']))?>
+                                    <div class="menu-title">'.Yii::t('app','Contracts').'</div>',Url::to(['/contracts/contracts/index']))?>
 
                                 </li>
                             <?php } ?>
@@ -217,7 +217,7 @@ use app\helper\Permissions;
                                         <ion-icon name="call-sharp" role="img" class="md hydrated"
                                                   aria-label="person circle sharp"></ion-icon>
                                     </div>
-                                    <div class="menu-title">'.Yii::t('app','follow Up Report').'</div>',Url::to(['/followUpReport/follow-up-report']))?>
+                                    <div class="menu-title">'.Yii::t('app','follow Up Report').'</div>',Url::to(['/followUpReport/follow-up-report/index']))?>
 
                                 </li>
                             <?php } ?>
@@ -237,7 +237,7 @@ use app\helper\Permissions;
                                         <ion-icon name="people-circle-sharp" role="img" class="md hydrated"
                                                   aria-label="person circle sharp"></ion-icon>
                                     </div>
-                                    <div class="menu-title">'.Yii::t('app','Employee').'</div>',Url::to(['/employee/employee']))?>
+                                    <div class="menu-title">'.Yii::t('app','Employee').'</div>',Url::to(['/employee/employee/index']))?>
 
                                 </li>
                             <?php } ?>
@@ -247,7 +247,7 @@ use app\helper\Permissions;
                                         <ion-icon name="trending-up-sharp" role="img" class="md hydrated"
                                                   aria-label="person circle sharp"></ion-icon>
                                     </div>
-                                    <div class="menu-title">'.Yii::t('app','Financial Transaction').'</div>',Url::to(['/financialTransaction/financial-transaction']))?>
+                                    <div class="menu-title">'.Yii::t('app','Financial Transaction').'</div>',Url::to(['/financialTransaction/financial-transaction/index']))?>
 
                                 </li>
                             <?php } ?>
@@ -257,7 +257,7 @@ use app\helper\Permissions;
                                         <ion-icon name="arrow-up-circle-sharp" role="img" class="md hydrated"
                                                   aria-label="person circle sharp"></ion-icon>
                                     </div>
-                                    <div class="menu-title">'.Yii::t('app','Expenses').'</div>',Url::to(['/expenses/expenses']))?>
+                                    <div class="menu-title">'.Yii::t('app','Expenses').'</div>',Url::to(['/expenses/expenses/index']))?>
 
                                 </li>
                             <?php } ?>

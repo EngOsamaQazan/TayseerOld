@@ -105,21 +105,24 @@ class BankStatementAnalyzer
 
     /**
      * اكتشاف صف العناوين — يبحث عن الصف الذي يحتوي أكبر عدد من الكلمات المفتاحية
+     * يدعم العناوين المركبة (صفين متتاليين)
      */
     private function detectHeaderRow(): void
     {
         $maxScore = 0;
         $bestRow  = 1;
 
-        /* نفحص أول 10 صفوف فقط */
-        $limit = min(10, count($this->sheetData));
+        /* نفحص أول 20 صفاً — بعض البنوك تضع عناوين كثيرة */
+        $limit = min(20, count($this->sheetData));
         for ($row = 1; $row <= $limit; $row++) {
             if (!isset($this->sheetData[$row])) continue;
 
             $score = 0;
+            $nonEmptyCells = 0;
             foreach ($this->sheetData[$row] as $cell) {
                 $normalized = $this->normalize($cell);
                 if (empty($normalized)) continue;
+                $nonEmptyCells++;
 
                 foreach (self::KEYWORDS as $field => $keywords) {
                     foreach ($keywords as $keyword) {
@@ -131,7 +134,8 @@ class BankStatementAnalyzer
                 }
             }
 
-            if ($score > $maxScore) {
+            /* يجب أن يكون الصف يحتوي على 3 خلايا غير فارغة على الأقل لاعتباره صف عناوين */
+            if ($score > $maxScore && $nonEmptyCells >= 3) {
                 $maxScore = $score;
                 $bestRow  = $row;
             }
@@ -139,16 +143,50 @@ class BankStatementAnalyzer
 
         $this->headerRow = $bestRow;
 
-        /* حفظ أسماء العناوين الأصلية */
+        /* حفظ أسماء العناوين الأصلية — مع دمج الصف التالي إذا كان يحتوي عناوين فرعية */
         if (isset($this->sheetData[$bestRow])) {
             foreach ($this->sheetData[$bestRow] as $col => $val) {
                 $this->originalHeaders[$col] = trim((string)$val);
             }
         }
+
+        /* فحص الصف التالي — قد يحتوي أسماء أعمدة فرعية (عناوين مدمجة) */
+        $nextRow = $bestRow + 1;
+        if (isset($this->sheetData[$nextRow])) {
+            $nextScore = 0;
+            foreach ($this->sheetData[$nextRow] as $cell) {
+                $normalized = $this->normalize($cell);
+                if (empty($normalized)) continue;
+                foreach (self::KEYWORDS as $keywords) {
+                    foreach ($keywords as $keyword) {
+                        if (mb_strpos($normalized, $this->normalize($keyword)) !== false) {
+                            $nextScore++;
+                            break 2;
+                        }
+                    }
+                }
+            }
+
+            /* إذا كان الصف التالي يحتوي أيضاً كلمات مفتاحية، ادمج العناوين */
+            if ($nextScore >= 2) {
+                foreach ($this->sheetData[$nextRow] as $col => $val) {
+                    $trimmed = trim((string)$val);
+                    if (!empty($trimmed)) {
+                        if (empty($this->originalHeaders[$col])) {
+                            $this->originalHeaders[$col] = $trimmed;
+                        } else {
+                            $this->originalHeaders[$col] .= ' ' . $trimmed;
+                        }
+                    }
+                }
+                /* تحديث headerRow إلى الصف الثاني لأن dataStartRow سيكون بعده */
+                $this->headerRow = $nextRow;
+            }
+        }
     }
 
     /**
-     * اكتشاف ربط الأعمدة بناءً على أسماء العناوين
+     * اكتشاف ربط الأعمدة بناءً على أسماء العناوين + تحليل البيانات كبديل
      */
     private function detectColumnMapping(): void
     {
@@ -198,6 +236,92 @@ class BankStatementAnalyzer
                 $usedColumns[]         = $bestCol;
             }
         }
+
+        /* ═══ فحص بديل بناءً على أنماط البيانات ═══ */
+        /* إذا لم نجد عمود التاريخ بالكلمات المفتاحية، نبحث عن أعمدة تحتوي تواريخ */
+        if (empty($this->mapping['date'])) {
+            $this->detectColumnsByDataPatterns($usedColumns);
+        }
+    }
+
+    /**
+     * اكتشاف الأعمدة بناءً على أنماط البيانات — يُستخدم كبديل عند فشل الكلمات المفتاحية
+     * يفحص أول صفوف البيانات ويحلل نوع المحتوى لكل عمود
+     */
+    private function detectColumnsByDataPatterns(array &$usedColumns): void
+    {
+        /* جمع 5 صفوف بيانات للتحليل */
+        $sampleRows = [];
+        $start = $this->headerRow + 1;
+        for ($i = $start; $i <= min($start + 15, count($this->sheetData)); $i++) {
+            if (!isset($this->sheetData[$i])) continue;
+            $hasData = false;
+            foreach ($this->sheetData[$i] as $cell) {
+                if (!empty(trim((string)$cell))) { $hasData = true; break; }
+            }
+            if ($hasData) {
+                $sampleRows[] = $this->sheetData[$i];
+                if (count($sampleRows) >= 5) break;
+            }
+        }
+
+        if (empty($sampleRows)) return;
+
+        /* تحليل كل عمود */
+        $columnStats = [];
+        foreach ($sampleRows as $row) {
+            foreach ($row as $col => $cell) {
+                if (in_array($col, $usedColumns)) continue;
+                $val = trim((string)$cell);
+                if (empty($val)) continue;
+
+                if (!isset($columnStats[$col])) {
+                    $columnStats[$col] = ['dates' => 0, 'numbers' => 0, 'texts' => 0, 'total' => 0];
+                }
+                $columnStats[$col]['total']++;
+
+                if ($this->isValidDate($val)) {
+                    $columnStats[$col]['dates']++;
+                } elseif (is_numeric(str_replace([',', ' ', '.'], '', $val)) && $this->parseNumber($val) > 0) {
+                    $columnStats[$col]['numbers']++;
+                } elseif (mb_strlen($val) > 3) {
+                    $columnStats[$col]['texts']++;
+                }
+            }
+        }
+
+        /* عمود التاريخ: أكثر عمود يحتوي تواريخ */
+        if (empty($this->mapping['date'])) {
+            $bestDateCol = null;
+            $bestDateCount = 0;
+            foreach ($columnStats as $col => $stats) {
+                if ($stats['dates'] > $bestDateCount) {
+                    $bestDateCount = $stats['dates'];
+                    $bestDateCol = $col;
+                }
+            }
+            if ($bestDateCol && $bestDateCount >= 2) {
+                $this->mapping['date'] = $bestDateCol;
+                $usedColumns[] = $bestDateCol;
+            }
+        }
+
+        /* عمود الوصف: أكثر عمود يحتوي نصوص طويلة */
+        if (empty($this->mapping['description'])) {
+            $bestTextCol = null;
+            $bestTextCount = 0;
+            foreach ($columnStats as $col => $stats) {
+                if (in_array($col, $usedColumns)) continue;
+                if ($stats['texts'] > $bestTextCount) {
+                    $bestTextCount = $stats['texts'];
+                    $bestTextCol = $col;
+                }
+            }
+            if ($bestTextCol && $bestTextCount >= 2) {
+                $this->mapping['description'] = $bestTextCol;
+                $usedColumns[] = $bestTextCol;
+            }
+        }
     }
 
     /**
@@ -207,26 +331,46 @@ class BankStatementAnalyzer
     {
         $dateCol = $this->mapping['date'] ?? null;
         $start   = $this->headerRow + 1;
+        $maxScan = min($start + 20, count($this->sheetData));
 
-        for ($row = $start; $row <= min($start + 15, count($this->sheetData)); $row++) {
+        for ($row = $start; $row <= $maxScan; $row++) {
             if (!isset($this->sheetData[$row])) continue;
+
+            /* تخطي الصفوف الفارغة تماماً */
+            $allEmpty = true;
+            foreach ($this->sheetData[$row] as $cell) {
+                if (!empty(trim((string)$cell))) { $allEmpty = false; break; }
+            }
+            if ($allEmpty) continue;
 
             /* إذا وجدنا عمود تاريخ — نبحث عن أول تاريخ صالح */
             if ($dateCol && isset($this->sheetData[$row][$dateCol])) {
-                $val = trim((string)$this->sheetData[$row][$dateCol]);
+                $val = $this->sheetData[$row][$dateCol];
                 if ($this->isValidDate($val)) {
                     $this->dataStartRow = $row;
                     return;
                 }
             }
 
-            /* إذا لم نجد عمود تاريخ — نبحث عن أول صف يحتوي رقم */
+            /* فحص بديل: البحث عن تاريخ صالح في أي خلية (لو عمود التاريخ المكتشف خاطئ) */
             if (!$dateCol) {
                 foreach ($this->sheetData[$row] as $cell) {
-                    if (is_numeric(str_replace([',', ' '], '', (string)$cell))) {
+                    $cellVal = trim((string)$cell);
+                    if (!empty($cellVal) && $this->isValidDate($cellVal)) {
                         $this->dataStartRow = $row;
                         return;
                     }
+                }
+                /* فحص أخير: صف يحتوي أرقام متعددة (يشبه بيانات مالية) */
+                $numericCount = 0;
+                foreach ($this->sheetData[$row] as $cell) {
+                    if (is_numeric(str_replace([',', ' '], '', (string)$cell))) {
+                        $numericCount++;
+                    }
+                }
+                if ($numericCount >= 3) {
+                    $this->dataStartRow = $row;
+                    return;
                 }
             }
         }
@@ -478,36 +622,107 @@ class BankStatementAnalyzer
     }
 
     /**
-     * تحقق من صلاحية التاريخ
+     * تحقق من صلاحية التاريخ — يدعم:
+     * - صيغ النصوص: 2024-01-15, 15/01/2024, 15.01.2024
+     * - أرقام Excel التسلسلية (Excel serial dates): 45302, 45302.0
+     * - صيغ تحتوي وقت: 2024-01-15 14:30:00
      */
-    private function isValidDate(?string $val): bool
+    private function isValidDate($val): bool
     {
+        if ($val === null || $val === '') return false;
+        $val = trim((string)$val);
         if (empty($val)) return false;
-        $val = trim($val);
-        /* أنماط شائعة */
+
+        /* فحص رقم Excel التسلسلي — نطاق معقول: 1900-01-01 (=1) إلى ~2100 (=73050) */
+        if (is_numeric($val)) {
+            $num = (float)$val;
+            /* أرقام Excel: 30000=~1982, 40000=~2009, 50000=~2036 */
+            if ($num > 25000 && $num < 60000) return true;
+        }
+
+        /* أنماط نصية شائعة */
         $patterns = [
-            '/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}$/',     /* 2024-01-15 */
-            '/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/',    /* 15/01/2024 أو 15-1-24 */
-            '/^\d{1,2}\.\d{1,2}\.\d{2,4}$/',           /* 15.01.2024 */
+            '/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/',       /* 2024-01-15 (قد يتبعه وقت) */
+            '/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}/',      /* 15/01/2024 أو 15-1-24 */
+            '/^\d{1,2}\.\d{1,2}\.\d{2,4}$/',            /* 15.01.2024 */
         ];
         foreach ($patterns as $p) {
             if (preg_match($p, $val)) return true;
         }
+
         /* محاولة PHP */
-        return strtotime($val) !== false && strtotime($val) > strtotime('1990-01-01');
+        $ts = @strtotime($val);
+        return $ts !== false && $ts > strtotime('1990-01-01');
     }
 
     /**
-     * تحويل نص تاريخ إلى صيغة Y-m-d
+     * تحويل نص تاريخ إلى صيغة Y-m-d — يدعم:
+     * - أرقام Excel التسلسلية
+     * - صيغ DD/MM/YYYY (الأكثر شيوعاً في البنوك العربية)
+     * - صيغ YYYY-MM-DD
      */
-    public function parseDate(?string $val): ?string
+    public function parseDate($val): ?string
     {
+        if ($val === null || $val === '') return null;
+        $val = trim((string)$val);
         if (empty($val)) return null;
-        $val = trim(str_replace(['/', '.'], '-', $val));
-        $ts  = strtotime($val);
+
+        /* فحص رقم Excel التسلسلي */
+        if (is_numeric($val)) {
+            $num = (float)$val;
+            if ($num > 25000 && $num < 60000) {
+                /* تحويل Excel serial → Unix timestamp */
+                /* Excel base date: 1900-01-01 = serial 1 (مع تصحيح خطأ Excel المعروف للسنة الكبيسة 1900) */
+                $unixDays = $num - 25569; /* 25569 = عدد الأيام بين 1900-01-01 و 1970-01-01 */
+                $ts = (int)($unixDays * 86400);
+                if ($ts > strtotime('1990-01-01')) {
+                    return date('Y-m-d', $ts);
+                }
+            }
+            return null;
+        }
+
+        /* إزالة جزء الوقت إذا كان موجوداً */
+        if (preg_match('/^(\d{1,4}[-\/\.]\d{1,2}[-\/\.]\d{1,4})/', $val, $m)) {
+            $val = $m[1];
+        }
+
+        /* تحويل فواصل التاريخ */
+        $val = str_replace(['.'], '-', $val);
+
+        /* معالجة DD/MM/YYYY (شائع في البنوك العربية والأردنية) */
+        if (preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})$#', $val, $m)) {
+            $day   = (int)$m[1];
+            $month = (int)$m[2];
+            $year  = (int)$m[3];
+            if (checkdate($month, $day, $year)) {
+                return sprintf('%04d-%02d-%02d', $year, $month, $day);
+            }
+            /* ربما MM/DD/YYYY */
+            if (checkdate($day, $month, $year)) {
+                return sprintf('%04d-%02d-%02d', $year, $day, $month);
+            }
+            return null;
+        }
+
+        /* معالجة DD/MM/YY */
+        if (preg_match('#^(\d{1,2})/(\d{1,2})/(\d{2})$#', $val, $m)) {
+            $day   = (int)$m[1];
+            $month = (int)$m[2];
+            $year  = (int)$m[3] + ($m[3] > 50 ? 1900 : 2000);
+            if (checkdate($month, $day, $year)) {
+                return sprintf('%04d-%02d-%02d', $year, $month, $day);
+            }
+            return null;
+        }
+
+        /* محاولة عامة */
+        $val = str_replace('/', '-', $val);
+        $ts = @strtotime($val);
         if ($ts && $ts > strtotime('1990-01-01')) {
             return date('Y-m-d', $ts);
         }
+
         return null;
     }
 

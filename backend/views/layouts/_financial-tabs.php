@@ -22,7 +22,7 @@ if ($u->can(Permissions::FINANCIAL_TRANSACTION)) {
         'id'    => 'transactions',
         'label' => 'الحركات المالية',
         'icon'  => 'fa-exchange',
-        'url'   => Url::to(['/financialTransaction/financial-transaction']),
+        'url'   => Url::to(['/financialTransaction/financial-transaction/index']),
     ];
 }
 
@@ -40,7 +40,7 @@ if ($u->can(Permissions::EXPENSES)) {
         'id'    => 'expenses',
         'label' => 'المصاريف',
         'icon'  => 'fa-credit-card',
-        'url'   => Url::to(['/expenses/expenses']),
+        'url'   => Url::to(['/expenses/expenses/index']),
     ];
 }
 
@@ -49,7 +49,7 @@ if ($u->can(Permissions::LOAN_SCHEDULING)) {
         'id'    => 'settlements',
         'label' => 'التسويات',
         'icon'  => 'fa-balance-scale',
-        'url'   => Url::to(['/loanScheduling/loan-scheduling']),
+        'url'   => Url::to(['/loanScheduling/loan-scheduling/index']),
     ];
 }
 

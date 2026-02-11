@@ -72,9 +72,10 @@ if ($filterFrom && $filterTo) {
 }
 
 $u = Yii::$app->user;
-$canEdit   = $u->can(Permissions::EXP_EDIT);
-$canDelete = $u->can(Permissions::EXP_DELETE);
-$canRevert = $u->can(Permissions::EXP_REVERT);
+$baseExp   = Permissions::EXPENSES; // الصلاحية الأساسية كـ fallback
+$canEdit   = $u->can(Permissions::EXP_EDIT)   || $u->can($baseExp);
+$canDelete = $u->can(Permissions::EXP_DELETE) || $u->can($baseExp);
+$canRevert = $u->can(Permissions::EXP_REVERT) || $u->can($baseExp);
 
 /* ═══ هل تم تحديد فترة زمنية؟ ═══ */
 $hasDateFilter = !empty($searchModel->date_from);

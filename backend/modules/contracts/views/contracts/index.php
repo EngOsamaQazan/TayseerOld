@@ -236,10 +236,10 @@ $end   = $begin + count($models) - 1;
                                         <i class="fa fa-print text-info"></i> طباعة
                                     </a>
                                     <div class="ct-act-divider"></div>
-                                    <a href="<?= Url::to(['/contractInstallment/contract-installment', 'contract_id' => $m->id]) ?>" role="menuitem">
+                                    <a href="<?= Url::to(['/contractInstallment/contract-installment/index', 'contract_id' => $m->id]) ?>" role="menuitem">
                                         <i class="fa fa-money text-success"></i> الدفعات
                                     </a>
-                                    <a href="<?= Url::to(['/followUp/follow-up', 'contract_id' => $m->id]) ?>" role="menuitem">
+                                    <a href="<?= Url::to(['/followUp/follow-up/index', 'contract_id' => $m->id]) ?>" role="menuitem">
                                         <i class="fa fa-comments text-primary"></i> المتابعة
                                     </a>
                                     <a href="<?= Url::to(['/loanScheduling/loan-scheduling/create', 'contract_id' => $m->id]) ?>" role="menuitem">

@@ -18,6 +18,12 @@ use common\helper\Permissions;
 $this->title = 'الإدارة المالية';
 $this->params['breadcrumbs'][] = $this->title;
 
+/* ═══ صلاحيات (مع fallback للصلاحية الأساسية) ═══ */
+$baseInc      = Permissions::INCOME;
+$canIncEdit   = Yii::$app->user->can(Permissions::INC_EDIT)   || Yii::$app->user->can($baseInc);
+$canIncDelete = Yii::$app->user->can(Permissions::INC_DELETE) || Yii::$app->user->can($baseInc);
+$canIncRevert = Yii::$app->user->can(Permissions::INC_REVERT) || Yii::$app->user->can($baseInc);
+
 /* ═══ بيانات مرجعية (كاش) ═══ */
 $cache = Yii::$app->cache;
 $p     = Yii::$app->params;
@@ -124,7 +130,7 @@ $hasDateFilter = !empty($searchModel->date_from) || !empty($searchModel->_by);
          ║  2. شريط الأدوات                              ║
          ╚═══════════════════════════════════════════════╝ -->
     <section class="fin-actions" aria-label="إجراءات">
-        <?php if (Yii::$app->user->can(Permissions::INC_EDIT)): ?>
+        <?php if ($canIncEdit): ?>
         <div class="fin-act-group">
             <?= Html::a('<i class="fa fa-plus"></i> <span>دفعة جديدة</span>', ['create'], [
                 'class' => 'fin-btn fin-btn--add', 'title' => 'إضافة دفعة جديدة',
@@ -151,7 +157,7 @@ $hasDateFilter = !empty($searchModel->date_from) || !empty($searchModel->_by);
     <section class="fin-data-section">
         <div class="fin-data-bar">
             <span class="fin-data-count"><i class="fa fa-table"></i> عرض <b><?= $dataProvider->getCount() ?></b> من <b><?= $dataProvider->getTotalCount() ?></b> دفعة</span>
-            <?php if (Yii::$app->user->can(Permissions::INC_DELETE)): ?>
+            <?php if ($canIncDelete): ?>
             <div class="fin-bulk-bar" id="bulkBar" style="display:none">
                 <span class="fin-bulk-count"><i class="fa fa-check-square-o"></i> تم تحديد <b id="bulkCount">0</b> دفعة</span>
                 <button type="button" class="fin-btn fin-btn--del fin-btn--sm" id="bulkDeleteBtn">
@@ -206,13 +212,13 @@ $hasDateFilter = !empty($searchModel->date_from) || !empty($searchModel->_by);
                         <td class="fin-td"><span class="fin-desc" title="<?= $safeNotes ?>"><?= $safeNotes ?: '<span class="fin-na">—</span>' ?></span></td>
                         <td class="fin-td fin-td--acts">
                             <div class="fin-acts-wrap">
-                                <?php if (Yii::$app->user->can(Permissions::INC_EDIT)): ?>
+                                <?php if ($canIncEdit): ?>
                                 <?= Html::a('<i class="fa fa-pencil"></i>', ['update-income', 'id' => $m->id], ['class' => 'fin-act fin-act--edit', 'title' => 'تعديل']) ?>
                                 <?php endif ?>
-                                <?php if (Yii::$app->user->can(Permissions::INC_DELETE)): ?>
+                                <?php if ($canIncDelete): ?>
                                 <?= Html::a('<i class="fa fa-trash-o"></i>', ['delete', 'id' => $m->id], ['class' => 'fin-act fin-act--del', 'title' => 'حذف', 'data' => ['method' => 'post', 'confirm' => 'هل أنت متأكد من حذف هذه الدفعة؟']]) ?>
                                 <?php endif ?>
-                                <?php if ($hasFt && Yii::$app->user->can(Permissions::INC_REVERT)): ?>
+                                <?php if ($hasFt && $canIncRevert): ?>
                                     <?= Html::a('<i class="fa fa-undo"></i>', ['back-to-financial-transaction', 'id' => $m->id, 'financial' => $m->financial_transaction_id], ['class' => 'fin-act fin-act--notes', 'title' => 'إرجاع للحركات المالية', 'data' => ['confirm' => 'هل تريد إرجاع هذه الدفعة للحركات المالية؟']]) ?>
                                 <?php endif ?>
                             </div>

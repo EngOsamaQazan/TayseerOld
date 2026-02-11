@@ -248,21 +248,41 @@ h1, h2, h3, h4, h5, h6 {
   overflow: hidden;
 }
 
-/* Sidebar mini */
+/* Sidebar mini — collapsed state */
 @media (min-width: 768px) {
   .sidebar-mini.sidebar-collapse .main-sidebar {
     transform: translateX(0) !important;
-    width: 50px;
+    width: 54px;
+    border-radius: 0 14px 14px 0;
   }
   .sidebar-mini.sidebar-collapse .content-wrapper,
   .sidebar-mini.sidebar-collapse .main-footer {
-    margin-right: 50px !important;
+    margin-right: 54px !important;
   }
   .sidebar-mini.sidebar-collapse .main-header .navbar {
-    margin-right: 50px !important;
+    margin-right: 54px !important;
   }
   .sidebar-mini.sidebar-collapse .main-header .logo {
-    width: 50px;
+    width: 54px;
+  }
+  .sidebar-mini.sidebar-collapse .sidebar-brand-panel {
+    padding: 12px 6px;
+  }
+  .sidebar-mini.sidebar-collapse .sidebar-brand-img {
+    max-width: 36px;
+    max-height: 36px;
+  }
+  .sidebar-mini.sidebar-collapse .sidebar-menu > li > a {
+    padding: 12px 0 !important;
+    text-align: center;
+  }
+  .sidebar-mini.sidebar-collapse .sidebar-menu > li > a > .fa,
+  .sidebar-mini.sidebar-collapse .sidebar-menu > li > a > .glyphicon,
+  .sidebar-mini.sidebar-collapse .sidebar-menu > li > a > .ion {
+    margin: 0 !important;
+    font-size: 16px;
+    display: block;
+    width: 100%;
   }
   .sidebar-mini.sidebar-collapse .sidebar-menu > li > a > span,
   .sidebar-mini.sidebar-collapse .sidebar-menu > li > a > .pull-right-container {
@@ -271,17 +291,26 @@ h1, h2, h3, h4, h5, h6 {
   .sidebar-mini.sidebar-collapse .sidebar-menu > li:hover > a > span {
     display: block !important;
     position: absolute;
-    right: 50px;
+    right: 54px;
     top: 0;
-    background: var(--clr-primary-800);
+    background: #3d1018;
     padding: 12px 20px;
     min-width: 200px;
     z-index: 9999;
     border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+    box-shadow: -4px 2px 12px rgba(0,0,0,0.2);
+    color: #fff;
+    font-size: 13px;
   }
   .sidebar-mini.sidebar-collapse .treeview-menu {
-    right: 50px !important;
+    right: 54px !important;
     left: auto !important;
+    background: #3d1018 !important;
+    border-radius: 0 0 0 var(--radius-sm);
+    box-shadow: -4px 4px 12px rgba(0,0,0,0.2);
+  }
+  .sidebar-mini.sidebar-collapse .sidebar-menu .header {
+    display: none;
   }
 }
 
@@ -407,69 +436,235 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-family) !important;
 }
 
-/* --- Sidebar --- */
+/* ───────────────────────────────────────────────────────────────
+   SIDEBAR — Professional Floating Design
+   ─────────────────────────────────────────────────────────────── */
+
+/*
+ * Design rationale:
+ *   1. Softer burgundy (#5a1428) — less eye strain during long sessions
+ *   2. Inner border-radius 20px — subtle floating illusion
+ *   3. Soft box-shadow — depth without heaviness
+ *   4. 4px accent indicator on active item — instant visual cue
+ *   5. Generous padding & spacing — professional readability
+ *   6. 0.2s transitions — smooth but never distracting
+ */
+
+/* --- Sidebar container — softer, floating --- */
 .skin-blue .main-sidebar,
 .main-sidebar,
 .skin-blue .left-side {
-  background: linear-gradient(180deg, var(--clr-primary-900) 0%, #2a0a10 100%) !important;
-  box-shadow: -2px 0 15px rgba(0,0,0,0.15);
+  background: linear-gradient(180deg, #4a1220 0%, #2e0c14 50%, #1e0810 100%) !important;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.12), -1px 0 6px rgba(0,0,0,0.06);
+  border-radius: 0 20px 20px 0; /* RTL: الحافة الداخلية */
+  overflow: hidden;
 }
 
+/* --- Brand / Logo panel — visually separated --- */
+.sidebar-brand-panel {
+  padding: 20px 16px 16px;
+  text-align: center;
+  background: rgba(0,0,0,0.12);
+  border-bottom: 1px solid rgba(200,160,74,0.15);
+  position: relative;
+}
+
+.sidebar-brand-panel::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 15%;
+  left: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(200,160,74,0.3), transparent);
+}
+
+.sidebar-brand-logo {
+  display: inline-block;
+}
+
+.sidebar-brand-img {
+  max-width: 52px;
+  max-height: 52px;
+  border-radius: 50%;
+  border: 2px solid rgba(200,160,74,0.45);
+  padding: 2px;
+  transition: all 0.3s ease;
+  filter: brightness(1);
+}
+
+.sidebar-brand-img:hover {
+  border-color: rgba(200,160,74,0.75);
+  transform: scale(1.05);
+}
+
+/* --- Navigation wrapper --- */
+.sidebar-nav-wrap {
+  padding-top: 6px;
+}
+
+/* --- Menu items — improved spacing & typography --- */
 .skin-blue .sidebar-menu > li > a,
 .sidebar-menu > li > a {
-  color: rgba(255,255,255,0.85) !important;
-  border-right: 3px solid transparent;
-  transition: var(--transition);
-  font-size: var(--font-size-sm);
+  color: rgba(255,255,255,0.78) !important;
+  padding: 11px 18px 11px 14px !important;
+  border-right: 4px solid transparent;
+  transition: all 0.2s ease;
+  font-size: 13px;
   font-weight: 500;
+  letter-spacing: 0.15px;
+  line-height: 1.5;
+  position: relative;
 }
 
+/* Icon spacing */
+.sidebar-menu > li > a > .fa,
+.sidebar-menu > li > a > .glyphicon,
+.sidebar-menu > li > a > .ion {
+  width: 22px;
+  text-align: center;
+  font-size: 14px;
+  opacity: 0.8;
+  margin-left: 12px !important;
+  margin-right: 0;
+  transition: all 0.2s ease;
+}
+
+/* --- Hover state — gentle glow, no flash --- */
 .skin-blue .sidebar-menu > li:hover > a,
+.sidebar-menu > li:hover > a {
+  color: #fff !important;
+  background: rgba(255,255,255,0.06) !important;
+  border-right-color: rgba(200,160,74,0.4) !important;
+}
+
+.sidebar-menu > li:hover > a > .fa,
+.sidebar-menu > li:hover > a > .glyphicon,
+.sidebar-menu > li:hover > a > .ion {
+  opacity: 1;
+}
+
+/* --- Active state — accent indicator + lighter background --- */
 .skin-blue .sidebar-menu > li.active > a,
-.sidebar-menu > li:hover > a,
 .sidebar-menu > li.active > a {
   color: #ffffff !important;
-  background: rgba(255,255,255,0.08) !important;
+  background: rgba(200,160,74,0.1) !important;
   border-right-color: var(--clr-accent) !important;
+  border-right-width: 4px;
+  font-weight: 600;
 }
 
+.sidebar-menu > li.active > a > .fa,
+.sidebar-menu > li.active > a > .glyphicon,
+.sidebar-menu > li.active > a > .ion {
+  opacity: 1;
+  color: var(--clr-accent-light);
+}
+
+/* --- Treeview (sub-menus) --- */
 .skin-blue .sidebar-menu > li > .treeview-menu,
 .sidebar-menu > li > .treeview-menu {
-  background: rgba(0,0,0,0.2) !important;
+  background: rgba(0,0,0,0.15) !important;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-right: 4px solid transparent;
 }
 
 .skin-blue .treeview-menu > li > a,
 .treeview-menu > li > a {
-  color: rgba(255,255,255,0.7) !important;
-  font-size: var(--font-size-xs);
+  color: rgba(255,255,255,0.62) !important;
+  font-size: 12px;
+  padding: 8px 20px 8px 10px !important;
+  transition: all 0.2s ease;
+  border-right: 3px solid transparent;
 }
 
 .skin-blue .treeview-menu > li > a:hover,
-.skin-blue .treeview-menu > li.active > a,
-.treeview-menu > li > a:hover,
-.treeview-menu > li.active > a {
-  color: var(--clr-accent-light) !important;
-  background: rgba(255,255,255,0.05) !important;
+.treeview-menu > li > a:hover {
+  color: rgba(255,255,255,0.9) !important;
+  background: rgba(255,255,255,0.04) !important;
+  border-right-color: rgba(200,160,74,0.3) !important;
 }
 
-/* Sidebar user panel */
+.skin-blue .treeview-menu > li.active > a,
+.treeview-menu > li.active > a {
+  color: var(--clr-accent-light) !important;
+  background: rgba(200,160,74,0.08) !important;
+  border-right-color: var(--clr-accent) !important;
+  font-weight: 600;
+}
+
+/* Sub-menu icon spacing */
+.sidebar-menu .treeview-menu > li > a > .fa,
+.sidebar-menu .treeview-menu > li > a > .glyphicon {
+  width: 18px;
+  text-align: center;
+  font-size: 11px;
+  opacity: 0.7;
+  margin-left: 10px !important;
+  margin-right: 0;
+}
+
+.treeview-menu > li:hover > a > .fa,
+.treeview-menu > li:hover > a > .glyphicon,
+.treeview-menu > li.active > a > .fa,
+.treeview-menu > li.active > a > .glyphicon {
+  opacity: 1;
+}
+
+/* --- Section headers --- */
+.sidebar-menu .header {
+  color: var(--clr-accent) !important;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  padding: 20px 18px 8px !important;
+  opacity: 0.7;
+  position: relative;
+}
+
+.sidebar-menu .header::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: 18px;
+  left: 18px;
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+}
+
+/* --- Old user-panel class kept for backward compat --- */
 .user-panel {
-  border-bottom: 1px solid rgba(255,255,255,0.1) !important;
-  padding: 15px 10px;
+  border-bottom: none !important;
+  padding: 0;
 }
 
 .user-panel .info {
   color: var(--clr-text-on-primary);
 }
 
-/* Sidebar section header */
-.sidebar-menu .header {
-  color: var(--clr-accent) !important;
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: var(--font-size-xs);
-  letter-spacing: 1px;
-  padding: 15px 15px 8px;
+/* --- Scrollbar inside sidebar --- */
+.sidebar {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.22);
 }
 
 /* ============================================================
@@ -1111,14 +1306,25 @@ textarea.form-control {
 
   .main-sidebar {
     transform: translateX(230px);
+    border-radius: 0 16px 16px 0;
   }
 
   .sidebar-open .main-sidebar {
     transform: translateX(0);
+    box-shadow: -6px 0 30px rgba(0,0,0,0.25);
   }
 
   .content {
     padding: 15px !important;
+  }
+
+  /* Sidebar brand compact on mobile */
+  .sidebar-brand-panel {
+    padding: 14px 12px 12px;
+  }
+  .sidebar-brand-img {
+    max-width: 44px;
+    max-height: 44px;
   }
 
   /* content-header: يُدار من القسم 54 */
@@ -1278,7 +1484,7 @@ a:hover, a:focus {
 
 .sidebar-menu > li > a > span {
   display: inline-block;
-  max-width: calc(100% - 40px);
+  max-width: calc(100% - 46px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -314,42 +314,132 @@ class FinancialTransactionController extends Controller
 
             /* ═══ المرحلة 2: تحليل الملف + معاينة ═══ */
             $excelFile = UploadedFile::getInstance($model, 'excel_file');
+
             if ($excelFile) {
-                try {
-                    /* قراءة الملف */
-                    $sheetData = $this->readExcelFile($excelFile->tempName, $excelFile->extension);
+                /* التحقق من صحة رفع الملف */
+                if ($excelFile->error !== UPLOAD_ERR_OK) {
+                    $uploadErrors = [
+                        UPLOAD_ERR_INI_SIZE   => 'حجم الملف يتجاوز الحد المسموح به في إعدادات PHP.',
+                        UPLOAD_ERR_FORM_SIZE  => 'حجم الملف يتجاوز الحد المسموح في النموذج.',
+                        UPLOAD_ERR_PARTIAL    => 'تم رفع الملف جزئياً فقط. يرجى المحاولة مرة أخرى.',
+                        UPLOAD_ERR_NO_FILE    => 'لم يتم رفع أي ملف.',
+                        UPLOAD_ERR_NO_TMP_DIR => 'مجلد الملفات المؤقتة غير موجود على الخادم.',
+                        UPLOAD_ERR_CANT_WRITE => 'فشل في كتابة الملف على القرص.',
+                        UPLOAD_ERR_EXTENSION  => 'تم إيقاف رفع الملف بواسطة إضافة PHP.',
+                    ];
+                    $errMsg = $uploadErrors[$excelFile->error] ?? 'خطأ غير معروف في رفع الملف (رمز: ' . $excelFile->error . ')';
+                    Yii::$app->session->setFlash('error', $errMsg);
+                } else {
+                    try {
+                        /* قراءة الملف */
+                        $sheetData = $this->readExcelFile($excelFile->tempName, $excelFile->extension);
 
-                    /* حفظ مؤقت للملف */
-                    $tempFile = '/tmp/import_' . uniqid() . '.' . $excelFile->extension;
-                    copy($excelFile->tempName, $tempFile);
+                        if (empty($sheetData) || count($sheetData) < 2) {
+                            Yii::$app->session->setFlash('error', 'الملف فارغ أو لا يحتوي على بيانات كافية.');
+                        } else {
+                            /* حفظ مؤقت للملف */
+                            $tmpDir = sys_get_temp_dir();
+                            $tempFile = $tmpDir . '/import_' . uniqid() . '.' . $excelFile->extension;
+                            if (!copy($excelFile->tempName, $tempFile)) {
+                                Yii::$app->session->setFlash('error', 'فشل في حفظ الملف المؤقت. تحقق من صلاحيات الكتابة.');
+                            } else {
+                                /* تسجيل أول 15 صف للتشخيص */
+                                $debugRows = [];
+                                for ($r = 1; $r <= min(15, count($sheetData)); $r++) {
+                                    if (isset($sheetData[$r])) {
+                                        $debugRows[$r] = $sheetData[$r];
+                                    }
+                                }
+                                Yii::info('Import file: total rows=' . count($sheetData) . ', first 15 rows: ' . json_encode($debugRows, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), __METHOD__);
 
-                    /* تحليل تلقائي */
-                    $analyzer = new BankStatementAnalyzer();
-                    $analysis = $analyzer->analyze($sheetData);
+                                /* تحليل تلقائي */
+                                $analyzer = new BankStatementAnalyzer();
+                                $analysis = $analyzer->analyze($sheetData);
 
-                    /* تحليل جميع الصفوف لحساب الملخص الكامل */
-                    $allParsed = $analyzer->parseRows(
-                        $analysis['mapping'],
-                        $analysis['dataStartRow'],
-                        null /* بدون حد — كل الصفوف */
-                    );
+                                Yii::info('Analysis result: headerRow=' . $analysis['headerRow']
+                                    . ', dataStartRow=' . $analysis['dataStartRow']
+                                    . ', confidence=' . $analysis['confidence']
+                                    . ', mapping=' . json_encode($analysis['mapping'], JSON_UNESCAPED_UNICODE)
+                                    . ', originalHeaders=' . json_encode($analysis['originalHeaders'], JSON_UNESCAPED_UNICODE),
+                                    __METHOD__);
 
-                    $summary = $analyzer->calculateSummary($allParsed);
+                                /* تحليل جميع الصفوف لحساب الملخص الكامل */
+                                $allParsed = $analyzer->parseRows(
+                                    $analysis['mapping'],
+                                    $analysis['dataStartRow'],
+                                    null /* بدون حد — كل الصفوف */
+                                );
 
-                    /* معاينة أول 10 صفوف فقط للعرض */
-                    $preview = array_slice($allParsed, 0, 10);
+                                Yii::info('Parsed rows count: ' . count($allParsed), __METHOD__);
 
-                    /* استخراج الصفوف التي بها أخطاء لعرضها بالتفصيل */
-                    $errorRows = array_values(array_filter($allParsed, function ($r) {
-                        return !empty($r['errors']) && empty($r['openingBalance']);
-                    }));
+                                if (empty($allParsed)) {
+                                    /* لم يتم تحليل أي صفوف — عرض تشخيص للمستخدم */
+                                    $diagMsg = 'لم يتمكن النظام من تحليل بيانات الملف.';
+                                    $diagMsg .= "\n" . 'صف العناوين المكتشف: ' . $analysis['headerRow'];
+                                    $diagMsg .= ' | صف بداية البيانات: ' . $analysis['dataStartRow'];
+                                    $diagMsg .= ' | مستوى الثقة: ' . $analysis['confidence'] . '%';
+                                    $detected = [];
+                                    $fieldLabels = ['date' => 'التاريخ', 'description' => 'البيان', 'debit' => 'المدين', 'credit' => 'الدائن', 'amount' => 'المبلغ', 'balance' => 'الرصيد'];
+                                    foreach ($fieldLabels as $f => $lbl) {
+                                        if (isset($analysis['mapping'][$f])) {
+                                            $col = $analysis['mapping'][$f];
+                                            $hdr = $analysis['originalHeaders'][$col] ?? '';
+                                            $detected[] = $lbl . ' → ' . $col . ($hdr ? " ($hdr)" : '');
+                                        }
+                                    }
+                                    if (!empty($detected)) {
+                                        $diagMsg .= "\n" . 'الأعمدة المكتشفة: ' . implode(' | ', $detected);
+                                    } else {
+                                        $diagMsg .= "\n" . 'لم يتم اكتشاف أي أعمدة. تأكد من أن صف العناوين يحتوي على كلمات مثل: تاريخ، بيان، مدين، دائن، مبلغ.';
+                                    }
 
-                    $mapping          = $analysis['mapping'];
-                    $availableColumns = $analyzer->getAvailableColumns();
+                                    /* عرض عينة من البيانات حول dataStartRow */
+                                    $sampleStart = max(1, $analysis['dataStartRow'] - 1);
+                                    $sampleEnd   = min(count($sheetData), $analysis['dataStartRow'] + 3);
+                                    $sampleInfo  = [];
+                                    for ($sr = $sampleStart; $sr <= $sampleEnd; $sr++) {
+                                        if (isset($sheetData[$sr])) {
+                                            $cellVals = [];
+                                            foreach ($sheetData[$sr] as $ck => $cv) {
+                                                if (!empty(trim((string)$cv))) {
+                                                    $cellVals[] = $ck . '=' . mb_substr(trim((string)$cv), 0, 25);
+                                                }
+                                            }
+                                            if (!empty($cellVals)) {
+                                                $sampleInfo[] = "صف $sr: " . implode(' | ', $cellVals);
+                                            }
+                                        }
+                                    }
+                                    if (!empty($sampleInfo)) {
+                                        $diagMsg .= "\n\n" . 'عينة من البيانات:' . "\n" . implode("\n", $sampleInfo);
+                                    }
 
-                } catch (\Exception $e) {
-                    Yii::$app->session->setFlash('error', 'خطأ في قراءة الملف: ' . $e->getMessage());
+                                    Yii::warning('Import: no rows parsed. Diagnostics: ' . $diagMsg, __METHOD__);
+                                    Yii::$app->session->setFlash('error', $diagMsg);
+                                } else {
+                                    $summary = $analyzer->calculateSummary($allParsed);
+
+                                    /* معاينة أول 10 صفوف فقط للعرض */
+                                    $preview = array_slice($allParsed, 0, 10);
+
+                                    /* استخراج الصفوف التي بها أخطاء لعرضها بالتفصيل */
+                                    $errorRows = array_values(array_filter($allParsed, function ($r) {
+                                        return !empty($r['errors']) && empty($r['openingBalance']);
+                                    }));
+
+                                    $mapping          = $analysis['mapping'];
+                                    $availableColumns = $analyzer->getAvailableColumns();
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        Yii::$app->session->setFlash('error', 'خطأ في قراءة الملف: ' . $e->getMessage());
+                        Yii::error('Import file error: ' . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
+                    }
                 }
+            } else {
+                /* لم يتم رفع ملف — عرض رسالة توضيحية */
+                Yii::$app->session->setFlash('error', 'الرجاء اختيار ملف Excel (.xlsx أو .xls) قبل الضغط على "تحليل الملف".');
             }
         }
 
@@ -798,6 +888,7 @@ class FinancialTransactionController extends Controller
 
     /**
      * قراءة ملف Excel وإرجاع بياناته كمصفوفة
+     * يحاول القراءة بتنسيق formatted ثم raw إذا لم يجد تواريخ مفهومة
      */
     private function readExcelFile(string $filePath, string $extension): array
     {
@@ -811,6 +902,10 @@ class FinancialTransactionController extends Controller
 
         $excel = $reader->load($filePath);
         $excel->setActiveSheetIndex(0);
-        return $excel->getActiveSheet()->toArray(null, true, true, true);
+
+        /* القراءة بالتنسيق (formatData=true) — التواريخ تأتي كنصوص مُنسّقة */
+        $data = $excel->getActiveSheet()->toArray(null, true, true, true);
+
+        return $data;
     }
 }

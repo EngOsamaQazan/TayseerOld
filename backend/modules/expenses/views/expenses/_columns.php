@@ -96,16 +96,16 @@ return [
                     'url' => ['view', 'id' => $key],
                 ];
 
-                /* تعديل */
-                if ($u->can(Permissions::EXP_EDIT)) {
+                /* تعديل — fallback للصلاحية الأساسية */
+                if ($u->can(Permissions::EXP_EDIT) || $u->can(Permissions::EXPENSES)) {
                     $items[] = [
                         'label' => '<i class="fa fa-pencil text-primary"></i> ' . Yii::t('app', 'تعديل'),
                         'url' => ['update', 'id' => $key],
                     ];
                 }
 
-                /* حذف */
-                if ($u->can(Permissions::EXP_DELETE)) {
+                /* حذف — fallback للصلاحية الأساسية */
+                if ($u->can(Permissions::EXP_DELETE) || $u->can(Permissions::EXPENSES)) {
                     $items[] = [
                         'label' => '<i class="fa fa-trash text-danger"></i> ' . Yii::t('app', 'حذف'),
                         'url' => ['delete', 'id' => $key],
@@ -113,8 +113,8 @@ return [
                     ];
                 }
 
-                /* إرجاع للحركات المالية */
-                if (!empty($model->financial_transaction_id) && $u->can(Permissions::EXP_REVERT)) {
+                /* إرجاع للحركات المالية — fallback للصلاحية الأساسية */
+                if (!empty($model->financial_transaction_id) && ($u->can(Permissions::EXP_REVERT) || $u->can(Permissions::EXPENSES))) {
                     $items[] = [
                         'label' => '<i class="fa fa-undo text-warning"></i> ' . Yii::t('app', 'إرجاع للحركات المالية'),
                         'url' => ['back-to-financial-transaction', 'id' => $key, 'financial' => $model->financial_transaction_id],

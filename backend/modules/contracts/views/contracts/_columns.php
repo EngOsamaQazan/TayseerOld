@@ -158,8 +158,8 @@ return [
                     ['label' => '<i class="fa fa-pencil text-primary"></i> تعديل', 'url' => ['update', 'id' => $key]],
                     ['label' => '<i class="fa fa-print text-info"></i> طباعة العقد والكمبيالات', 'url' => ['print-preview', 'id' => $key]],
                     '<li class="divider"></li>',
-                    ['label' => '<i class="fa fa-money text-success"></i> الدفعات', 'url' => ['/contractInstallment/contract-installment', 'contract_id' => $key]],
-                    ['label' => '<i class="fa fa-comments text-primary"></i> المتابعة', 'url' => ['/followUp/follow-up', 'contract_id' => $key]],
+                    ['label' => '<i class="fa fa-money text-success"></i> الدفعات', 'url' => ['/contractInstallment/contract-installment/index', 'contract_id' => $key]],
+                    ['label' => '<i class="fa fa-comments text-primary"></i> المتابعة', 'url' => ['/followUp/follow-up/index', 'contract_id' => $key]],
                     ['label' => '<i class="fa fa-calendar text-info"></i> جدولة', 'url' => ['/loanScheduling/loan-scheduling/create', 'contract_id' => $key]],
                 ];
 

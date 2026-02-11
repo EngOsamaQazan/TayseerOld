@@ -25,6 +25,19 @@ $this->params['breadcrumbs'][] = $this->title;
 /* ═══ صلاحيات ═══ */
 $isManager    = Yii::$app->user->can(Permissions::MANAGER);
 $canExport    = Yii::$app->user->can(Permissions::FINANCIAL_TRANSACTION_TO_EXPORT_DATA);
+
+/*
+ * Fallback: إذا الصلاحيات المفصّلة (FIN_EDIT, FIN_IMPORT, ...) غير موجودة بقاعدة البيانات،
+ *           نرجع للصلاحية الأساسية "الحركات المالية".
+ * ─────────────────────────────────────────────────────────────────
+ * هذا يمنع مشكلة اختفاء الأزرار عند إعادة إنشاء الـ Docker volume
+ * لأن الـ dump الأصلي (namaa_jadal.sql) لا يحتوي على الصلاحيات المفصّلة.
+ */
+$baseFin  = Permissions::FINANCIAL_TRANSACTION; // 'الحركات المالية'
+$canFinEdit     = Yii::$app->user->can(Permissions::FIN_EDIT)     || Yii::$app->user->can($baseFin);
+$canFinImport   = Yii::$app->user->can(Permissions::FIN_IMPORT)   || Yii::$app->user->can($baseFin);
+$canFinTransfer = Yii::$app->user->can(Permissions::FIN_TRANSFER) || Yii::$app->user->can($baseFin);
+$canFinDelete   = Yii::$app->user->can(Permissions::FIN_DELETE)   || Yii::$app->user->can($baseFin);
 $typeIncome   = FinancialTransaction::TYPE_INCOME;
 $typeOutcome  = FinancialTransaction::TYPE_OUTCOME;
 $custPayments = FinancialTransaction::CUSTOMER_PAYMENTS;
@@ -102,21 +115,21 @@ $dataProvider->query->with(['company']);
          ║  2. شريط الأدوات — Actions & Buttons         ║
          ╚═══════════════════════════════════════════════╝ -->
     <section class="fin-actions" aria-label="إجراءات">
-        <?php if (Yii::$app->user->can(Permissions::FIN_EDIT)): ?>
+        <?php if ($canFinEdit): ?>
         <div class="fin-act-group">
             <?= Html::a('<i class="fa fa-plus"></i> <span>حركة جديدة</span>', ['create'], [
                 'class' => 'fin-btn fin-btn--add', 'title' => 'إضافة حركة مالية جديدة',
             ]) ?>
         </div>
         <?php endif ?>
-        <?php if (Yii::$app->user->can(Permissions::FIN_IMPORT)): ?>
+        <?php if ($canFinImport): ?>
         <div class="fin-act-group">
             <?= Html::a('<i class="fa fa-file-excel-o"></i> <span>استيراد</span>', ['financial-transaction/import-file'], [
                 'class' => 'fin-btn fin-btn--import', 'title' => 'استيراد حركات من ملف Excel',
             ]) ?>
         </div>
         <?php endif ?>
-        <?php if (Yii::$app->user->can(Permissions::FIN_TRANSFER)): ?>
+        <?php if ($canFinTransfer): ?>
         <div class="fin-act-group">
             <?= Html::a('<i class="fa fa-share-square-o"></i> <span>ترحيل دفعات</span> <b>' . $dataTransfer . '</b>', ['financial-transaction/transfer-data'], [
                 'class' => 'fin-btn fin-btn--transfer', 'title' => 'ترحيل الدفعات الدائنة',
@@ -126,7 +139,7 @@ $dataProvider->query->with(['company']);
             ]) ?>
         </div>
         <?php endif ?>
-        <?php if (Yii::$app->user->can(Permissions::FIN_DELETE)): ?>
+        <?php if ($canFinDelete): ?>
         <div class="fin-act-group">
             <button type="button" class="fin-btn fin-btn--undo" id="undoLastImportBtn" title="حذف جميع حركات آخر استيراد">
                 <i class="fa fa-undo"></i> <span>تراجع عن آخر استيراد</span>
@@ -146,7 +159,7 @@ $dataProvider->query->with(['company']);
     <section class="fin-data-section">
         <div class="fin-data-bar">
             <span class="fin-data-count"><i class="fa fa-table"></i> عرض <b><?= $dataProvider->getCount() ?></b> من <b><?= $dataProvider->getTotalCount() ?></b> حركة</span>
-            <?php if (Yii::$app->user->can(Permissions::FIN_DELETE)): ?>
+            <?php if ($canFinDelete): ?>
             <!-- شريط الحذف الجماعي — يظهر عند تحديد صفوف -->
             <div class="fin-bulk-bar" id="bulkBar" style="display:none">
                 <span class="fin-bulk-count"><i class="fa fa-check-square-o"></i> تم تحديد <b id="bulkCount">0</b> حركة</span>

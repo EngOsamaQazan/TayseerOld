@@ -48,7 +48,7 @@ $companies = ArrayHelper::map(Companies::find()->all(), 'id', 'name');
     <?php foreach (Yii::$app->session->getAllFlashes() as $type => $msg): ?>
         <div class="fin-alert fin-alert--<?= $type === 'error' ? 'danger' : $type ?>">
             <i class="fa fa-<?= $type === 'success' ? 'check-circle' : 'exclamation-triangle' ?>"></i>
-            <?= is_array($msg) ? $msg[0] : $msg ?>
+            <?= nl2br(Html::encode(is_array($msg) ? $msg[0] : $msg)) ?>
         </div>
     <?php endforeach ?>
 

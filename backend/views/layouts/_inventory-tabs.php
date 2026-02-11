@@ -17,7 +17,7 @@ if ($u->can(Permissions::INVENTORY_ITEMS) || $u->can(Permissions::INVENTORY_INVO
         'id'    => 'dashboard',
         'label' => 'لوحة التحكم',
         'icon'  => 'fa-tachometer',
-        'url'   => Url::to(['/inventoryItems/inventory-items']),
+        'url'   => Url::to(['/inventoryItems/inventory-items/index']),
     ];
 }
 
@@ -27,7 +27,7 @@ if ($u->can(Permissions::INVENTORY_INVOICES)) {
         'id'    => 'invoices',
         'label' => 'أوامر الشراء',
         'icon'  => 'fa-shopping-cart',
-        'url'   => Url::to(['/inventoryInvoices/inventory-invoices']),
+        'url'   => Url::to(['/inventoryInvoices/inventory-invoices/index']),
     ];
 }
 
