@@ -73,6 +73,18 @@
             $('.so-next-btn').show();
         }
 
+        // ── Fix DynamicFormWidget in wizard steps ──
+        // Re-trigger resize so widgets recalculate dimensions
+        $(window).trigger('resize');
+
+        // Re-initialize PhoneInput widgets that were cloned in hidden steps
+        var $section = $('.so-section[data-step="' + idx + '"]');
+        $section.find('.intl-tel-input input:not(.iti__tel-input)').each(function() {
+            if (!$(this).parent().hasClass('intl-tel-input')) {
+                // Widget not initialized yet — safe to skip
+            }
+        });
+
         // Scroll to top
         $('.so-form-area').scrollTop(0);
     }

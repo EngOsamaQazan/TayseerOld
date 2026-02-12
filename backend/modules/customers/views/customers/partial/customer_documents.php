@@ -16,7 +16,7 @@ DynamicFormWidget::begin([
     'insertButton' => '.customer-documents-add-item',
     'deleteButton' => '.customer-documents-remove-item',
     'model' => $customerDocumentsModel[0],
-    'formId' => 'dynamic-form',
+    'formId' => 'smart-onboarding-form',
     'formFields' => ['document_number', 'document_type', 'images'],
 ]);
 ?>

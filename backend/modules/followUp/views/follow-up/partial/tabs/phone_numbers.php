@@ -33,9 +33,7 @@ use backend\modules\customers\models\ContractsCustomers;
                     'class' => '\kartik\grid\DataColumn',
                     'attribute' => 'name',
                     'value' => function ($model) {
-                        return '<button type="button" class="btn btn-primary custmer-popup"  data-target="#customerInfoModal" data-toggle="modal" customer-id ="' . $model->id . '">
-  ' . $model->name . '
-</button>';
+                        return '<a href="javascript:void(0)" class="custmer-popup" data-target="#customerInfoModal" data-toggle="modal" customer-id="' . $model->id . '" style="color:var(--ocp-primary,#6B1D3D);font-weight:600;text-decoration:none;cursor:pointer;border-bottom:1px dashed var(--ocp-primary,#6B1D3D);padding-bottom:1px;transition:all 0.2s" onmouseover="this.style.color=\'#4a1229\';this.style.borderBottomStyle=\'solid\'" onmouseout="this.style.color=\'var(--ocp-primary,#6B1D3D)\';this.style.borderBottomStyle=\'dashed\'">' . Html::encode($model->name) . '</a>';
                     },
                     'format' => 'raw',
                 ],
@@ -245,7 +243,7 @@ use backend\modules\customers\models\ContractsCustomers;
                 'panel' => [
                     'type' => false,
                     'heading' => false,
-                    'before' => '<h4>' . $value->customer->name . '</h4>',
+                    'before' => '<h4><a href="javascript:void(0)" class="custmer-popup" data-target="#customerInfoModal" data-toggle="modal" customer-id="' . $value->customer->id . '" style="color:var(--ocp-primary,#6B1D3D);text-decoration:none;border-bottom:2px dashed var(--ocp-primary,#6B1D3D);padding-bottom:2px">' . Html::encode($value->customer->name) . '</a></h4>',
                     'after' => false,
                     'footer' => false
                 ]

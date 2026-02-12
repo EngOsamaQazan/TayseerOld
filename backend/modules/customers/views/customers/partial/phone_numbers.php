@@ -16,7 +16,7 @@ DynamicFormWidget::begin([
     'insertButton' => '.phone-numbers-add-item',
     'deleteButton' => '.phone-numbers-remove-item',
     'model' => $modelsPhoneNumbers[0],
-    'formId' => 'dynamic-form',
+    'formId' => 'smart-onboarding-form',
     'formFields' => ['address'],
 ]);
 ?>

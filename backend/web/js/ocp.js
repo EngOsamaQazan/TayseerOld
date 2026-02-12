@@ -395,6 +395,20 @@
         // AI
         // ═══════════════════════════════════════
         executeAIAction: function (actionType) {
+            // Special handling for judiciary actions
+            if (actionType === 'add_judiciary_action') {
+                // Switch to judiciary tab
+                this.switchTab('judiciary-actions');
+                this.toast('انتقل لتبويب الإجراءات القضائية', 'info');
+                return;
+            }
+            if (actionType === 'open_case') {
+                // Click the open case button if exists
+                var caseBtn = document.querySelector('[data-action="add_judiciary_action"]');
+                if (caseBtn) caseBtn.click();
+                return;
+            }
+
             // Map AI action to panel opening
             var panelMap = {
                 'call': 'call',
@@ -435,9 +449,16 @@
 
         handleAlertCTA: function (btn) {
             var action = btn.dataset.action;
-            if (action) {
-                this.openPanel(action);
+            if (!action) return;
+
+            // Judiciary-specific CTA handling
+            if (action === 'add_judiciary_action') {
+                this.switchTab('judiciary-actions');
+                this.toast('انتقل لتبويب الإجراءات القضائية', 'info');
+                return;
             }
+
+            this.openPanel(action);
         },
 
         // ═══════════════════════════════════════
@@ -573,6 +594,30 @@
                 title.addEventListener('click', function () {
                     this.closest('.ocp-section--collapsible').classList.toggle('collapsed');
                 });
+            });
+        },
+
+        // ═══════════════════════════════════════
+        // JUDICIARY CHECK DATE UPDATE
+        // ═══════════════════════════════════════
+        updateJudiciaryCheck: function (judiciaryId) {
+            if (!OCP_CONFIG || !OCP_CONFIG.urls || !OCP_CONFIG.urls.updateJudiciaryCheck) {
+                this.toast('رابط تحديث التشييك غير متاح', 'warning');
+                return;
+            }
+            var self = this;
+            $.post(OCP_CONFIG.urls.updateJudiciaryCheck, {
+                judiciary_id: judiciaryId
+            }, function (res) {
+                if (res.success) {
+                    self.toast('تم تحديث تاريخ التشييك: ' + res.date, 'success');
+                    // Reload page to reflect change
+                    setTimeout(function () { location.reload(); }, 800);
+                } else {
+                    self.toast(res.message || 'حدث خطأ', 'error');
+                }
+            }).fail(function () {
+                self.toast('خطأ في الاتصال بالخادم', 'error');
             });
         },
 

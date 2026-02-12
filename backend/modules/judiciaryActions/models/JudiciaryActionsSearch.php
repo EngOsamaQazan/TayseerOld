@@ -5,84 +5,79 @@ namespace backend\modules\judiciaryActions\models;
 use Yii;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use backend\modules\judiciaryActions\models\JudiciaryActions;
 
 /**
- * JudiciaryActionsSearch represents the model behind the search form about `backend\modules\judiciary\models\JudiciaryActions`.
+ * JudiciaryActionsSearch — supports action_nature filtering
  */
 class JudiciaryActionsSearch extends JudiciaryActions
 {
-    /**
-     * @inheritdoc
-     */
     public function rules()
     {
         return [
             [['id'], 'integer'],
-            [['name', 'action_type'], 'safe'],
+            [['name', 'action_type', 'action_nature'], 'safe'],
         ];
     }
 
-    /**
-     * @inheritdoc
-     */
     public function scenarios()
     {
-        // bypass scenarios() implementation in the parent class
         return Model::scenarios();
     }
 
     /**
      * Creates data provider instance with search query applied
-     *
-     * @param array $params
-     *
-     * @return ActiveDataProvider
      */
     public function search($params)
     {
         $query = JudiciaryActions::find();
+
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'sort' => [
+                'defaultOrder' => ['id' => SORT_ASC],
+            ],
+            'pagination' => [
+                'pageSize' => 50,
+            ],
         ]);
+
         $this->load($params);
 
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
             return $dataProvider;
         }
+
+        // Filter by soft delete — show active by default
+        $query->andWhere(['or', ['is_deleted' => 0], ['is_deleted' => null]]);
 
         $query->andFilterWhere([
             'id' => $this->id,
             'action_type' => $this->action_type,
+            'action_nature' => $this->action_nature,
         ]);
+
         $query->andFilterWhere(['like', 'name', $this->name]);
 
         return $dataProvider;
     }
+
     public function searchCounter($params)
     {
         $query = JudiciaryActions::find();
 
-        $dataProvider = new ActiveDataProvider([
-            'query' => $query,
-        ]);
-
         $this->load($params);
 
-        if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
-            return $dataProvider;
+        // Active records only
+        $query->andWhere(['or', ['is_deleted' => 0], ['is_deleted' => null]]);
+
+        if ($this->validate()) {
+            $query->andFilterWhere([
+                'id' => $this->id,
+                'action_type' => $this->action_type,
+                'action_nature' => $this->action_nature,
+            ]);
+            $query->andFilterWhere(['like', 'name', $this->name]);
         }
-
-        $query->andFilterWhere([
-            'id' => $this->id,
-            'action_type' => $this->action_type,
-        ]);
-
-        $query->andFilterWhere(['like', 'name', $this->name]);
 
         return $query->count();
     }

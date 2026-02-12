@@ -40,6 +40,8 @@ use backend\modules\JudiciaryInformAddress\model\JudiciaryInformAddress;
  * @property int $input_method
  * @property string $year
  * @property int $judiciary_inform_address_id
+ * @property string|null $last_check_date
+ * @property string|null $case_status
  *
  * @property Court $court
  * @property User $createdBy
@@ -112,8 +114,8 @@ class Judiciary extends \yii\db\ActiveRecord
             [['court_id'], 'exist', 'skipOnError' => true, 'targetClass' => Court::class, 'targetAttribute' => ['court_id' => 'id']],
             [['created_by'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['created_by' => 'id']],
             [['judiciary_inform_address_id'], 'exist', 'skipOnError' => true, 'targetClass' => JudiciaryInformAddress::class, 'targetAttribute' => ['judiciary_inform_address_id' => 'id']],
-            [['income_date', 'year'], 'string'],
-            [['from_income_date', 'to_income_date', 'company_id'], 'safe'],
+            [['income_date', 'year', 'last_check_date', 'case_status'], 'string'],
+            [['from_income_date', 'to_income_date', 'company_id', 'last_check_date', 'case_status'], 'safe'],
             [['from_income_date', 'to_income_date'], 'string']
 
         ];

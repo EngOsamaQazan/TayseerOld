@@ -1,135 +1,559 @@
 <?php
-
+/**
+ * إضافة/تعديل إجراء قضائي — تصميم جديد كلياً
+ * يدعم: العرض الهرمي للإجراءات + Smart Media Upload + اختيار مباشر للأطراف
+ */
 use yii\helpers\Html;
+use yii\helpers\Json;
+use yii\helpers\Url;
 use yii\widgets\ActiveForm;
 use backend\modules\judiciary\models\Judiciary;
 use backend\modules\customers\models\Customers;
 use backend\modules\judiciaryActions\models\JudiciaryActions;
 use yii\helpers\ArrayHelper;
-use kartik\date\DatePicker;
 use backend\modules\customers\models\ContractsCustomers;
 
-/* @var $this yii\web\View */
-/* @var $model backend\modules\judiciary\models\JudiciaryCustomersActions */
-/* @var $form yii\widgets\ActiveForm */
-/* @var $contractID */
+/* @var $model backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActions */
+/* @var $contractID int */
 
-$data = ContractsCustomers::find()
-    ->select(['c.id', 'c.name'])
-    ->alias('cc')
-    ->innerJoin('{{%customers}} c', 'c.id=cc.customer_id')
+// ─── Load judiciary for this contract ───
+$judiciary = Judiciary::find()->where(['contract_id' => $contractID])->one();
+$judiciaryLabel = $judiciary ? ($judiciary->judiciary_number . '/' . ($judiciary->year ?: '-')) : '-';
+
+// ─── Load contract parties directly ───
+$partyRows = (new \yii\db\Query())
+    ->select(['cc.customer_id', 'c.name', 'cc.customer_type'])
+    ->from('os_contracts_customers cc')
+    ->innerJoin('os_customers c', 'c.id = cc.customer_id')
     ->where(['cc.contract_id' => $contractID])
-    ->createCommand()->queryAll();
+    ->all();
 
+// ─── Load all active actions grouped by nature ───
+$allActions = JudiciaryActions::find()
+    ->andWhere(['or', ['is_deleted' => 0], ['is_deleted' => null]])
+    ->orderBy(['name' => SORT_ASC])
+    ->all();
+
+$natureLabels = [
+    'request'    => 'طلبات إجرائية',
+    'document'   => 'كتب ومذكرات',
+    'doc_status' => 'حالات كتب',
+    'process'    => 'إجراءات إدارية',
+];
+$natureIcons = [
+    'request'    => 'fa-file-text-o',
+    'document'   => 'fa-file-o',
+    'doc_status' => 'fa-exchange',
+    'process'    => 'fa-cog',
+];
+$natureColors = [
+    'request'    => '#3B82F6',
+    'document'   => '#8B5CF6',
+    'doc_status' => '#EA580C',
+    'process'    => '#64748B',
+];
+
+$actionNatureMap = [];
+$groupedById = [];
+foreach ($allActions as $a) {
+    $n = $a->action_nature ?: 'process';
+    $actionNatureMap[$a->id] = $n;
+    $groupedById[$a->id] = ['name' => $a->name, 'nature' => $n];
+}
+
+// ─── Approved requests + existing documents for linking ───
+$approvedRequests = [];
+$existingDocuments = [];
+if ($judiciary) {
+    $reqRows = (new \yii\db\Query())
+        ->select(['jca.id', 'jca.action_date', 'jca.customers_id', 'ja.name as aname', 'c.name as cname'])
+        ->from('os_judiciary_customers_actions jca')
+        ->innerJoin('os_judiciary_actions ja', 'ja.id = jca.judiciary_actions_id')
+        ->leftJoin('os_customers c', 'c.id = jca.customers_id')
+        ->where(['jca.judiciary_id' => $judiciary->id, 'jca.is_deleted' => 0, 'ja.action_nature' => 'request', 'jca.request_status' => 'approved'])
+        ->all();
+    foreach ($reqRows as $r) {
+        $approvedRequests[$r['id']] = $r['aname'] . ($r['action_date'] ? ' · ' . substr($r['action_date'], 0, 10) : '') . ($r['cname'] ? ' — ' . $r['cname'] : '');
+    }
+
+    $docRows = (new \yii\db\Query())
+        ->select(['jca.id', 'jca.action_date', 'jca.customers_id', 'ja.name as aname', 'c.name as cname'])
+        ->from('os_judiciary_customers_actions jca')
+        ->innerJoin('os_judiciary_actions ja', 'ja.id = jca.judiciary_actions_id')
+        ->leftJoin('os_customers c', 'c.id = jca.customers_id')
+        ->where(['jca.judiciary_id' => $judiciary->id, 'jca.is_deleted' => 0, 'ja.action_nature' => 'document'])
+        ->all();
+    foreach ($docRows as $r) {
+        $existingDocuments[$r['id']] = $r['aname'] . ($r['action_date'] ? ' · ' . substr($r['action_date'], 0, 10) : '') . ($r['cname'] ? ' — ' . $r['cname'] : '');
+    }
+}
+
+$isNew = $model->isNewRecord;
+$existingCustomerId = $model->customers_id ?: '';
 ?>
-<div class="questions-bank box box-primary">
 
-    <?php $form = ActiveForm::begin([
-        'options' => ['enctype' => 'multipart/form-data'], // Important for file uploads
-    ]); ?>
+<style>
+/* ══════ Judiciary Action Form — OCP Design ══════ */
+.jaf { font-family:var(--ocp-font-family,'Tajawal',sans-serif);direction:rtl;font-size:13px;color:#1E293B; }
+.jaf *,.jaf *:before,.jaf *:after { box-sizing:border-box; }
 
-    <div class="row">
-        <div class="col-lg-6">
-            <?= $form->field($model, 'judiciary_id')->widget(kartik\select2\Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(Judiciary::find()->where(['contract_id' => $contractID])->all(), 'id', 'judiciary_number'),
-                'options' => [
-                    'placeholder' => 'Select a judiciary.',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]); ?>
+/* Case header chip */
+.jaf-case {
+    display:flex;align-items:center;gap:10px;padding:12px 16px;
+    background:linear-gradient(135deg,#EFF6FF,#F0F9FF);border-radius:10px;
+    border:1px solid #BFDBFE;margin-bottom:14px;
+}
+.jaf-case-icon { width:40px;height:40px;border-radius:10px;background:#DBEAFE;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+.jaf-case-number { font-size:16px;font-weight:800;color:#1E40AF;font-family:'Courier New',monospace; }
+.jaf-case-court { font-size:11px;color:#64748B;margin-top:1px; }
+
+/* Parties selector */
+.jaf-parties { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px; }
+.jaf-party {
+    display:flex;align-items:center;gap:8px;padding:8px 14px;
+    border-radius:10px;border:2px solid #E2E8F0;background:#fff;
+    cursor:pointer;transition:all .2s;font-size:12px;
+}
+.jaf-party:hover { border-color:#93C5FD;background:#F0F9FF; }
+.jaf-party.selected { border-color:#3B82F6;background:#EFF6FF;box-shadow:0 0 0 3px rgba(59,130,246,.15); }
+.jaf-party-avatar {
+    width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;
+}
+.jaf-party-name { font-weight:600;color:#1E293B; }
+.jaf-party-type { font-size:10px;padding:1px 6px;border-radius:8px;font-weight:500; }
+
+/* Action tree selector */
+.jaf-action-tree { margin-bottom:14px; }
+.jaf-nature-group { margin-bottom:8px; }
+.jaf-nature-header {
+    display:flex;align-items:center;gap:6px;padding:6px 10px;
+    background:#F8FAFC;border-radius:8px 8px 0 0;border:1px solid #E2E8F0;border-bottom:none;
+    font-weight:700;font-size:12px;cursor:pointer;user-select:none;
+}
+.jaf-nature-header i.toggle { transition:transform .2s;margin-left:auto; }
+.jaf-nature-header.collapsed i.toggle { transform:rotate(-90deg); }
+.jaf-nature-list {
+    display:flex;flex-direction:column;border:1px solid #E2E8F0;border-radius:0 0 8px 8px;
+    max-height:200px;overflow-y:auto;
+}
+.jaf-nature-list.collapsed { display:none; }
+.jaf-action-item {
+    display:flex;align-items:center;gap:8px;padding:7px 12px;
+    border-bottom:1px solid #F1F5F9;cursor:pointer;transition:all .15s;font-size:12px;
+}
+.jaf-action-item:last-child { border-bottom:none; }
+.jaf-action-item:hover { background:#F8FAFC; }
+.jaf-action-item.selected { background:#EFF6FF;font-weight:600;color:#1D4ED8; }
+.jaf-action-item .bullet { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+
+/* Contextual sections */
+.jaf-ctx { display:none;margin-bottom:14px;padding:12px 14px;border-radius:10px;border:1px solid #E2E8F0;background:#FAFAFA; }
+.jaf-ctx.active { display:block; }
+.jaf-ctx-title { font-size:12px;font-weight:700;color:#475569;margin-bottom:8px;display:flex;align-items:center;gap:6px; }
+
+/* Date field */
+.jaf-date-wrap { margin-bottom:14px; }
+.jaf-input {
+    width:100%;padding:8px 12px;border:1px solid #D1D5DB;border-radius:8px;
+    font-size:13px;outline:none;transition:border-color .2s;background:#fff;
+}
+.jaf-input:focus { border-color:#3B82F6;box-shadow:0 0 0 3px rgba(59,130,246,.1); }
+.jaf-label { font-size:11px;font-weight:600;color:#64748B;margin-bottom:4px;display:block; }
+
+/* Note textarea */
+.jaf-note textarea {
+    width:100%;padding:8px 12px;border:1px solid #D1D5DB;border-radius:8px;
+    font-size:13px;resize:vertical;min-height:60px;outline:none;font-family:inherit;
+}
+.jaf-note textarea:focus { border-color:#3B82F6;box-shadow:0 0 0 3px rgba(59,130,246,.1); }
+
+/* Upload zone (simplified smart-media) */
+.jaf-upload-zone {
+    border:2px dashed #CBD5E1;border-radius:10px;padding:20px;text-align:center;
+    background:#FAFAFA;cursor:pointer;transition:all .2s;position:relative;
+}
+.jaf-upload-zone:hover,.jaf-upload-zone.dragover { border-color:#3B82F6;background:#F0F9FF; }
+.jaf-upload-zone input[type="file"] { position:absolute;inset:0;opacity:0;cursor:pointer; }
+.jaf-upload-icon { font-size:28px;color:#94A3B8;margin-bottom:6px; }
+.jaf-upload-text { font-size:12px;color:#64748B; }
+.jaf-upload-hint { font-size:10px;color:#94A3B8;margin-top:2px; }
+.jaf-preview-list { display:flex;gap:8px;flex-wrap:wrap;margin-top:10px; }
+.jaf-preview-item {
+    position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;
+    border:1px solid #E2E8F0;background:#F8FAFC;
+}
+.jaf-preview-item img { width:100%;height:100%;object-fit:cover; }
+.jaf-preview-item .remove {
+    position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
+    background:rgba(239,68,68,.9);color:#fff;display:flex;align-items:center;justify-content:center;
+    font-size:10px;cursor:pointer;border:none;line-height:1;
+}
+
+/* Inline select */
+.jaf-select {
+    width:100%;padding:8px 12px;border:1px solid #D1D5DB;border-radius:8px;
+    font-size:13px;outline:none;background:#fff;cursor:pointer;
+    -webkit-appearance:none;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:left 12px center;
+}
+.jaf-select:focus { border-color:#3B82F6;box-shadow:0 0 0 3px rgba(59,130,246,.1); }
+
+/* Request status hint */
+.jaf-status-hint {
+    display:inline-flex;align-items:center;gap:4px;padding:4px 10px;
+    border-radius:8px;font-size:11px;font-weight:600;
+}
+</style>
+
+<div class="jaf">
+
+<?php $form = ActiveForm::begin([
+    'id' => 'jaf-form',
+    'options' => ['enctype' => 'multipart/form-data'],
+]); ?>
+
+<!-- ═══ Hidden fields ═══ -->
+<?= Html::activeHiddenInput($model, 'judiciary_id', ['id' => 'jaf-judiciary-id', 'value' => $judiciary ? $judiciary->id : '']) ?>
+<?= Html::activeHiddenInput($model, 'customers_id', ['id' => 'jaf-customer-id']) ?>
+<?= Html::activeHiddenInput($model, 'judiciary_actions_id', ['id' => 'jaf-action-id']) ?>
+<?= Html::activeHiddenInput($model, 'parent_id', ['id' => 'jaf-parent-id']) ?>
+<?= Html::activeHiddenInput($model, 'request_status', ['id' => 'jaf-request-status', 'value' => $isNew ? 'pending' : $model->request_status]) ?>
+<?= Html::activeHiddenInput($model, 'is_current', ['id' => 'jaf-is-current', 'value' => $model->is_current ?: 1]) ?>
+<?= Html::activeHiddenInput($model, 'amount', ['id' => 'jaf-amount']) ?>
+<?= Html::activeHiddenInput($model, 'request_target', ['id' => 'jaf-request-target']) ?>
+
+<!-- ═══ 1. Case Header ═══ -->
+<div class="jaf-case">
+    <div class="jaf-case-icon"><i class="fa fa-gavel" style="color:#2563EB;font-size:18px"></i></div>
+    <div>
+        <div class="jaf-case-number"><?= Html::encode($judiciaryLabel) ?></div>
+        <div class="jaf-case-court"><?= $judiciary && $judiciary->court ? Html::encode($judiciary->court->name) : '' ?></div>
+    </div>
+</div>
+
+<!-- ═══ 2. Party Selector ═══ -->
+<div>
+    <label class="jaf-label"><i class="fa fa-users"></i> اختر الطرف</label>
+    <div class="jaf-parties">
+        <?php foreach ($partyRows as $p):
+            $isClient = $p['customer_type'] === 'client';
+            $isSelected = ($existingCustomerId == $p['customer_id']);
+        ?>
+        <div class="jaf-party <?= $isSelected ? 'selected' : '' ?>" data-customer-id="<?= $p['customer_id'] ?>">
+            <div class="jaf-party-avatar" style="background:<?= $isClient ? '#DBEAFE' : '#FEF3C7' ?>">
+                <i class="fa <?= $isClient ? 'fa-user' : 'fa-user-o' ?>" style="color:<?= $isClient ? '#2563EB' : '#D97706' ?>"></i>
+            </div>
+            <div>
+                <div class="jaf-party-name"><?= Html::encode($p['name']) ?></div>
+                <span class="jaf-party-type" style="background:<?= $isClient ? '#DBEAFE' : '#FEF3C7' ?>;color:<?= $isClient ? '#1D4ED8' : '#92400E' ?>"><?= $isClient ? 'مدين' : 'كفيل' ?></span>
+            </div>
         </div>
-        <div class="col-lg-6">
-            <?= $form->field($model, 'customers_id')->widget(kartik\select2\Select2::classname(), [
-                'options' => [
-                    'placeholder' => 'ابحث بالاسم أو الرقم الوطني...',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
-                    'ajax' => [
-                        'url' => \yii\helpers\Url::to(['/customers/customers/search-customers']),
-                        'dataType' => 'json', 'delay' => 250,
-                        'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
-                        'processResults' => new \yii\web\JsExpression('function(d){return d}'),
-                        'cache' => true,
-                    ],
-                    'templateResult' => new \yii\web\JsExpression("function(i){if(i.loading)return i.text;var h='<div><b>'+i.text+'</b>';if(i.id_number)h+=' <small style=\"color:#64748b\">· '+i.id_number+'</small>';if(i.phone)h+=' <small style=\"color:#0891b2\">☎ '+i.phone+'</small>';return $(h+'</div>')}"),
-                    'templateSelection' => new \yii\web\JsExpression("function(i){return i.text||i.id}"),
-                ],
-            ]); ?>
+        <?php endforeach; ?>
+    </div>
+</div>
+
+<!-- ═══ 3. Action Tree Selector ═══ -->
+<div class="jaf-action-tree">
+    <label class="jaf-label"><i class="fa fa-sitemap"></i> اختر الإجراء القضائي</label>
+    <?php
+    // Group actions by nature
+    $grouped = [];
+    foreach ($allActions as $a) {
+        $n = $a->action_nature ?: 'process';
+        $grouped[$n][] = $a;
+    }
+    $natureOrder = ['request', 'document', 'doc_status', 'process'];
+    foreach ($natureOrder as $nature):
+        if (empty($grouped[$nature])) continue;
+        $nColor = $natureColors[$nature];
+        $nIcon = $natureIcons[$nature];
+        $nLabel = $natureLabels[$nature];
+    ?>
+    <div class="jaf-nature-group">
+        <div class="jaf-nature-header" data-nature="<?= $nature ?>" onclick="JAF.toggleNature(this)">
+            <i class="fa <?= $nIcon ?>" style="color:<?= $nColor ?>"></i>
+            <span style="color:<?= $nColor ?>"><?= $nLabel ?></span>
+            <span style="font-weight:400;color:#94A3B8;font-size:11px">(<?= count($grouped[$nature]) ?>)</span>
+            <i class="fa fa-chevron-down toggle" style="color:#94A3B8;font-size:10px"></i>
+        </div>
+        <div class="jaf-nature-list collapsed" id="nature-list-<?= $nature ?>">
+            <?php foreach ($grouped[$nature] as $a): ?>
+            <div class="jaf-action-item <?= $model->judiciary_actions_id == $a->id ? 'selected' : '' ?>"
+                 data-action-id="<?= $a->id ?>" data-nature="<?= $nature ?>"
+                 onclick="JAF.selectAction(this)">
+                <span class="bullet" style="background:<?= $nColor ?>"></span>
+                <?= Html::encode($a->name) ?>
+            </div>
+            <?php endforeach; ?>
         </div>
     </div>
+    <?php endforeach; ?>
+</div>
 
-    <div class="row">
-        <div class="col-lg-6">
-            <?= $form->field($model, 'judiciary_actions_id')->widget(kartik\select2\Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(JudiciaryActions::find()->all(), 'id', 'name'),
-                'options' => [
-                    'placeholder' => 'Select a judiciary action.',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]); ?>
+<!-- ═══ 4. Contextual: Request Status (for editing existing requests) ═══ -->
+<div class="jaf-ctx" id="ctx-request">
+    <div class="jaf-ctx-title"><i class="fa fa-clock-o" style="color:#F59E0B"></i> حالة الطلب</div>
+    <?php if ($isNew): ?>
+        <div class="jaf-status-hint" style="background:#FFFBEB;color:#B45309">
+            <i class="fa fa-clock-o"></i> سيُحفظ تلقائياً بحالة "معلق"
         </div>
-        <div>
-            <?= $form->field($model, 'action_date')->widget(DatePicker::classname(), [
-                'pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
-                ]
-            ])->label('تاريخ الحركة'); ?>
+    <?php else: ?>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+            <?php foreach (['pending' => ['معلق','#F59E0B','#FFFBEB'], 'approved' => ['موافقة','#10B981','#ECFDF5'], 'rejected' => ['مرفوض','#EF4444','#FEF2F2']] as $sk => $sv): ?>
+            <label class="jaf-party" style="border-width:2px;padding:6px 12px;<?= $model->request_status === $sk ? 'border-color:'.$sv[1].';background:'.$sv[2] : '' ?>" data-status="<?= $sk ?>" onclick="JAF.setRequestStatus('<?= $sk ?>')">
+                <i class="fa <?= $sk === 'pending' ? 'fa-clock-o' : ($sk === 'approved' ? 'fa-check-circle' : 'fa-times-circle') ?>" style="color:<?= $sv[1] ?>;font-size:14px"></i>
+                <span style="font-weight:600;color:<?= $sv[1] ?>"><?= $sv[0] ?></span>
+            </label>
+            <?php endforeach; ?>
         </div>
-    </div>
-
-    <?= $form->field($model, 'note')->textarea(['rows' => 6]) ?>
-
-    <!-- Add the file input for the image -->
-    <?= $form->field($model, 'image')->fileInput() ?>
-
-    <!-- Display the existing image if available -->
-    <?php if ($model->image): ?>
-        <div class="form-group">
-            <label>Current Image:</label><br>
-            <!-- Thumbnail Image -->
-            <a href="#" data-toggle="modal" data-target="#imageModal">
-                <?= Html::img(Yii::getAlias('@web') . '/' . $model->image, [
-                    'class' => 'img-thumbnail',
-                    'style' => 'max-width: 200px; cursor: pointer;',
-                    'alt' => 'Uploaded Image'
-                ]) ?>
-            </a>
-        </div>
-
-        <!-- Modal -->
-        <div class="modal fade" id="imageModal" tabindex="-1" role="dialog" aria-labelledby="imageModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="imageModalLabel">Uploaded Image</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body text-center">
-                        <!-- Full-Size Image -->
-                        <?= Html::img(Yii::getAlias('@web') . '/' . $model->image, [
-                            'class' => 'img-fluid',
-                            'alt' => 'Uploaded Image'
-                        ]) ?>
-                    </div>
-                </div>
+        <div style="display:flex;gap:8px">
+            <div style="flex:1">
+                <label class="jaf-label">نص القرار</label>
+                <?= Html::activeTextarea($model, 'decision_text', ['class' => 'jaf-input', 'rows' => 2, 'placeholder' => 'نص قرار القاضي (اختياري)', 'style' => 'resize:vertical;min-height:50px']) ?>
+            </div>
+            <div style="flex:0 0 auto">
+                <label class="jaf-label">مرفق القرار</label>
+                <?= Html::activeFileInput($model, 'decision_file', ['accept' => 'image/*,.pdf', 'class' => 'jaf-input', 'style' => 'padding:4px 8px']) ?>
             </div>
         </div>
     <?php endif; ?>
-
-    <?php if (!Yii::$app->request->isAjax) { ?>
-        <div class="form-group">
-            <?= Html::submitButton($model->isNewRecord ? Yii::t('app', 'Create') : Yii::t('app', 'Update'), ['class' => $model->isNewRecord ? 'btn btn-success' : 'btn btn-primary']) ?>
+    <!-- request_target section (for specific requests like refund) -->
+    <div id="ctx-request-target" style="display:none;margin-top:8px">
+        <div style="display:flex;gap:8px">
+            <div style="flex:1">
+                <label class="jaf-label">جهة الطلب</label>
+                <select class="jaf-select" id="jaf-req-target-select" onchange="$('#jaf-request-target').val(this.value)">
+                    <option value="">— اختر —</option>
+                    <option value="judge" <?= $model->request_target === 'judge' ? 'selected' : '' ?>>القاضي</option>
+                    <option value="accounting" <?= $model->request_target === 'accounting' ? 'selected' : '' ?>>المحاسبة</option>
+                    <option value="other" <?= $model->request_target === 'other' ? 'selected' : '' ?>>أخرى</option>
+                </select>
+            </div>
+            <div style="flex:1">
+                <label class="jaf-label">المبلغ</label>
+                <input type="number" step="0.01" class="jaf-input" id="jaf-amount-input" value="<?= $model->amount ?>" placeholder="0.00" oninput="$('#jaf-amount').val(this.value)">
+            </div>
         </div>
-    <?php } ?>
-
-    <?php ActiveForm::end(); ?>
-
+    </div>
 </div>
+
+<!-- ═══ 5. Contextual: Link to Parent (for documents) ═══ -->
+<div class="jaf-ctx" id="ctx-document">
+    <div class="jaf-ctx-title"><i class="fa fa-link" style="color:#8B5CF6"></i> ربط بالطلب المعتمد</div>
+    <?php if (empty($approvedRequests)): ?>
+        <div style="font-size:12px;color:#DC2626;padding:6px 0">
+            <i class="fa fa-exclamation-triangle"></i> لا توجد طلبات معتمدة — اعتمد الطلب أولاً
+        </div>
+    <?php else: ?>
+        <select class="jaf-select" id="jaf-parent-req-select" onchange="$('#jaf-parent-id').val(this.value)">
+            <option value="">— اختر الطلب الأصلي —</option>
+            <?php foreach ($approvedRequests as $rid => $rl): ?>
+            <option value="<?= $rid ?>" <?= $model->parent_id == $rid ? 'selected' : '' ?>><?= Html::encode($rl) ?></option>
+            <?php endforeach; ?>
+        </select>
+    <?php endif; ?>
+</div>
+
+<!-- ═══ 6. Contextual: Link to Document (for statuses) ═══ -->
+<div class="jaf-ctx" id="ctx-doc-status">
+    <div class="jaf-ctx-title"><i class="fa fa-exchange" style="color:#EA580C"></i> ربط بالكتاب</div>
+    <?php if (empty($existingDocuments)): ?>
+        <div style="font-size:12px;color:#DC2626;padding:6px 0">
+            <i class="fa fa-exclamation-triangle"></i> لا توجد كتب مسجلة
+        </div>
+    <?php else: ?>
+        <div style="display:flex;gap:8px">
+            <div style="flex:2">
+                <select class="jaf-select" id="jaf-parent-doc-select" onchange="$('#jaf-parent-id').val(this.value)">
+                    <option value="">— اختر الكتاب —</option>
+                    <?php foreach ($existingDocuments as $did => $dl): ?>
+                    <option value="<?= $did ?>" <?= $model->parent_id == $did ? 'selected' : '' ?>><?= Html::encode($dl) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div style="flex:1">
+                <select class="jaf-select" id="jaf-current-select" onchange="$('#jaf-is-current').val(this.value)">
+                    <option value="1" <?= $model->is_current ? 'selected' : '' ?>>حالة حالية</option>
+                    <option value="0" <?= !$model->is_current ? 'selected' : '' ?>>حالة سابقة</option>
+                </select>
+            </div>
+        </div>
+        <div style="margin-top:8px">
+            <label class="jaf-label">المبلغ (إن وجد)</label>
+            <input type="number" step="0.01" class="jaf-input" style="max-width:200px" value="<?= $model->amount ?>" placeholder="0.00" oninput="$('#jaf-amount').val(this.value)">
+        </div>
+    <?php endif; ?>
+</div>
+
+<!-- ═══ 7. Date ═══ -->
+<div class="jaf-date-wrap">
+    <label class="jaf-label"><i class="fa fa-calendar"></i> تاريخ الإجراء</label>
+    <?= Html::activeInput('date', $model, 'action_date', ['class' => 'jaf-input', 'id' => 'jaf-action-date', 'style' => 'max-width:200px']) ?>
+</div>
+
+<!-- ═══ 8. Note ═══ -->
+<div class="jaf-note" style="margin-bottom:14px">
+    <label class="jaf-label"><i class="fa fa-sticky-note-o"></i> ملاحظات</label>
+    <?= Html::activeTextarea($model, 'note', ['rows' => 2, 'placeholder' => 'ملاحظات اختيارية...', 'style' => 'width:100%;padding:8px 12px;border:1px solid #D1D5DB;border-radius:8px;font-size:13px;resize:vertical;min-height:50px;outline:none;font-family:inherit']) ?>
+</div>
+
+<!-- ═══ 9. Smart Upload Zone ═══ -->
+<div style="margin-bottom:14px">
+    <label class="jaf-label"><i class="fa fa-paperclip"></i> مرفقات</label>
+    <div class="jaf-upload-zone" id="jaf-drop-zone">
+        <input type="file" name="JudiciaryCustomersActions[image]" accept="image/*,.pdf" id="jaf-file-input">
+        <div class="jaf-upload-icon"><i class="fa fa-cloud-upload"></i></div>
+        <div class="jaf-upload-text">اسحب الملف هنا أو اضغط للاختيار</div>
+        <div class="jaf-upload-hint">JPG, PNG, PDF — بحد أقصى 10MB</div>
+    </div>
+    <div class="jaf-preview-list" id="jaf-previews">
+        <?php if ($model->image): ?>
+        <div class="jaf-preview-item" id="jaf-existing-preview">
+            <?php
+            $ext = strtolower(pathinfo($model->image, PATHINFO_EXTENSION));
+            $isPdf = ($ext === 'pdf');
+            ?>
+            <?php if ($isPdf): ?>
+                <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#FEF2F2"><i class="fa fa-file-pdf-o" style="font-size:28px;color:#DC2626"></i></div>
+            <?php else: ?>
+                <img src="<?= Yii::getAlias('@web') . '/' . $model->image ?>" alt="">
+            <?php endif; ?>
+            <button type="button" class="remove" onclick="JAF.removeExisting()">&times;</button>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<?php if (!Yii::$app->request->isAjax): ?>
+<div style="padding-top:8px">
+    <?= Html::submitButton(
+        $isNew ? '<i class="fa fa-plus"></i> إضافة' : '<i class="fa fa-save"></i> حفظ',
+        ['class' => 'btn btn-primary btn-lg', 'style' => 'border-radius:10px;font-size:14px;padding:10px 30px']
+    ) ?>
+</div>
+<?php endif; ?>
+
+<?php ActiveForm::end(); ?>
+</div>
+
+<script>
+var JAF = (function() {
+    var natureMap = <?= Json::encode($actionNatureMap) ?>;
+    var REFUND_ID = 55;
+
+    function init() {
+        // Party selection
+        $('.jaf-party').on('click', function() {
+            $('.jaf-party').removeClass('selected');
+            $(this).addClass('selected');
+            $('#jaf-customer-id').val($(this).data('customer-id'));
+        });
+
+        // Drop zone
+        var $zone = $('#jaf-drop-zone');
+        $zone.on('dragover dragenter', function(e) { e.preventDefault(); $(this).addClass('dragover'); });
+        $zone.on('dragleave drop', function(e) { e.preventDefault(); $(this).removeClass('dragover'); });
+        $zone.on('drop', function(e) {
+            var dt = e.originalEvent.dataTransfer;
+            if (dt && dt.files.length) {
+                $('#jaf-file-input')[0].files = dt.files;
+                showPreview(dt.files[0]);
+            }
+        });
+        $('#jaf-file-input').on('change', function() {
+            if (this.files.length) showPreview(this.files[0]);
+        });
+
+        // Pre-expand the nature group of existing selection
+        var existingAction = $('#jaf-action-id').val();
+        if (existingAction && natureMap[existingAction]) {
+            var n = natureMap[existingAction];
+            var $header = $('.jaf-nature-header[data-nature="' + n + '"]');
+            if ($header.hasClass('collapsed') || !$header.hasClass('collapsed')) {
+                $header.removeClass('collapsed');
+                $('#nature-list-' + n).removeClass('collapsed');
+            }
+            showContext(n);
+        }
+    }
+
+    function showPreview(file) {
+        var $list = $('#jaf-previews');
+        $list.find('.jaf-new-preview').remove();
+
+        var html;
+        if (file.type.indexOf('image/') === 0) {
+            var url = URL.createObjectURL(file);
+            html = '<div class="jaf-preview-item jaf-new-preview"><img src="' + url + '"><button type="button" class="remove" onclick="JAF.clearFile()">&times;</button></div>';
+        } else {
+            html = '<div class="jaf-preview-item jaf-new-preview"><div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#FEF2F2"><i class="fa fa-file-pdf-o" style="font-size:28px;color:#DC2626"></i></div><button type="button" class="remove" onclick="JAF.clearFile()">&times;</button></div>';
+        }
+        $list.append(html);
+    }
+
+    function toggleNature(el) {
+        var $h = $(el);
+        var $list = $h.next('.jaf-nature-list');
+        $h.toggleClass('collapsed');
+        $list.toggleClass('collapsed');
+    }
+
+    function selectAction(el) {
+        var $el = $(el);
+        $('.jaf-action-item').removeClass('selected');
+        $el.addClass('selected');
+
+        var actionId = $el.data('action-id');
+        var nature = $el.data('nature');
+        $('#jaf-action-id').val(actionId);
+
+        // Reset parent_id when changing action
+        $('#jaf-parent-id').val('');
+
+        showContext(nature);
+
+        // Special: refund request shows target
+        if (parseInt(actionId) === REFUND_ID) {
+            $('#ctx-request-target').show();
+        } else {
+            $('#ctx-request-target').hide();
+        }
+    }
+
+    function showContext(nature) {
+        $('.jaf-ctx').removeClass('active');
+        if (nature === 'request')    $('#ctx-request').addClass('active');
+        if (nature === 'document')   $('#ctx-document').addClass('active');
+        if (nature === 'doc_status') $('#ctx-doc-status').addClass('active');
+    }
+
+    function setRequestStatus(status) {
+        $('#jaf-request-status').val(status);
+        var colors = { pending: ['#F59E0B','#FFFBEB'], approved: ['#10B981','#ECFDF5'], rejected: ['#EF4444','#FEF2F2'] };
+        $('[data-status]').css({ borderColor: '#E2E8F0', background: '#fff' });
+        $('[data-status="' + status + '"]').css({ borderColor: colors[status][0], background: colors[status][1] });
+    }
+
+    function clearFile() {
+        $('#jaf-file-input').val('');
+        $('#jaf-previews .jaf-new-preview').remove();
+    }
+
+    function removeExisting() {
+        $('#jaf-existing-preview').remove();
+        // Add a hidden field to signal removal
+        $('<input type="hidden" name="remove_image" value="1">').insertAfter('#jaf-file-input');
+    }
+
+    $(document).ready(init);
+
+    return {
+        toggleNature: toggleNature,
+        selectAction: selectAction,
+        setRequestStatus: setRequestStatus,
+        clearFile: clearFile,
+        removeExisting: removeExisting
+    };
+})();
+</script>

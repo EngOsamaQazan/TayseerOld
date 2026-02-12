@@ -12,16 +12,14 @@ use backend\modules\contracts\models\Contracts;
 use yii\data\ActiveDataProvider;
 use backend\modules\customers\models\Customers;
 use common\models\Income;
+use yii\db\Query;
 
 /**
- * Site controllers
+ * Site controller — Dashboard + Auth
  */
 class SiteController extends Controller
 {
 
-    /**
-     * {@inheritdoc}
-     */
     public function behaviors()
     {
         return [
@@ -33,7 +31,7 @@ class SiteController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'dashboard-data'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -48,9 +46,6 @@ class SiteController extends Controller
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function actions()
     {
         return [
@@ -61,46 +56,131 @@ class SiteController extends Controller
     }
 
     /**
-     * Displays homepage.
-     *
-     * @return string
+     * لوحة التحكم الرئيسية
      */
     public function actionIndex()
     {
-        /*     $customersModel = new Customers();
-             $contractModel = new Contracts();
-             $incomeModel = new income();
-             $customersDataProvider = new ActiveDataProvider([
-                 'query' => $customersModel->find()->limit(10)->orderBy([
-                     'id' => SORT_DESC
-                 ]),
-                 'pagination' => false,
-             ]);
-             $contractSataProvider = new ActiveDataProvider([
-                 'query' => $contractModel->find()->limit(10)->orderBy([
-                     'id' => SORT_DESC
-                 ]),
-                 'pagination' => false,
-             ]);
-             $incomeDataProvider = new ActiveDataProvider([
-                 'query' => $incomeModel->find()->limit(10)->orderBy([
-                     'id' => SORT_DESC
-                 ]),
-                 'pagination' => false,
-             ]);
-             return $this->render('index', [
-                         'contractSataProvider' => $contractSataProvider,
-                         'customersDataProvider' => $customersDataProvider,
-                         'incomeDataProvider' => $incomeDataProvider,
-             ]);*/
-        $this->redirect('followUpReport/follow-up-report');
+        $companyId = isset(Yii::$app->params['company_id']) ? Yii::$app->params['company_id'] : null;
 
+        // ─── KPI الرئيسية ───
+        $q = new Query();
+
+        // عدد العقود حسب الحالة
+        $contractStats = $q->select(['status', 'COUNT(*) as cnt', 'COALESCE(SUM(total_value),0) as total_value'])
+            ->from('os_contracts')
+            ->where(['is_deleted' => 0])
+            ->andFilterWhere(['company_id' => $companyId])
+            ->groupBy('status')
+            ->all();
+
+        $contractsByStatus = [];
+        $totalContracts = 0;
+        $totalContractValue = 0;
+        foreach ($contractStats as $row) {
+            $contractsByStatus[$row['status']] = (int)$row['cnt'];
+            $totalContracts += (int)$row['cnt'];
+            $totalContractValue += (float)$row['total_value'];
+        }
+
+        // عدد العملاء
+        $totalCustomers = (new Query())->from('os_customers')
+            ->andFilterWhere(['company_id' => $companyId])
+            ->count();
+
+        // إيرادات الشهر الحالي
+        $monthlyIncome = (new Query())->from('os_income')
+            ->where(['YEAR(date)' => date('Y'), 'MONTH(date)' => date('m')])
+            ->andFilterWhere(['company_id' => $companyId])
+            ->sum('amount') ?: 0;
+
+        // إيرادات السنة الحالية
+        $yearlyIncome = (new Query())->from('os_income')
+            ->where(['YEAR(date)' => date('Y')])
+            ->andFilterWhere(['company_id' => $companyId])
+            ->sum('amount') ?: 0;
+
+        // مصاريف الشهر الحالي
+        $monthlyExpenses = (new Query())->from('os_expenses')
+            ->where(['YEAR(date)' => date('Y'), 'MONTH(date)' => date('m')])
+            ->andFilterWhere(['company_id' => $companyId])
+            ->sum('amount') ?: 0;
+
+        // عدد القضايا
+        $totalCases = (new Query())->from('os_judiciary')
+            ->andFilterWhere(['company_id' => $companyId])
+            ->count();
+
+        // عدد التسويات
+        $totalSettlements = (new Query())->from('os_loan_scheduling')
+            ->where(['is_deleted' => 0])
+            ->count();
+
+        // ─── بيانات الرسم البياني — إيرادات آخر 12 شهر ───
+        $incomeChart = (new Query())
+            ->select(["DATE_FORMAT(date, '%Y-%m') as month_key", "SUM(amount) as total"])
+            ->from('os_income')
+            ->where(['>=', 'date', date('Y-m-d', strtotime('-11 months', strtotime(date('Y-m-01'))))])
+            ->andFilterWhere(['company_id' => $companyId])
+            ->groupBy("DATE_FORMAT(date, '%Y-%m')")
+            ->orderBy("month_key ASC")
+            ->all();
+
+        // ─── آخر 10 دفعات ───
+        $recentPayments = (new Query())
+            ->select(['i.id', 'i.date', 'i.amount', 'i.contract_id', 'c.name as customer_name'])
+            ->from('os_income i')
+            ->leftJoin('os_contracts ct', 'ct.id = i.contract_id')
+            ->leftJoin('os_contracts_customers cc', 'cc.contracts_id = ct.id AND cc.type = "client"')
+            ->leftJoin('os_customers c', 'c.id = cc.customers_id')
+            ->andFilterWhere(['i.company_id' => $companyId])
+            ->orderBy('i.id DESC')
+            ->limit(10)
+            ->all();
+
+        // ─── آخر 10 عقود ───
+        $recentContracts = (new Query())
+            ->select(['ct.id', 'ct.Date_of_sale', 'ct.total_value', 'ct.status', 'ct.monthly_installment_value', 'c.name as customer_name'])
+            ->from('os_contracts ct')
+            ->leftJoin('os_contracts_customers cc', 'cc.contracts_id = ct.id AND cc.type = "client"')
+            ->leftJoin('os_customers c', 'c.id = cc.customers_id')
+            ->where(['ct.is_deleted' => 0])
+            ->andFilterWhere(['ct.company_id' => $companyId])
+            ->orderBy('ct.id DESC')
+            ->limit(10)
+            ->all();
+
+        // ─── أداء الموظفين — أعلى 10 بالإيرادات هذا الشهر ───
+        $topCollectors = (new Query())
+            ->select(['u.id', "CONCAT(p.name) as emp_name", 'SUM(i.amount) as collected'])
+            ->from('os_income i')
+            ->leftJoin('os_user u', 'u.id = i._by')
+            ->leftJoin('os_profile p', 'p.user_id = u.id')
+            ->where(['YEAR(i.date)' => date('Y'), 'MONTH(i.date)' => date('m')])
+            ->andFilterWhere(['i.company_id' => $companyId])
+            ->groupBy('u.id')
+            ->orderBy('collected DESC')
+            ->limit(10)
+            ->all();
+
+        return $this->render('index', [
+            'totalContracts'    => $totalContracts,
+            'contractsByStatus' => $contractsByStatus,
+            'totalContractValue'=> $totalContractValue,
+            'totalCustomers'    => $totalCustomers,
+            'monthlyIncome'     => $monthlyIncome,
+            'yearlyIncome'      => $yearlyIncome,
+            'monthlyExpenses'   => $monthlyExpenses,
+            'totalCases'        => $totalCases,
+            'totalSettlements'  => $totalSettlements,
+            'incomeChart'       => $incomeChart,
+            'recentPayments'    => $recentPayments,
+            'recentContracts'   => $recentContracts,
+            'topCollectors'     => $topCollectors,
+        ]);
     }
 
     /**
      * Login action.
-     *
-     * @return string
      */
     public function actionLogin()
     {
@@ -110,11 +190,9 @@ class SiteController extends Controller
 
         $model = new LoginForm();
         if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            //return $this->goBack();
-            return $this->redirect(['customers/customers/index']);
+            return $this->redirect(['/site/index']);
         } else {
             $model->password = '';
-
             return $this->render('login', [
                 'model' => $model,
             ]);
@@ -123,13 +201,10 @@ class SiteController extends Controller
 
     /**
      * Logout action.
-     *
-     * @return string
      */
     public function actionLogout()
     {
         Yii::$app->user->logout();
-
         return $this->goHome();
     }
 
@@ -152,20 +227,13 @@ class SiteController extends Controller
 
         $sheetDataCount = count($sheetData);
         if ($sheetData < 16) {
-            //set flash error: No Data Found To Import
-            //return $this->>render('import_result',['notImportedData'=>[]]) view and print flash message there
         }
         $notImportedData = [];
         for ($i = 16; $i < $sheetDataCount; $i++) {
             $model = new Expenses();
-            //fill all attributes here
             if (!$model->save()) {
                 array_push($notImportedData, $model->attributes);
             }
         }
-        //set flash success: count($notImportedData) Record has been imported
-        //return $this->>render('import_result',['notImportedData'=>$notImportedData]) view and print flash message there
-
     }
-
 }

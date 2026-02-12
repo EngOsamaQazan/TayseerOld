@@ -23,7 +23,11 @@ CrudAsset::register($this);
  * @var backend\modules\followUp\models\FollowUp $model
  * @var yii\data\ActiveDataProvider $dataProvider
  * @var array $modelsPhoneNumbersFollwUps
+ * @var array $judiciaryData
  */
+
+$isLegal = in_array($contract->status, ['judiciary', 'legal_department']);
+$isClosed = in_array($contract->status, ['finished', 'canceled']);
 
 $this->title = 'لوحة تحكم العقد #' . $contract->id;
 $this->params['breadcrumbs'][] = ['label' => 'تقارير المتابعة', 'url' => ['/followUpReport']];
@@ -47,6 +51,7 @@ $this->registerJs("window.OCP_CONFIG = " . Json::encode([
         'sendSms' => Url::to(['/followUp/follow-up/send-sms']),
         'changeStatus' => Url::to(['/followUp/follow-up/change-status']),
         'customerInfo' => Url::to(['/followUp/follow-up/custamer-info']),
+        'updateJudiciaryCheck' => Url::to(['/followUp/follow-up/update-judiciary-check']),
         'addNewLoan' => Url::to(['/followUp/follow-up/add-new-loan']),
     ],
 ]) . ";", \yii\web\View::POS_HEAD);
@@ -164,6 +169,19 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                 <?= $riskLevelArabic[$riskLevel] ?? 'غير محدد' ?>
             </div>
 
+            <?php // Judiciary info in status bar for legal contracts ?>
+            <?php if ($isLegal && !empty($judiciaryData['judiciary'])): ?>
+            <div class="ocp-status-bar__divider"></div>
+            <div class="ocp-status-bar__judiciary" style="display:flex;align-items:center;gap:6px;font-size:var(--ocp-font-size-sm)">
+                <i class="fa fa-gavel" style="color:var(--ocp-danger)"></i>
+                <span class="ocp-mono"><?= ($judiciaryData['judiciary']->judiciary_number ?: '-') . '/' . ($judiciaryData['judiciary']->year ?: '-') ?></span>
+                <span style="color:var(--ocp-text-muted)">|</span>
+                <span><?= $judiciaryData['judiciary']->court ? Html::encode($judiciaryData['judiciary']->court->name) : '' ?></span>
+                <span style="color:var(--ocp-text-muted)">|</span>
+                <span><?= $judiciaryData['judiciary']->lawyer ? Html::encode($judiciaryData['judiciary']->lawyer->name) : '' ?></span>
+            </div>
+            <?php endif; ?>
+
             <div class="ocp-status-bar__divider"></div>
 
             <?php // Assignee ?>
@@ -232,6 +250,12 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                             مركز الأفعال — ماذا تريد أن تفعل الآن؟
                         </div>
                         <div class="ocp-action-grid">
+                            <?php if ($isClosed): ?>
+                                <div class="ocp-action-closed-msg" style="grid-column:1/-1;text-align:center;padding:var(--ocp-space-lg);color:var(--ocp-text-muted)">
+                                    <i class="fa fa-lock" style="font-size:24px;margin-bottom:8px;display:block"></i>
+                                    هذا العقد <?= $contract->status === 'finished' ? 'منتهي' : 'ملغي' ?> — لا يمكن تنفيذ إجراءات عليه
+                                </div>
+                            <?php else: ?>
                             <button class="ocp-action-btn" data-action="call" onclick="OCP.openPanel('call')">
                                 <span class="ocp-action-btn__shortcut">C</span>
                                 <div class="ocp-action-btn__icon ocp-action-btn__icon--call"><i class="fa fa-phone"></i></div>
@@ -252,18 +276,41 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                                 <div class="ocp-action-btn__icon ocp-action-btn__icon--sms"><i class="fa fa-comment"></i></div>
                                 <span class="ocp-action-btn__label">إرسال تذكير</span>
                             </button>
-                            <button class="ocp-action-btn" data-action="legal" onclick="OCP.openPanel('legal')">
-                                <span class="ocp-action-btn__shortcut">L</span>
-                                <div class="ocp-action-btn__icon ocp-action-btn__icon--legal"><i class="fa fa-gavel"></i></div>
-                                <span class="ocp-action-btn__label">تحويل للقضائي</span>
-                            </button>
+                            <?php if ($isLegal): ?>
+                                <?php
+                                // For legal contracts: show "إضافة إجراء قضائي" instead of "تحويل للقضائي"
+                                $judiciaryModel = $judiciaryData['judiciary'] ?? null;
+                                $addActionUrl = $judiciaryModel
+                                    ? Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $contract_id])
+                                    : '#';
+                                ?>
+                                <button class="ocp-action-btn" data-action="add_judiciary_action" onclick="<?= $judiciaryModel ? "window.open('" . Url::to(['/judiciary/judiciary/update', 'id' => $judiciaryModel->id, 'contract_id' => $contract_id]) . "', '_blank')" : "OCP.toast('لا يوجد ملف قضائي مسجل — يجب إنشاء قضية أولاً', 'warning')" ?>">
+                                    <span class="ocp-action-btn__shortcut">J</span>
+                                    <div class="ocp-action-btn__icon ocp-action-btn__icon--legal"><i class="fa fa-gavel"></i></div>
+                                    <span class="ocp-action-btn__label">فتح ملف القضية</span>
+                                </button>
+                            <?php else: ?>
+                                <button class="ocp-action-btn" data-action="legal" onclick="OCP.openPanel('legal')">
+                                    <span class="ocp-action-btn__shortcut">L</span>
+                                    <div class="ocp-action-btn__icon ocp-action-btn__icon--legal"><i class="fa fa-gavel"></i></div>
+                                    <span class="ocp-action-btn__label">تحويل للقضائي</span>
+                                </button>
+                            <?php endif; ?>
                             <button class="ocp-action-btn ocp-action-more-btn" onclick="OCP.toggleMoreActions()">
                                 <div class="ocp-action-btn__icon" style="background:var(--ocp-border-light);color:var(--ocp-text-muted)"><i class="fa fa-ellipsis-h"></i></div>
                                 <span class="ocp-action-btn__label">المزيد</span>
                             </button>
+                            <?php endif; ?>
                         </div>
                         <?php // Hidden extra actions ?>
                         <div class="ocp-action-grid ocp-hidden" id="ocp-more-actions" style="margin-top:var(--ocp-space-md)">
+                            <?php if ($isLegal): ?>
+                            <?php $judiciaryModel = $judiciaryData['judiciary'] ?? null; ?>
+                            <a class="ocp-action-btn" href="<?= $judiciaryModel ? Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $contract_id]) : '#' ?>" role="modal-remote" style="text-decoration:none">
+                                <div class="ocp-action-btn__icon" style="background:#FFF3E0;color:#E65100"><i class="fa fa-plus-circle"></i></div>
+                                <span class="ocp-action-btn__label">إضافة إجراء قضائي</span>
+                            </a>
+                            <?php endif; ?>
                             <button class="ocp-action-btn" data-action="review" onclick="OCP.openPanel('review')">
                                 <div class="ocp-action-btn__icon ocp-action-btn__icon--review"><i class="fa fa-user-circle"></i></div>
                                 <span class="ocp-action-btn__label">طلب مراجعة مدير</span>
@@ -306,8 +353,12 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
 
                 <?php // TABS: Timeline / Kanban / Financial / Phones / Payments / Settlements / Judiciary ?>
                 <div class="ocp-section">
+                    <?php
+                    // For legal contracts: default to judiciary tab
+                    $defaultTab = $isLegal ? 'judiciary-actions' : 'timeline';
+                    ?>
                     <div class="ocp-tabs" style="flex-wrap:wrap;gap:4px">
-                        <button class="ocp-tab active" data-tab="timeline" onclick="OCP.switchTab('timeline')">
+                        <button class="ocp-tab <?= $defaultTab === 'timeline' ? 'active' : '' ?>" data-tab="timeline" onclick="OCP.switchTab('timeline')">
                             <i class="fa fa-clock-o"></i> السجل الزمني
                             <span class="ocp-tab__count"><?= count($timeline) ?></span>
                         </button>
@@ -328,13 +379,16 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                         <button class="ocp-tab" data-tab="settlements" onclick="OCP.switchTab('settlements')">
                             <i class="fa fa-balance-scale"></i> التسويات
                         </button>
-                        <button class="ocp-tab" data-tab="judiciary-actions" onclick="OCP.switchTab('judiciary-actions')">
+                        <button class="ocp-tab <?= $defaultTab === 'judiciary-actions' ? 'active' : '' ?>" data-tab="judiciary-actions" onclick="OCP.switchTab('judiciary-actions')">
                             <i class="fa fa-gavel"></i> إجراءات قضائية
+                            <?php if ($isLegal && !empty($judiciaryData['actions'])): ?>
+                            <span class="ocp-tab__count"><?= count($judiciaryData['actions']) ?></span>
+                            <?php endif; ?>
                         </button>
                     </div>
 
                     <?php // TIMELINE TAB ?>
-                    <div class="ocp-tab-content" id="tab-timeline">
+                    <div class="ocp-tab-content <?= $defaultTab !== 'timeline' ? 'ocp-hidden' : '' ?>" id="tab-timeline">
                         <?= $this->render('panel/_timeline', ['timeline' => $timeline]) ?>
                     </div>
 
@@ -380,14 +434,14 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                         </div>
                     </div>
 
-                    <?php // JUDICIARY ACTIONS TAB (from old index) ?>
-                    <div class="ocp-tab-content ocp-hidden" id="tab-judiciary-actions">
-                        <div class="ocp-card" style="padding:var(--ocp-space-lg)">
-                            <?= $this->render('partial/tabs/judiciary_customers_actions.php', [
-                                'contract_id' => $contract_id,
-                                'model' => $model,
-                            ]) ?>
-                        </div>
+                    <?php // JUDICIARY ACTIONS TAB — rebuilt with operational summary + timeline ?>
+                    <div class="ocp-tab-content <?= $defaultTab !== 'judiciary-actions' ? 'ocp-hidden' : '' ?>" id="tab-judiciary-actions">
+                        <?= $this->render('panel/_judiciary_tab', [
+                            'contract_id' => $contract_id,
+                            'contract' => $contract,
+                            'judiciaryData' => $judiciaryData,
+                            'model' => $model,
+                        ]) ?>
                     </div>
                 </div>
             </div>

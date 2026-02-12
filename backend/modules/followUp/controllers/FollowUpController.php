@@ -46,7 +46,7 @@ class FollowUpController extends Controller
                     ],
                     [
                         'actions' => ['logout', 'index', 'create', 'delete', 'send-sms', 'view', 'update', 'find-next-contract', 'add-new-loan', 'printer', 'clearance', 'change-status', 'custamer-info',
-                        'panel', 'save-follow-up', 'create-task', 'move-task', 'ai-feedback', 'get-timeline'],
+                        'panel', 'save-follow-up', 'create-task', 'move-task', 'ai-feedback', 'get-timeline', 'update-judiciary-check'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -463,9 +463,10 @@ class FollowUpController extends Controller
             'last_payment' => $lastPayment,
         ]);
 
-        // AI Recommendations
+        // AI Recommendations (also loads judiciary data internally)
         $aiEngine = new AIEngine($contract);
         $aiData = $aiEngine->recommend();
+        $judiciaryData = $aiEngine->getJudiciaryData();
 
         // ContractCalculations — needed for old tabs (phone_numbers, payments, settlements, judiciary)
         $calc = new ContractCalculations($contract_id);
@@ -497,8 +498,8 @@ class FollowUpController extends Controller
         // Kanban
         $kanbanData = FollowUpTask::getKanbanData($contract_id);
 
-        // Smart Alerts
-        $alerts = $this->buildAlerts($contract, $riskEngine, $riskAssessment, $dpd, $brokenPromises);
+        // Smart Alerts (now judiciary-aware)
+        $alerts = $this->buildAlerts($contract, $riskEngine, $riskAssessment, $dpd, $brokenPromises, $judiciaryData);
 
         // FollowUp model + search (for old form compatibility)
         $model = new FollowUp();
@@ -510,6 +511,7 @@ class FollowUpController extends Controller
             'customer' => $customer,
             'riskData' => $riskData,
             'aiData' => $aiData,
+            'judiciaryData' => $judiciaryData,
             'kanbanData' => $kanbanData,
             'timeline' => $timeline,
             'financials' => $financials,
@@ -614,13 +616,67 @@ class FollowUpController extends Controller
     }
 
     /**
-     * Build smart alerts based on contract state
+     * Build smart alerts based on contract state — judiciary-aware
      */
-    private function buildAlerts($contract, $riskEngine, $riskAssessment, $dpd, $brokenPromises)
+    private function buildAlerts($contract, $riskEngine, $riskAssessment, $dpd, $brokenPromises, $judiciaryData = [])
     {
         $alerts = [];
+        $isLegal = in_array($contract->status, ['judiciary', 'legal_department']);
 
-        // Broken promises
+        // ═══ JUDICIARY-SPECIFIC ALERTS ═══
+        if ($isLegal) {
+            $judiciary = $judiciaryData['judiciary'] ?? null;
+            $lastAction = $judiciaryData['last_action'] ?? null;
+            $daysSinceLast = $judiciaryData['days_since_last'] ?? 999;
+            $stageLabel = $judiciaryData['stage_label'] ?? '';
+
+            if (!$judiciary) {
+                // No case registered
+                $alerts[] = [
+                    'severity' => 'critical',
+                    'icon' => 'fa-gavel',
+                    'title' => 'عقد قضائي بدون ملف قضائي مسجل!',
+                    'description' => 'العقد محول للقضاء لكن لا يوجد ملف قضائي في النظام — يجب تسجيل القضية فوراً',
+                    'cta' => ['label' => 'سجّل قضية', 'action' => 'add_judiciary_action'],
+                ];
+            } else {
+                // Case exists — show stage info
+                $caseNum = ($judiciary->judiciary_number ?: '-') . '/' . ($judiciary->year ?: '-');
+                $courtName = $judiciary->court ? $judiciary->court->name : 'غير محدد';
+                $lawyerName = $judiciary->lawyer ? $judiciary->lawyer->name : 'غير محدد';
+
+                $alerts[] = [
+                    'severity' => 'info',
+                    'icon' => 'fa-gavel',
+                    'title' => 'قضية ' . $caseNum . ' — ' . $courtName,
+                    'description' => 'المحامي: ' . $lawyerName . ' | المرحلة: ' . $stageLabel . ' | الإجراءات: ' . count($judiciaryData['actions'] ?? []),
+                    'cta' => null,
+                ];
+
+                // Stale case alert
+                if ($lastAction && $daysSinceLast > 14) {
+                    $lastActionName = $lastAction->judiciaryActions ? $lastAction->judiciaryActions->name : 'غير محدد';
+                    $severity = $daysSinceLast > 30 ? 'critical' : 'warning';
+                    $alerts[] = [
+                        'severity' => $severity,
+                        'icon' => 'fa-clock-o',
+                        'title' => 'لا إجراء قضائي منذ ' . $daysSinceLast . ' يوم',
+                        'description' => 'آخر إجراء: ' . $lastActionName . ' — يجب تحريك القضية منعاً للترك',
+                        'cta' => ['label' => 'إضافة إجراء', 'action' => 'add_judiciary_action'],
+                    ];
+                } elseif (!$lastAction) {
+                    $alerts[] = [
+                        'severity' => 'warning',
+                        'icon' => 'fa-exclamation-circle',
+                        'title' => 'لم يُسجل أي إجراء على القضية',
+                        'description' => 'يجب البدء بتسجيل الإجراءات القضائية',
+                        'cta' => ['label' => 'إضافة إجراء', 'action' => 'add_judiciary_action'],
+                    ];
+                }
+            }
+        }
+
+        // Broken promises (relevant for all statuses including legal — collection continues)
         if ($brokenPromises > 0) {
             $severity = $brokenPromises >= 3 ? 'critical' : 'warning';
             $alerts[] = [
@@ -655,15 +711,26 @@ class FollowUpController extends Controller
             ];
         }
 
-        // DPD Warning
+        // DPD Warning — context-aware for legal
         if ($dpd > 30) {
-            $alerts[] = [
-                'severity' => 'critical',
-                'icon' => 'fa-calendar-times-o',
-                'title' => 'تأخير كبير: ' . $dpd . ' يوم',
-                'description' => 'التأخير تجاوز الحد المسموح. يُنصح بالتصعيد الفوري',
-                'cta' => ['label' => 'صعّد', 'action' => 'legal'],
-            ];
+            if ($isLegal) {
+                // Already in legal — don't suggest "escalate"
+                $alerts[] = [
+                    'severity' => 'warning',
+                    'icon' => 'fa-calendar-times-o',
+                    'title' => 'تأخير ' . $dpd . ' يوم',
+                    'description' => 'التأخير مستمر — يجب المثابرة على التحصيل بالتوازي مع القضاء',
+                    'cta' => ['label' => 'اتصل', 'action' => 'call'],
+                ];
+            } else {
+                $alerts[] = [
+                    'severity' => 'critical',
+                    'icon' => 'fa-calendar-times-o',
+                    'title' => 'تأخير كبير: ' . $dpd . ' يوم',
+                    'description' => 'التأخير تجاوز الحد المسموح. يُنصح بالتصعيد الفوري',
+                    'cta' => ['label' => 'صعّد', 'action' => 'legal'],
+                ];
+            }
         } elseif ($dpd > 7) {
             $alerts[] = [
                 'severity' => 'warning',
@@ -671,17 +738,6 @@ class FollowUpController extends Controller
                 'title' => 'تأخير ' . $dpd . ' يوم',
                 'description' => 'يجب المتابعة الفورية للحفاظ على معدل التحصيل',
                 'cta' => ['label' => 'تابع', 'action' => 'call'],
-            ];
-        }
-
-        // Legal flag
-        if (in_array($contract->status, ['judiciary', 'legal_department'])) {
-            $alerts[] = [
-                'severity' => 'critical',
-                'icon' => 'fa-gavel',
-                'title' => 'ملف قضائي مفتوح',
-                'description' => 'هذا العقد في المرحلة القضائية — تطبق قيود على الإجراءات',
-                'cta' => null,
             ];
         }
 
@@ -706,6 +762,38 @@ class FollowUpController extends Controller
         }
 
         return $alerts;
+    }
+
+    /**
+     * AJAX: Update last_check_date on a judiciary case
+     */
+    public function actionUpdateJudiciaryCheck()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        if (!$request->isPost) {
+            return ['success' => false, 'message' => 'طريقة الطلب غير صحيحة'];
+        }
+
+        $judiciaryId = (int)$request->post('judiciary_id');
+        $judiciary = \backend\modules\judiciary\models\Judiciary::findOne($judiciaryId);
+
+        if (!$judiciary) {
+            return ['success' => false, 'message' => 'القضية غير موجودة'];
+        }
+
+        $judiciary->last_check_date = date('Y-m-d');
+        $judiciary->detachBehavior('softDeleteBehavior');
+        if ($judiciary->save(false, ['last_check_date'])) {
+            return [
+                'success' => true,
+                'message' => 'تم تحديث تاريخ التشييك',
+                'date' => date('Y/m/d'),
+            ];
+        }
+
+        return ['success' => false, 'message' => 'حدث خطأ أثناء الحفظ'];
     }
 
     /**

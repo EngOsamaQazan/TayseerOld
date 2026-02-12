@@ -111,6 +111,44 @@ $riskImpactArabic = ['low' => 'منخفض', 'medium' => 'متوسط', 'high' => 
     </div>
     <?php endif; ?>
 
+    <?php // ═══ JUDICIARY SUMMARY (for legal contracts) ═══ ?>
+    <?php $judSummary = $aiData['judiciary_summary'] ?? null; ?>
+    <?php if ($judSummary && $judSummary['has_case']): ?>
+    <div style="margin-top:var(--ocp-space-lg);padding:var(--ocp-space-md);background:#FFF8E1;border-radius:var(--ocp-radius-md);border:1px solid #FFE082">
+        <div style="font-size:var(--ocp-font-size-xs);font-weight:700;color:#F57F17;margin-bottom:var(--ocp-space-sm)">
+            <i class="fa fa-gavel"></i> ملخص القضية
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:var(--ocp-font-size-xs)">
+            <div><span style="color:var(--ocp-text-muted)">رقم القضية:</span> <strong><?= Html::encode($judSummary['case_number']) ?></strong></div>
+            <div><span style="color:var(--ocp-text-muted)">المحكمة:</span> <strong><?= Html::encode($judSummary['court'] ?: '-') ?></strong></div>
+            <div><span style="color:var(--ocp-text-muted)">المحامي:</span> <strong><?= Html::encode($judSummary['lawyer'] ?: '-') ?></strong></div>
+            <div><span style="color:var(--ocp-text-muted)">الإجراءات:</span> <strong><?= $judSummary['total_actions'] ?></strong></div>
+        </div>
+        <?php if ($judSummary['last_action_name']): ?>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid #FFE082;font-size:var(--ocp-font-size-xs)">
+            <span style="color:var(--ocp-text-muted)">آخر إجراء:</span>
+            <strong style="color:#E65100"><?= Html::encode($judSummary['last_action_name']) ?></strong>
+            <span style="color:var(--ocp-text-muted)"> (<?= Html::encode($judSummary['last_action_date'] ?: '-') ?>)</span>
+            <?php if ($judSummary['days_since_last_action'] < 999): ?>
+                <span style="color:<?= $judSummary['days_since_last_action'] > 30 ? '#C62828' : ($judSummary['days_since_last_action'] > 14 ? '#F57F17' : '#2E7D32') ?>">
+                    — منذ <?= $judSummary['days_since_last_action'] ?> يوم
+                </span>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+        <?php if ($judSummary['current_stage_label']): ?>
+        <div style="margin-top:6px;font-size:var(--ocp-font-size-xs)">
+            <span style="color:var(--ocp-text-muted)">المرحلة:</span>
+            <span style="background:#FFF3E0;color:#E65100;padding:1px 8px;border-radius:10px;font-weight:600"><?= Html::encode($judSummary['current_stage_label']) ?></span>
+            <?php if ($judSummary['next_stage_label']): ?>
+                <span style="color:var(--ocp-text-muted)">← التالي:</span>
+                <span style="color:#1565C0;font-weight:600"><?= Html::encode($judSummary['next_stage_label']) ?></span>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
     <?php // ═══ RISK SIGNALS ═══ ?>
     <?php if (!empty($risk['signals'])): ?>
     <div style="margin-top:var(--ocp-space-lg);padding-top:var(--ocp-space-md);border-top:1px solid var(--ocp-border-light)">

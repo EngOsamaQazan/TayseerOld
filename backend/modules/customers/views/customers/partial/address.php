@@ -14,7 +14,7 @@ DynamicFormWidget::begin([
     'insertButton' => '.addrres-add-item',
     'deleteButton' => '.addrres-remove-item',
     'model' => $modelsAddress[0],
-    'formId' => 'dynamic-form',
+    'formId' => 'smart-onboarding-form',
     'formFields' => ['address'],
 ]);
 ?>

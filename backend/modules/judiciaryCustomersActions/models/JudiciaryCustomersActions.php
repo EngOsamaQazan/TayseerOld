@@ -25,6 +25,13 @@ use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
  * @property int $last_update_by
  * @property int $is_deleted
  * @property string $action_date
+ * @property int|null $parent_id
+ * @property string|null $request_status  (pending|approved|rejected)
+ * @property string|null $decision_text
+ * @property string|null $decision_file
+ * @property int $is_current
+ * @property float|null $amount
+ * @property string|null $request_target  (judge|accounting|other)
  */
 class JudiciaryCustomersActions extends \yii\db\ActiveRecord
 {
@@ -85,8 +92,14 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
             [['judiciary_actions_id'], 'integer', 'on' => 'create-followup-judicary-custamer-action'],
             [['note', 'action_date', 'year', 'form_action_date', 'to_action_date'], 'string'],
             [['image'], 'string'],
-            [['image'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, gif']
-
+            [['image'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, gif'],
+            [['parent_id', 'is_current'], 'integer'],
+            [['request_status'], 'in', 'range' => ['pending', 'approved', 'rejected']],
+            [['request_target'], 'in', 'range' => ['judge', 'accounting', 'other']],
+            [['decision_text'], 'string'],
+            [['decision_file'], 'string', 'max' => 255],
+            [['amount'], 'number'],
+            [['parent_id', 'request_status', 'decision_text', 'decision_file', 'is_current', 'amount', 'request_target'], 'safe'],
         ];
     }
 
@@ -139,6 +152,50 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
     public function getContract()
     {
         return $this->hasOne(\backend\modules\judiciaryContracts\models\JudiciaryContracts::className(), ['id' => 'contract_id']);
+    }
+
+    /**
+     * Parent action (e.g., the request this document belongs to)
+     */
+    public function getParentAction()
+    {
+        return $this->hasOne(self::class, ['id' => 'parent_id']);
+    }
+
+    /**
+     * Child actions (e.g., documents under this request, or statuses under this document)
+     */
+    public function getChildActions()
+    {
+        return $this->hasMany(self::class, ['parent_id' => 'id'])
+            ->andWhere(['is_deleted' => 0])
+            ->orderBy(['action_date' => SORT_ASC]);
+    }
+
+    /**
+     * Get request status label in Arabic
+     */
+    public function getRequestStatusLabel()
+    {
+        $map = [
+            'pending'  => 'معلق',
+            'approved' => 'موافقة',
+            'rejected' => 'مرفوض',
+        ];
+        return $map[$this->request_status] ?? '';
+    }
+
+    /**
+     * Get request status color
+     */
+    public function getRequestStatusColor()
+    {
+        $map = [
+            'pending'  => '#F59E0B',
+            'approved' => '#10B981',
+            'rejected' => '#EF4444',
+        ];
+        return $map[$this->request_status] ?? '#6B7280';
     }
 
     public static function find()

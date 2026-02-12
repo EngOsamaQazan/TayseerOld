@@ -105,25 +105,34 @@ class EmployeeController extends Controller
     {
         $request = Yii::$app->request;
         $model = new Employee();
+        $model->setScenario('create');
 
         if ($model->load($request->post())) {
             $model->profile_avatar_file = UploadedFile::getInstances($model, 'profile_avatar_file');
             $model->profile_attachment_files = UploadedFile::getInstances($model, 'profile_attachment_files');
-            $model->password_hash = Yii::$app->security->generatePasswordHash($model->password_hash);
-            if (!empty($model->profile_avatar_file)) {
-                $model->updateProfileAvatar();
-            }
-            if (!empty($model->profile_attachment_files)) {
 
-                $model->addProfileAttachment();
+            // ── تفعيل الحساب تلقائياً عند الإنشاء ──
+            // password_hash يتم تشفيره في beforeSave فلا نشفّره هنا مرتين
+            $model->confirmed_at = time();          // تفعيل فوري
+            $model->created_at   = time();
+            $model->updated_at   = time();
+            $model->created_by   = Yii::$app->user->id ?? 1;
+
+            if ($model->save()) {
+                if (!empty($model->profile_avatar_file)) {
+                    $model->updateProfileAvatar();
+                }
+                if (!empty($model->profile_attachment_files)) {
+                    $model->addProfileAttachment();
+                }
+                Yii::$app->session->setFlash('success', 'تم إنشاء حساب الموظف وتفعيله بنجاح.');
+                return $this->redirect('index');
             }
-            $model->save();
-            $this->redirect('index');
-        } else {
-            return $this->render('create', [
-                'model' => $model,
-            ]);
         }
+
+        return $this->render('create', [
+            'model' => $model,
+        ]);
     }
 
     /**

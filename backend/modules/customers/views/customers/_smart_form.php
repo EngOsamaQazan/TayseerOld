@@ -151,17 +151,17 @@ if (!$isNew) {
                 <div class="so-fieldset">
                     <h3 class="so-fieldset-title"><i class="fa fa-user"></i> البيانات الشخصية</h3>
                     <div class="so-grid so-grid-3">
-                        <div><?= $form->field($model, 'name')->textInput(['maxlength' => true, 'placeholder' => 'الاسم الرباعي', 'required' => true])->label('اسم العميل *') ?></div>
-                        <div><?= $form->field($model, 'id_number')->textInput(['maxlength' => true, 'placeholder' => 'الرقم الوطني', 'required' => true])->label('الرقم الوطني *') ?></div>
-                        <div><?= $form->field($model, 'sex')->dropDownList([0 => 'ذكر', 1 => 'أنثى'])->label('الجنس *') ?></div>
+                        <div><?= $form->field($model, 'name')->textInput(['maxlength' => true, 'placeholder' => 'الاسم الرباعي', 'required' => true])->label('اسم العميل') ?></div>
+                        <div><?= $form->field($model, 'id_number')->textInput(['maxlength' => true, 'placeholder' => 'الرقم الوطني', 'required' => true])->label('الرقم الوطني') ?></div>
+                        <div><?= $form->field($model, 'sex')->dropDownList([0 => 'ذكر', 1 => 'أنثى'])->label('الجنس') ?></div>
                     </div>
                     <div class="so-grid so-grid-3" style="margin-top: 16px">
                         <div><?= $form->field($model, 'birth_date')->widget(DatePicker::class, [
                             'options' => ['placeholder' => 'YYYY-MM-DD', 'required' => true],
                             'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
-                        ])->label('تاريخ الميلاد *') ?></div>
-                        <div><?= $form->field($model, 'city')->dropDownList(ArrayHelper::map($city, 'id', 'name'), ['prompt' => '-- المدينة --'])->label('مدينة الولادة *') ?></div>
-                        <div><?= $form->field($model, 'citizen')->dropDownList(ArrayHelper::map($citizen, 'id', 'name'), ['prompt' => '-- الجنسية --'])->label('الجنسية *') ?></div>
+                        ])->label('تاريخ الميلاد') ?></div>
+                        <div><?= $form->field($model, 'city')->dropDownList(ArrayHelper::map($city, 'id', 'name'), ['prompt' => '-- المدينة --'])->label('مدينة الولادة') ?></div>
+                        <div><?= $form->field($model, 'citizen')->dropDownList(ArrayHelper::map($citizen, 'id', 'name'), ['prompt' => '-- الجنسية --'])->label('الجنسية') ?></div>
                     </div>
                 </div>
 
@@ -170,9 +170,9 @@ if (!$isNew) {
                     <div class="so-grid so-grid-3">
                         <div><?= $form->field($model, 'primary_phone_number')->widget(PhoneInput::class, [
                             'jsOptions' => ['preferredCountries' => ['jo']],
-                        ])->label('الهاتف الرئيسي *') ?></div>
+                        ])->label('الهاتف الرئيسي') ?></div>
                         <div><?= $form->field($model, 'email')->textInput(['type' => 'email', 'placeholder' => 'example@email.com'])->label('البريد الإلكتروني') ?></div>
-                        <div><?= $form->field($model, 'hear_about_us')->dropDownList(ArrayHelper::map($hearAboutUs, 'id', 'name'), ['prompt' => '-- كيف سمعت عنا --'])->label('كيف سمعت عنا *') ?></div>
+                        <div><?= $form->field($model, 'hear_about_us')->dropDownList(ArrayHelper::map($hearAboutUs, 'id', 'name'), ['prompt' => '-- كيف سمعت عنا --'])->label('كيف سمعت عنا') ?></div>
                     </div>
                 </div>
 
@@ -191,10 +191,15 @@ if (!$isNew) {
                     <div class="so-grid so-grid-3">
                         <div><?= $form->field($model, 'job_title')->widget(Select2::class, [
                             'data' => ArrayHelper::map($jobs, 'id', 'name'),
-                            'options' => ['placeholder' => 'اختر الوظيفة'],
+                            'options' => ['placeholder' => 'اختر جهة العمل'],
                             'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                        ])->label('المسمى الوظيفي *') ?></div>
-                        <div><?= $form->field($model, 'job_number')->textInput(['maxlength' => true, 'placeholder' => 'الرقم الوظيفي'])->label('الرقم الوظيفي') ?></div>
+                        ])->label('جهة العمل') ?></div>
+                        <div>
+                            <div class="form-group">
+                                <label for="fin-employer-name">المسمى الوظيفي</label>
+                                <input type="text" id="fin-employer-name" name="CustomerFinancials[employer_name]" class="form-control" value="<?= Html::encode($financials['employer_name'] ?? '') ?>" placeholder="مثال: محاسب، سائق، مهندس">
+                            </div>
+                        </div>
                         <div>
                             <div class="form-group">
                                 <label for="fin-employment-type">نوع التوظيف</label>
@@ -208,12 +213,7 @@ if (!$isNew) {
                         </div>
                     </div>
                     <div class="so-grid so-grid-3" style="margin-top: 16px">
-                        <div>
-                            <div class="form-group">
-                                <label for="fin-employer-name">جهة العمل</label>
-                                <input type="text" id="fin-employer-name" name="CustomerFinancials[employer_name]" class="form-control" value="<?= Html::encode($financials['employer_name'] ?? '') ?>" placeholder="اسم جهة العمل">
-                            </div>
-                        </div>
+                        <div><?= $form->field($model, 'job_number')->textInput(['maxlength' => true, 'placeholder' => 'الرقم الوظيفي'])->label('الرقم الوظيفي') ?></div>
                         <div>
                             <div class="form-group">
                                 <label for="fin-years-at-job">سنوات الخدمة</label>

@@ -392,6 +392,36 @@
     .so-fieldset { break-inside: avoid; }
 }
 
+/* ── Dynamic Form Buttons Fix ── */
+.so-fieldset .btn-success.btn-xs,
+.so-fieldset .btn-danger.btn-xs {
+    position: relative; z-index: 2; cursor: pointer !important;
+    pointer-events: auto !important;
+}
+.so-fieldset .addrres-add-item,
+.so-fieldset .phone-numbers-add-item,
+.so-fieldset .customer-documents-add-item {
+    display: inline-flex !important; align-items: center; gap: 6px;
+    padding: 8px 16px !important; font-size: 13px !important;
+    font-weight: 600; border-radius: 6px; margin-top: 10px;
+    background: var(--clr-primary, #800020) !important;
+    border-color: var(--clr-primary, #800020) !important;
+    color: #fff !important; transition: all 0.2s;
+}
+.so-fieldset .addrres-add-item:hover,
+.so-fieldset .phone-numbers-add-item:hover,
+.so-fieldset .customer-documents-add-item:hover {
+    background: var(--clr-primary-700, #70001c) !important;
+    transform: translateY(-1px);
+}
+.so-fieldset .panel { border: 1px solid #e8e8e8; border-radius: 8px; margin-bottom: 10px; }
+.so-fieldset .panel-body { padding: 12px 16px; }
+.so-fieldset .addrres-remove-item,
+.so-fieldset .phone-numbers-remove-item,
+.so-fieldset .customer-documents-remove-item {
+    padding: 6px 10px !important; border-radius: 6px;
+}
+
 /* ── Duplicate warning ── */
 .so-duplicate-warn {
     background: #fff3cd; border: 1px solid #ffc107; border-radius: var(--radius-sm);
