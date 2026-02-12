@@ -124,6 +124,16 @@ class Permissions
     public static function checkMainMenuItems($items)
     {
         foreach ($items as $key => $menuItem) {
+            // ── تجاوز العناوين (headers) — لا تحتاج صلاحيات ──
+            if (isset($menuItem['options']['class']) && strpos($menuItem['options']['class'], 'header') !== false) {
+                continue;
+            }
+
+            // ── تجاوز العناصر بدون privilege ولكن لها url (متاحة للجميع مثل لوحة التحكم) ──
+            if (!isset($menuItem['privilege']) && !isset($menuItem['items']) && isset($menuItem['url'])) {
+                continue;
+            }
+
             if (isset($menuItem['privilege'])) {
                 $priv = $menuItem['privilege'];
                 /* إذا privilege مصفوفة → فحص OR */
@@ -144,7 +154,8 @@ class Permissions
                 $items[$key]['items'] = self::checkMainMenuItems($menuItem['items']);
             }
 
-            if ((!isset($menuItem['privilege']) && !isset($menuItem['items'])) || (isset($menuItem['items']) && count($menuItem['items']) == 0)) {
+            // حذف القوائم الفرعية الفارغة فقط
+            if (isset($menuItem['items']) && count($items[$key]['items'] ?? []) == 0) {
                 unset($items[$key]);
             }
         }

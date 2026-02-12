@@ -31,7 +31,7 @@ class SiteController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'dashboard-data'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -61,106 +61,123 @@ class SiteController extends Controller
     public function actionIndex()
     {
         $companyId = isset(Yii::$app->params['company_id']) ? Yii::$app->params['company_id'] : null;
+        $db = Yii::$app->db;
 
-        // ─── KPI الرئيسية ───
-        $q = new Query();
-
-        // عدد العقود حسب الحالة
-        $contractStats = $q->select(['status', 'COUNT(*) as cnt', 'COALESCE(SUM(total_value),0) as total_value'])
-            ->from('os_contracts')
-            ->where(['is_deleted' => 0])
-            ->andFilterWhere(['company_id' => $companyId])
-            ->groupBy('status')
-            ->all();
-
+        // ─── الاستعلامات مغلفة بـ try-catch لمنع كسر الصفحة ───
         $contractsByStatus = [];
         $totalContracts = 0;
         $totalContractValue = 0;
-        foreach ($contractStats as $row) {
-            $contractsByStatus[$row['status']] = (int)$row['cnt'];
-            $totalContracts += (int)$row['cnt'];
-            $totalContractValue += (float)$row['total_value'];
-        }
+        $totalCustomers = 0;
+        $monthlyIncome = 0;
+        $yearlyIncome = 0;
+        $monthlyExpenses = 0;
+        $totalCases = 0;
+        $totalSettlements = 0;
+        $incomeChart = [];
+        $recentPayments = [];
+        $recentContracts = [];
+        $topCollectors = [];
 
-        // عدد العملاء
-        $totalCustomers = (new Query())->from('os_customers')
-            ->andFilterWhere(['company_id' => $companyId])
-            ->count();
+        try {
+            // ─── KPI: عدد العقود حسب الحالة ───
+            $contractStats = $db->createCommand(
+                "SELECT status, COUNT(*) as cnt, COALESCE(SUM(total_value),0) as total_value
+                 FROM os_contracts WHERE is_deleted=0
+                 " . ($companyId ? "AND company_id=:cid" : "") . "
+                 GROUP BY status",
+                $companyId ? [':cid' => $companyId] : []
+            )->queryAll();
 
-        // إيرادات الشهر الحالي
-        $monthlyIncome = (new Query())->from('os_income')
-            ->where(['YEAR(date)' => date('Y'), 'MONTH(date)' => date('m')])
-            ->andFilterWhere(['company_id' => $companyId])
-            ->sum('amount') ?: 0;
+            foreach ($contractStats as $row) {
+                $contractsByStatus[$row['status']] = (int)$row['cnt'];
+                $totalContracts += (int)$row['cnt'];
+                $totalContractValue += (float)$row['total_value'];
+            }
+        } catch (\Exception $e) { Yii::error($e->getMessage()); }
 
-        // إيرادات السنة الحالية
-        $yearlyIncome = (new Query())->from('os_income')
-            ->where(['YEAR(date)' => date('Y')])
-            ->andFilterWhere(['company_id' => $companyId])
-            ->sum('amount') ?: 0;
+        try {
+            $totalCustomers = (int)$db->createCommand("SELECT COUNT(*) FROM os_customers")->queryScalar();
+        } catch (\Exception $e) {}
 
-        // مصاريف الشهر الحالي
-        $monthlyExpenses = (new Query())->from('os_expenses')
-            ->where(['YEAR(date)' => date('Y'), 'MONTH(date)' => date('m')])
-            ->andFilterWhere(['company_id' => $companyId])
-            ->sum('amount') ?: 0;
+        try {
+            $monthlyIncome = (float)$db->createCommand(
+                "SELECT COALESCE(SUM(amount),0) FROM os_income WHERE YEAR(`date`)=:y AND MONTH(`date`)=:m",
+                [':y' => date('Y'), ':m' => date('m')]
+            )->queryScalar();
+        } catch (\Exception $e) {}
 
-        // عدد القضايا
-        $totalCases = (new Query())->from('os_judiciary')
-            ->andFilterWhere(['company_id' => $companyId])
-            ->count();
+        try {
+            $yearlyIncome = (float)$db->createCommand(
+                "SELECT COALESCE(SUM(amount),0) FROM os_income WHERE YEAR(`date`)=:y",
+                [':y' => date('Y')]
+            )->queryScalar();
+        } catch (\Exception $e) {}
 
-        // عدد التسويات
-        $totalSettlements = (new Query())->from('os_loan_scheduling')
-            ->where(['is_deleted' => 0])
-            ->count();
+        try {
+            $monthlyExpenses = (float)$db->createCommand(
+                "SELECT COALESCE(SUM(amount),0) FROM os_expenses WHERE YEAR(expenses_date)=:y AND MONTH(expenses_date)=:m",
+                [':y' => date('Y'), ':m' => date('m')]
+            )->queryScalar();
+        } catch (\Exception $e) {}
 
-        // ─── بيانات الرسم البياني — إيرادات آخر 12 شهر ───
-        $incomeChart = (new Query())
-            ->select(["DATE_FORMAT(date, '%Y-%m') as month_key", "SUM(amount) as total"])
-            ->from('os_income')
-            ->where(['>=', 'date', date('Y-m-d', strtotime('-11 months', strtotime(date('Y-m-01'))))])
-            ->andFilterWhere(['company_id' => $companyId])
-            ->groupBy("DATE_FORMAT(date, '%Y-%m')")
-            ->orderBy("month_key ASC")
-            ->all();
+        try {
+            $totalCases = (int)$db->createCommand(
+                "SELECT COUNT(*) FROM os_judiciary" . ($companyId ? " WHERE company_id=:cid" : ""),
+                $companyId ? [':cid' => $companyId] : []
+            )->queryScalar();
+        } catch (\Exception $e) {}
 
-        // ─── آخر 10 دفعات ───
-        $recentPayments = (new Query())
-            ->select(['i.id', 'i.date', 'i.amount', 'i.contract_id', 'c.name as customer_name'])
-            ->from('os_income i')
-            ->leftJoin('os_contracts ct', 'ct.id = i.contract_id')
-            ->leftJoin('os_contracts_customers cc', 'cc.contracts_id = ct.id AND cc.type = "client"')
-            ->leftJoin('os_customers c', 'c.id = cc.customers_id')
-            ->andFilterWhere(['i.company_id' => $companyId])
-            ->orderBy('i.id DESC')
-            ->limit(10)
-            ->all();
+        try {
+            $totalSettlements = (int)$db->createCommand("SELECT COUNT(*) FROM os_loan_scheduling WHERE is_deleted=0")->queryScalar();
+        } catch (\Exception $e) {}
 
-        // ─── آخر 10 عقود ───
-        $recentContracts = (new Query())
-            ->select(['ct.id', 'ct.Date_of_sale', 'ct.total_value', 'ct.status', 'ct.monthly_installment_value', 'c.name as customer_name'])
-            ->from('os_contracts ct')
-            ->leftJoin('os_contracts_customers cc', 'cc.contracts_id = ct.id AND cc.type = "client"')
-            ->leftJoin('os_customers c', 'c.id = cc.customers_id')
-            ->where(['ct.is_deleted' => 0])
-            ->andFilterWhere(['ct.company_id' => $companyId])
-            ->orderBy('ct.id DESC')
-            ->limit(10)
-            ->all();
+        try {
+            $incomeChart = $db->createCommand(
+                "SELECT DATE_FORMAT(`date`, '%Y-%m') as month_key, SUM(amount) as total
+                 FROM os_income
+                 WHERE `date` >= :startDate
+                 GROUP BY DATE_FORMAT(`date`, '%Y-%m')
+                 ORDER BY month_key ASC",
+                [':startDate' => date('Y-m-d', strtotime('-11 months', strtotime(date('Y-m-01'))))]
+            )->queryAll();
+        } catch (\Exception $e) {}
 
-        // ─── أداء الموظفين — أعلى 10 بالإيرادات هذا الشهر ───
-        $topCollectors = (new Query())
-            ->select(['u.id', "CONCAT(p.name) as emp_name", 'SUM(i.amount) as collected'])
-            ->from('os_income i')
-            ->leftJoin('os_user u', 'u.id = i._by')
-            ->leftJoin('os_profile p', 'p.user_id = u.id')
-            ->where(['YEAR(i.date)' => date('Y'), 'MONTH(i.date)' => date('m')])
-            ->andFilterWhere(['i.company_id' => $companyId])
-            ->groupBy('u.id')
-            ->orderBy('collected DESC')
-            ->limit(10)
-            ->all();
+        try {
+            $recentPayments = $db->createCommand(
+                "SELECT i.id, i.date, i.amount, i.contract_id, c.name as customer_name
+                 FROM os_income i
+                 LEFT JOIN os_contracts ct ON ct.id = i.contract_id
+                 LEFT JOIN os_contracts_customers cc ON cc.contract_id = ct.id AND cc.customer_type = 'client'
+                 LEFT JOIN os_customers c ON c.id = cc.customer_id
+                 ORDER BY i.id DESC LIMIT 10"
+            )->queryAll();
+        } catch (\Exception $e) {}
+
+        try {
+            $recentContracts = $db->createCommand(
+                "SELECT ct.id, ct.Date_of_sale, ct.total_value, ct.status, ct.monthly_installment_value, c.name as customer_name
+                 FROM os_contracts ct
+                 LEFT JOIN os_contracts_customers cc ON cc.contract_id = ct.id AND cc.customer_type = 'client'
+                 LEFT JOIN os_customers c ON c.id = cc.customer_id
+                 WHERE ct.is_deleted=0
+                 " . ($companyId ? "AND ct.company_id=:cid" : "") . "
+                 ORDER BY ct.id DESC LIMIT 10",
+                $companyId ? [':cid' => $companyId] : []
+            )->queryAll();
+        } catch (\Exception $e) {}
+
+        try {
+            $topCollectors = $db->createCommand(
+                "SELECT u.id, p.name as emp_name, SUM(i.amount) as collected
+                 FROM os_income i
+                 LEFT JOIN os_user u ON u.id = i._by
+                 LEFT JOIN os_profile p ON p.user_id = u.id
+                 WHERE YEAR(i.`date`)=:y AND MONTH(i.`date`)=:m
+                 GROUP BY u.id, p.name
+                 ORDER BY collected DESC LIMIT 10",
+                [':y' => date('Y'), ':m' => date('m')]
+            )->queryAll();
+        } catch (\Exception $e) {}
 
         return $this->render('index', [
             'totalContracts'    => $totalContracts,
