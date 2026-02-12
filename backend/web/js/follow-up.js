@@ -31,7 +31,7 @@ $(document).on('click', '.custmer-popup', function () {
     $.post(customer_info_url, { customerId: customerId }, function (msg) {
         let info = JSON.parse(msg);
         $('.cu-name').val(info['name']);
-        $('#exampleModalLabel12').text(info['name']);
+        $('#customerInfoTitle').text(info['name']);
         $('.cu-id-number').val(info['id_number']);
         $('.cu-birth-date').val(info['birth_date']);
         $('.cu-job-number').val(info['job_number']);

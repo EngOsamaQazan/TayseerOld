@@ -2008,6 +2008,58 @@
 }
 
 /* ═══════════════════════════════════════════════
+  15-A. NEXT CONTRACT BUTTON
+   ═══════════════════════════════════════════════ */
+.ocp-next-contract-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    background: var(--ocp-success);
+    color: #fff;
+    border-radius: var(--ocp-radius-lg);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+.ocp-next-contract-btn:hover {
+    background: #16A34A;
+    color: #fff;
+    text-decoration: none;
+    transform: translateX(-2px);
+}
+
+/* ═══════════════════════════════════════════════
+  15-B. OCP CARD (wrapper for old tabs content)
+   ═══════════════════════════════════════════════ */
+.ocp-card {
+    background: var(--ocp-surface);
+    border-radius: var(--ocp-radius-lg);
+    border: 1px solid var(--ocp-border-light);
+    overflow-x: auto;
+}
+.ocp-card .card { margin: 0; border: none; box-shadow: none; }
+.ocp-card .card-body { padding: 0; }
+.ocp-card .box { margin: 0; border: none; box-shadow: none; }
+.ocp-card .kv-grid-container { overflow-x: auto; }
+
+/* Fix GridView inside OCP tabs */
+.ocp-tab-content .panel { border: none; box-shadow: none; margin-bottom: 0; }
+.ocp-tab-content .panel-body { padding: 8px 0; }
+.ocp-tab-content .table > thead > tr > th { font-size: 12px; white-space: nowrap; }
+.ocp-tab-content .table > tbody > tr > td { font-size: 13px; }
+.ocp-tab-content .btn-xs { font-size: 11px; }
+.ocp-tab-content .kv-panel-before { padding: 8px 0; }
+.ocp-tab-content h3, .ocp-tab-content h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ocp-text-primary);
+    margin: 12px 0 8px;
+}
+
+/* ═══════════════════════════════════════════════
   15. PRINT STYLES
    ═══════════════════════════════════════════════ */
 @media print {

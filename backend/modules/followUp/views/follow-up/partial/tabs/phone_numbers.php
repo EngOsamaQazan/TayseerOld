@@ -33,7 +33,7 @@ use backend\modules\customers\models\ContractsCustomers;
                     'class' => '\kartik\grid\DataColumn',
                     'attribute' => 'name',
                     'value' => function ($model) {
-                        return '<button type="button" class="btn btn-primary custmer-popup"  data-target="#exampleModal12" data-toggle="modal" customer-id ="' . $model->id . '">
+                        return '<button type="button" class="btn btn-primary custmer-popup"  data-target="#customerInfoModal" data-toggle="modal" customer-id ="' . $model->id . '">
   ' . $model->name . '
 </button>';
                     },
@@ -98,7 +98,7 @@ use backend\modules\customers\models\ContractsCustomers;
                 [
                     'format' => 'raw',
                     'value' => function ($model) {
-                        return '<button type="button" onclick="setPhoneNumebr(' . $model->primary_phone_number . ')" class="btn btn-primary glyphicon glyphicon-comment" data-toggle="modal" data-target="#exampleModalCenter"></button>';
+                        return '<button type="button" onclick="setPhoneNumebr(' . $model->primary_phone_number . ')" class="btn btn-primary glyphicon glyphicon-comment" data-toggle="modal" data-target="#smsModal"></button>';
                     }
                 ],
                 [
@@ -208,7 +208,7 @@ use backend\modules\customers\models\ContractsCustomers;
                     [
                         'format' => 'raw',
                         'value' => function ($model) {
-                            return '<button type="button" onclick="setPhoneNumebr(' . $model->phone_number . ')" class="btn btn-primary glyphicon glyphicon-comment" data-toggle="modal" data-target="#exampleModalCenter"></button>';
+                            return '<button type="button" onclick="setPhoneNumebr(' . $model->phone_number . ')" class="btn btn-primary glyphicon glyphicon-comment" data-toggle="modal" data-target="#smsModal"></button>';
                         }
                     ],
                     [

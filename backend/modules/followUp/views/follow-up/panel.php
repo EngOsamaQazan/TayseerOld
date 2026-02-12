@@ -3,6 +3,10 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\helpers\Json;
+use yii\bootstrap\Modal;
+use johnitvn\ajaxcrud\CrudAsset;
+
+CrudAsset::register($this);
 
 /**
  * @var yii\web\View $this
@@ -13,7 +17,12 @@ use yii\helpers\Json;
  * @var array $timeline
  * @var array $financials
  * @var array $alerts
- * @var array $customer
+ * @var backend\modules\customers\models\Customers|null $customer
+ * @var backend\modules\followUp\helper\ContractCalculations $contractCalculations
+ * @var string|int $contract_id
+ * @var backend\modules\followUp\models\FollowUp $model
+ * @var yii\data\ActiveDataProvider $dataProvider
+ * @var array $modelsPhoneNumbersFollwUps
  */
 
 $this->title = 'لوحة تحكم العقد #' . $contract->id;
@@ -36,8 +45,18 @@ $this->registerJs("window.OCP_CONFIG = " . Json::encode([
         'aiFeedback' => Url::to(['/followUp/follow-up/ai-feedback']),
         'getTimeline' => Url::to(['/followUp/follow-up/get-timeline', 'contract_id' => $contractId]),
         'sendSms' => Url::to(['/followUp/follow-up/send-sms']),
+        'changeStatus' => Url::to(['/followUp/follow-up/change-status']),
+        'customerInfo' => Url::to(['/followUp/follow-up/custamer-info']),
+        'addNewLoan' => Url::to(['/followUp/follow-up/add-new-loan']),
     ],
 ]) . ";", \yii\web\View::POS_HEAD);
+
+// JS vars for old modals compatibility
+$this->registerJsVar('is_loan', $contractCalculations->contract_model->is_loan ?? 0, \yii\web\View::POS_HEAD);
+$this->registerJsVar('change_status_url', Url::to(['/followUp/follow-up/change-status']), \yii\web\View::POS_HEAD);
+$this->registerJsVar('send_sms', Url::to(['/followUp/follow-up/send-sms']), \yii\web\View::POS_HEAD);
+$this->registerJsVar('customer_info_url', Url::to(['/followUp/follow-up/custamer-info']), \yii\web\View::POS_HEAD);
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/follow-up.js', ['depends' => [\yii\web\JqueryAsset::class]]);
 
 $dpd = $riskData['dpd'] ?? 0;
 $dpdClass = $dpd <= 0 ? 'ok' : ($dpd <= 7 ? 'warning' : ($dpd <= 30 ? 'danger' : 'critical'));
@@ -154,6 +173,20 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                 </div>
                 <span class="ocp-assignee__name"><?= Html::encode($contract->followedBy ? $contract->followedBy->username : 'غير محدد') ?></span>
             </div>
+
+            <div class="ocp-status-bar__divider"></div>
+
+            <?php // Next Contract Button ?>
+            <?php
+            $nextID = $model->getNextContractID($contract_id);
+            $nextIDForManager = $model->getNextContractIDForManager($contract_id);
+            $targetNextId = Yii::$app->user->can('Manger') ? $nextIDForManager : $nextID;
+            ?>
+            <?php if ($targetNextId > 0): ?>
+            <a href="<?= Url::to(['panel', 'contract_id' => $targetNextId]) ?>" class="ocp-next-contract-btn" title="الانتقال للعقد التالي">
+                <i class="fa fa-arrow-left"></i> العقد التالي
+            </a>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -243,13 +276,37 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                                 <div class="ocp-action-btn__icon ocp-action-btn__icon--freeze"><i class="fa fa-pause-circle"></i></div>
                                 <span class="ocp-action-btn__label">تجميد المتابعة</span>
                             </button>
+                            <button class="ocp-action-btn" onclick="$('#customerImagesModal').modal('show')">
+                                <div class="ocp-action-btn__icon" style="background:#E8F5E9;color:#388E3C"><i class="fa fa-image"></i></div>
+                                <span class="ocp-action-btn__label">صور العملاء</span>
+                            </button>
+                            <button class="ocp-action-btn" onclick="$('#changeStatusModal').modal('show')">
+                                <div class="ocp-action-btn__icon" style="background:#FFF3E0;color:#E65100"><i class="fa fa-exchange"></i></div>
+                                <span class="ocp-action-btn__label">تغيير حالة العقد</span>
+                            </button>
+                            <button class="ocp-action-btn" onclick="$('#auditModal').modal('show')">
+                                <div class="ocp-action-btn__icon" style="background:#E3F2FD;color:#1565C0"><i class="fa fa-check-square-o"></i></div>
+                                <span class="ocp-action-btn__label">للتدقيق</span>
+                            </button>
+                            <button class="ocp-action-btn" onclick="$('#settlementModal').modal('show')">
+                                <div class="ocp-action-btn__icon" style="background:#F3E5F5;color:#7B1FA2"><i class="fa fa-balance-scale"></i></div>
+                                <span class="ocp-action-btn__label">إضافة تسوية</span>
+                            </button>
+                            <a class="ocp-action-btn" href="<?= Url::to(['printer', 'contract_id' => $contract_id]) ?>" target="_blank" style="text-decoration:none">
+                                <div class="ocp-action-btn__icon" style="background:#ECEFF1;color:#455A64"><i class="fa fa-print"></i></div>
+                                <span class="ocp-action-btn__label">كشف حساب</span>
+                            </a>
+                            <a class="ocp-action-btn" href="<?= Url::to(['clearance', 'contract_id' => $contract_id]) ?>" target="_blank" style="text-decoration:none">
+                                <div class="ocp-action-btn__icon" style="background:#E8EAF6;color:#283593"><i class="fa fa-file-text-o"></i></div>
+                                <span class="ocp-action-btn__label">براءة الذمة</span>
+                            </a>
                         </div>
                     </div>
                 </div>
 
-                <?php // TABS: Timeline / Kanban / Financial ?>
+                <?php // TABS: Timeline / Kanban / Financial / Phones / Payments / Settlements / Judiciary ?>
                 <div class="ocp-section">
-                    <div class="ocp-tabs">
+                    <div class="ocp-tabs" style="flex-wrap:wrap;gap:4px">
                         <button class="ocp-tab active" data-tab="timeline" onclick="OCP.switchTab('timeline')">
                             <i class="fa fa-clock-o"></i> السجل الزمني
                             <span class="ocp-tab__count"><?= count($timeline) ?></span>
@@ -261,6 +318,18 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                         </button>
                         <button class="ocp-tab" data-tab="financial" onclick="OCP.switchTab('financial')">
                             <i class="fa fa-money"></i> اللقطة المالية
+                        </button>
+                        <button class="ocp-tab" data-tab="phones" onclick="OCP.switchTab('phones')">
+                            <i class="fa fa-phone"></i> أرقام الهواتف
+                        </button>
+                        <button class="ocp-tab" data-tab="payments" onclick="OCP.switchTab('payments')">
+                            <i class="fa fa-credit-card"></i> الدفعات
+                        </button>
+                        <button class="ocp-tab" data-tab="settlements" onclick="OCP.switchTab('settlements')">
+                            <i class="fa fa-balance-scale"></i> التسويات
+                        </button>
+                        <button class="ocp-tab" data-tab="judiciary-actions" onclick="OCP.switchTab('judiciary-actions')">
+                            <i class="fa fa-gavel"></i> إجراءات قضائية
                         </button>
                     </div>
 
@@ -278,6 +347,48 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                     <div class="ocp-tab-content ocp-hidden" id="tab-financial">
                         <?= $this->render('panel/_financial', ['financials' => $financials]) ?>
                     </div>
+
+                    <?php // PHONE NUMBERS TAB (from old index) ?>
+                    <div class="ocp-tab-content ocp-hidden" id="tab-phones">
+                        <div class="ocp-card" style="padding:var(--ocp-space-lg)">
+                            <?= $this->render('partial/tabs/phone_numbers.php', [
+                                'contractCalculations' => $contractCalculations,
+                                'contract_id' => $contract_id,
+                                'model' => $model,
+                            ]) ?>
+                        </div>
+                    </div>
+
+                    <?php // PAYMENTS TAB (from old index) ?>
+                    <div class="ocp-tab-content ocp-hidden" id="tab-payments">
+                        <div class="ocp-card" style="padding:var(--ocp-space-lg)">
+                            <?= $this->render('partial/tabs/payments.php', [
+                                'contract_id' => $contract_id,
+                                'model' => $model,
+                            ]) ?>
+                        </div>
+                    </div>
+
+                    <?php // SETTLEMENTS TAB (from old index) ?>
+                    <div class="ocp-tab-content ocp-hidden" id="tab-settlements">
+                        <div class="ocp-card" style="padding:var(--ocp-space-lg)">
+                            <?= $this->render('partial/tabs/loan_scheduling.php', [
+                                'contract_id' => $contract_id,
+                                'model' => $model,
+                                'contractCalculations' => $contractCalculations,
+                            ]) ?>
+                        </div>
+                    </div>
+
+                    <?php // JUDICIARY ACTIONS TAB (from old index) ?>
+                    <div class="ocp-tab-content ocp-hidden" id="tab-judiciary-actions">
+                        <div class="ocp-card" style="padding:var(--ocp-space-lg)">
+                            <?= $this->render('partial/tabs/judiciary_customers_actions.php', [
+                                'contract_id' => $contract_id,
+                                'model' => $model,
+                            ]) ?>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -290,9 +401,25 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
         </div>
     </div>
 
+    <?php // ═══ NEXT CONTRACT (from old index) ═══ ?>
+    <?php if ($model->next ?? null): ?>
+    <div class="ocp-section" style="margin-top:var(--ocp-space-lg)">
+        <div class="ocp-card" style="padding:var(--ocp-space-lg)">
+            <?= $this->render('partial/next_contract.php', ['model' => $model, 'contract_id' => $contract_id]) ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <?php // ═══ SIDE PANELS (Hidden by default) ═══ ?>
     <div class="ocp-side-panel__overlay" id="ocp-overlay" onclick="OCP.closePanel()"></div>
     <?= $this->render('panel/_side_panels', ['contract' => $contract, 'customer' => $customer]) ?>
+
+    <?php // ═══ OLD MODALS (Customer Info, Customer Images, Audit, Settlement, Change Status, SMS) ═══ ?>
+    <?= $this->render('modals.php', ['contractCalculations' => $contractCalculations, 'contract_id' => $contract_id]) ?>
+
+    <?php // ═══ AJAX CRUD MODAL (for phone numbers, settlements etc.) ═══ ?>
+    <?php Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '']) ?>
+    <?php Modal::end() ?>
 
     <?php // ═══ TOAST NOTIFICATION ═══ ?>
     <div class="ocp-toast" id="ocp-toast">

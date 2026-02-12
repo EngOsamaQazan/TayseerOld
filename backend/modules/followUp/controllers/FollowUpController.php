@@ -67,28 +67,8 @@ class FollowUpController extends Controller
      */
     public function actionIndex($contract_id, $notificationID = 0)
     {
-        if ($notificationID != 0) {
-            Yii::$app->notifications->setReaded($notificationID);
-        }
-        $model = new FollowUp();
-        $searchModel = new FollowUpSearch();
-        $queryParams = Yii::$app->request->queryParams;
-        $dataProvider = $searchModel->search($queryParams, $contract_id);
-        $contract_model = \backend\modules\contracts\models\Contracts::findOne($contract_id);
-//        if ($contract_model->is_locked()) {
-//            throw new \yii\web\HttpException(403, 'هذا العقد مقفل ومتابع من قبل موظف اخر.');
-//        } else {
-//            $contract_model->unlock();
-//            $contract_model->lock();
-//        }
-        return $this->render('index', [
-            'model' => $model,
-            'contract_id' => $contract_id,
-            'searchModel' => $searchModel,
-            'dataProvider' => $dataProvider,
-            'contract_model' => $contract_model,
-            'modelsPhoneNumbersFollwUps' => [new FollowUpConnectionReports],
-        ]);
+        // Redirect to the new OCP panel — full merge
+        return $this->redirect(['panel', 'contract_id' => $contract_id, 'notificationID' => $notificationID]);
     }
 
     /**
@@ -448,8 +428,12 @@ class FollowUpController extends Controller
     /**
      * OCP Panel — Main operational control panel for a single contract
      */
-    public function actionPanel($contract_id)
+    public function actionPanel($contract_id, $notificationID = 0)
     {
+        if ($notificationID != 0) {
+            Yii::$app->notifications->setReaded($notificationID);
+        }
+
         $contract = Contracts::findOne($contract_id);
         if (!$contract) {
             throw new NotFoundHttpException('العقد غير موجود');
@@ -483,8 +467,10 @@ class FollowUpController extends Controller
         $aiEngine = new AIEngine($contract);
         $aiData = $aiEngine->recommend();
 
+        // ContractCalculations — needed for old tabs (phone_numbers, payments, settlements, judiciary)
+        $calc = new ContractCalculations($contract_id);
+
         // Financial Snapshot
-        $calc = new ContractCalculations($contract);
         $total = $calc->getContractTotal();
         $paid = $calc->paidAmount();
         $shouldPaid = $calc->amountShouldBePaid();
@@ -514,6 +500,11 @@ class FollowUpController extends Controller
         // Smart Alerts
         $alerts = $this->buildAlerts($contract, $riskEngine, $riskAssessment, $dpd, $brokenPromises);
 
+        // FollowUp model + search (for old form compatibility)
+        $model = new FollowUp();
+        $searchModel = new FollowUpSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams, $contract_id);
+
         return $this->render('panel', [
             'contract' => $contract,
             'customer' => $customer,
@@ -523,6 +514,11 @@ class FollowUpController extends Controller
             'timeline' => $timeline,
             'financials' => $financials,
             'alerts' => $alerts,
+            'contractCalculations' => $calc,
+            'contract_id' => $contract_id,
+            'model' => $model,
+            'dataProvider' => $dataProvider,
+            'modelsPhoneNumbersFollwUps' => [new FollowUpConnectionReports],
         ]);
     }
 
