@@ -7,9 +7,15 @@ use backend\modules\loanScheduling\models\LoanScheduling;
 use Yii;
 use backend\modules\followUp\models\FollowUp;
 use backend\modules\followUp\models\FollowUpSearch;
+use backend\modules\followUp\models\FollowUpTask;
+use backend\modules\followUp\helper\RiskEngine;
+use backend\modules\followUp\helper\AIEngine;
+use backend\modules\followUp\helper\ContractCalculations;
 use yii\helpers\Json;
+use yii\helpers\Url;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
+use yii\web\Response;
 use yii\filters\VerbFilter;
 use yii\filters\AccessControl;
 use backend\modules\followUp\models\FollowUpConnectionReports;
@@ -39,7 +45,8 @@ class FollowUpController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'create', 'delete', 'send-sms', 'view', 'update', 'find-next-contract', 'add-new-loan', 'printer', 'clearance', 'change-status', 'custamer-info'],
+                        'actions' => ['logout', 'index', 'create', 'delete', 'send-sms', 'view', 'update', 'find-next-contract', 'add-new-loan', 'printer', 'clearance', 'change-status', 'custamer-info',
+                        'panel', 'save-follow-up', 'create-task', 'move-task', 'ai-feedback', 'get-timeline'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -431,6 +438,496 @@ class FollowUpController extends Controller
             return json_encode($custumer_info);
 
 
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // OCP — Operational Control Panel Actions
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * OCP Panel — Main operational control panel for a single contract
+     */
+    public function actionPanel($contract_id)
+    {
+        $contract = Contracts::findOne($contract_id);
+        if (!$contract) {
+            throw new NotFoundHttpException('العقد غير موجود');
+        }
+
+        // Customer
+        $customer = null;
+        if ($contract->contractsCustomers) {
+            foreach ($contract->contractsCustomers as $cc) {
+                if ($cc->customer_type === 'client') {
+                    $customer = \backend\modules\customers\models\Customers::findOne($cc->customer_id);
+                    break;
+                }
+            }
+        }
+
+        // Risk Assessment
+        $riskEngine = new RiskEngine($contract);
+        $riskAssessment = $riskEngine->assess();
+        $dpd = $riskEngine->getDPD();
+        $brokenPromises = $riskEngine->getBrokenPromisesCount();
+        $lastPayment = $riskEngine->getLastPayment();
+
+        $riskData = array_merge($riskAssessment, [
+            'dpd' => $dpd,
+            'broken_promises' => $brokenPromises,
+            'last_payment' => $lastPayment,
+        ]);
+
+        // AI Recommendations
+        $aiEngine = new AIEngine($contract);
+        $aiData = $aiEngine->recommend();
+
+        // Financial Snapshot
+        $calc = new ContractCalculations($contract);
+        $total = $calc->getContractTotal();
+        $paid = $calc->paidAmount();
+        $shouldPaid = $calc->amountShouldBePaid();
+        $remaining = $calc->remainingAmount();
+        $overdue = max(0, $calc->deservedAmount());
+        $monthlyAmount = $contract->monthly_installment_value ?: 1;
+        $overdueInstallments = ($monthlyAmount > 0) ? (int)ceil($overdue / $monthlyAmount) : 0;
+        $remainingInstallments = ($monthlyAmount > 0) ? (int)ceil($remaining / $monthlyAmount) : 0;
+        $complianceRate = ($shouldPaid > 0) ? min(100, (int)round(($paid / $shouldPaid) * 100)) : 100;
+
+        $financials = [
+            'total' => $total,
+            'paid' => $paid,
+            'remaining' => $remaining,
+            'overdue' => $overdue,
+            'overdue_installments' => $overdueInstallments,
+            'remaining_installments' => $remainingInstallments,
+            'compliance_rate' => $complianceRate,
+        ];
+
+        // Timeline (combine follow-ups + payments + judiciary actions)
+        $timeline = $this->buildTimeline($contract_id);
+
+        // Kanban
+        $kanbanData = FollowUpTask::getKanbanData($contract_id);
+
+        // Smart Alerts
+        $alerts = $this->buildAlerts($contract, $riskEngine, $riskAssessment, $dpd, $brokenPromises);
+
+        return $this->render('panel', [
+            'contract' => $contract,
+            'customer' => $customer,
+            'riskData' => $riskData,
+            'aiData' => $aiData,
+            'kanbanData' => $kanbanData,
+            'timeline' => $timeline,
+            'financials' => $financials,
+            'alerts' => $alerts,
+        ]);
+    }
+
+    /**
+     * Build timeline from multiple data sources
+     */
+    private function buildTimeline($contract_id)
+    {
+        $events = [];
+
+        // Follow-ups
+        $followUps = FollowUp::find()
+            ->where(['contract_id' => $contract_id])
+            ->orderBy(['date_time' => SORT_DESC])
+            ->limit(50)
+            ->all();
+
+        foreach ($followUps as $fu) {
+            $type = 'call';
+            if (!empty($fu->promise_to_pay_at)) {
+                $type = 'promise';
+            }
+            $goalLabels = [1 => 'تحصيل', 2 => 'مصالحة', 3 => 'إنهاء عقد'];
+
+            $events[] = [
+                'id' => 'fu-' . $fu->id,
+                'type' => $type,
+                'datetime' => $fu->date_time ? date('Y/m/d H:i', strtotime($fu->date_time)) : '',
+                'content' => trim(
+                    ($fu->notes ?: '') .
+                    ($fu->feeling ? ' | الانطباع: ' . $fu->feeling : '') .
+                    (isset($goalLabels[$fu->connection_goal]) ? ' | الهدف: ' . $goalLabels[$fu->connection_goal] : '')
+                ),
+                'employee' => $fu->createdBy ? $fu->createdBy->username : '',
+                'promise_date' => $fu->promise_to_pay_at,
+                'amount' => null,
+                'pinned' => false,
+                'attachments' => [],
+                'sort_time' => $fu->date_time ? strtotime($fu->date_time) : 0,
+            ];
+        }
+
+        // Payments (from os_income)
+        $payments = Yii::$app->db->createCommand(
+            "SELECT i.*, u.username FROM {{%income}} i LEFT JOIN {{%user}} u ON i.created_by = u.id WHERE i.contract_id = :cid ORDER BY i.date DESC LIMIT 30",
+            [':cid' => $contract_id]
+        )->queryAll();
+
+        foreach ($payments as $pay) {
+            $events[] = [
+                'id' => 'pay-' . $pay['id'],
+                'type' => 'payment',
+                'datetime' => $pay['date'] ? date('Y/m/d', strtotime($pay['date'])) : '',
+                'content' => 'دفعة بمبلغ ' . number_format($pay['amount']) . ' د.أ' .
+                    ($pay['notes'] ? ' — ' . $pay['notes'] : ''),
+                'employee' => $pay['username'] ?? '',
+                'promise_date' => null,
+                'amount' => $pay['amount'],
+                'pinned' => false,
+                'attachments' => [],
+                'sort_time' => $pay['date'] ? strtotime($pay['date']) : 0,
+            ];
+        }
+
+        // Judiciary events
+        $judiciaryItems = Yii::$app->db->createCommand(
+            "SELECT j.*, u.username FROM {{%judiciary}} j LEFT JOIN {{%user}} u ON j.created_by = u.id WHERE j.contract_id = :cid AND j.is_deleted = 0 ORDER BY j.created_at DESC LIMIT 20",
+            [':cid' => $contract_id]
+        )->queryAll();
+
+        foreach ($judiciaryItems as $jud) {
+            $events[] = [
+                'id' => 'jud-' . $jud['id'],
+                'type' => 'legal',
+                'datetime' => $jud['created_at'] ? date('Y/m/d', $jud['created_at']) : '',
+                'content' => 'إجراء قضائي — رقم القضية: ' . ($jud['judiciary_number'] ?? '-') .
+                    ($jud['lawyer_cost'] ? ' | تكلفة المحامي: ' . number_format($jud['lawyer_cost']) : ''),
+                'employee' => $jud['username'] ?? '',
+                'promise_date' => null,
+                'amount' => null,
+                'pinned' => false,
+                'attachments' => [],
+                'sort_time' => $jud['created_at'] ?: 0,
+            ];
+        }
+
+        // Sort by time DESC (most recent first)
+        usort($events, function ($a, $b) {
+            return $b['sort_time'] - $a['sort_time'];
+        });
+
+        return $events;
+    }
+
+    /**
+     * Build smart alerts based on contract state
+     */
+    private function buildAlerts($contract, $riskEngine, $riskAssessment, $dpd, $brokenPromises)
+    {
+        $alerts = [];
+
+        // Broken promises
+        if ($brokenPromises > 0) {
+            $severity = $brokenPromises >= 3 ? 'critical' : 'warning';
+            $alerts[] = [
+                'severity' => $severity,
+                'icon' => 'fa-exclamation-triangle',
+                'title' => $brokenPromises . ' وعد/وعود دفع غير منفذة',
+                'description' => 'العميل لديه وعود دفع منتهية الصلاحية ولم يتم تنفيذها',
+                'cta' => ['label' => 'اتصل الآن', 'action' => 'call'],
+            ];
+        }
+
+        // No contact for a long time
+        $lastContact = $riskEngine->getLastContactDate();
+        if ($lastContact) {
+            $daysSince = (int)((strtotime('today') - strtotime($lastContact)) / 86400);
+            if ($daysSince > 14) {
+                $alerts[] = [
+                    'severity' => $daysSince > 30 ? 'critical' : 'warning',
+                    'icon' => 'fa-phone-slash',
+                    'title' => 'لا تواصل منذ ' . $daysSince . ' يوم',
+                    'description' => 'يجب التواصل مع العميل في أقرب وقت لتحديث وضعه',
+                    'cta' => ['label' => 'اتصل', 'action' => 'call'],
+                ];
+            }
+        } elseif ($lastContact === null) {
+            $alerts[] = [
+                'severity' => 'info',
+                'icon' => 'fa-info-circle',
+                'title' => 'لم يتم التواصل مع هذا العميل بعد',
+                'description' => 'هذا العقد ليس له سجل تواصل. يُنصح بإجراء أول اتصال',
+                'cta' => ['label' => 'اتصال أول', 'action' => 'call'],
+            ];
+        }
+
+        // DPD Warning
+        if ($dpd > 30) {
+            $alerts[] = [
+                'severity' => 'critical',
+                'icon' => 'fa-calendar-times-o',
+                'title' => 'تأخير كبير: ' . $dpd . ' يوم',
+                'description' => 'التأخير تجاوز الحد المسموح. يُنصح بالتصعيد الفوري',
+                'cta' => ['label' => 'صعّد', 'action' => 'legal'],
+            ];
+        } elseif ($dpd > 7) {
+            $alerts[] = [
+                'severity' => 'warning',
+                'icon' => 'fa-clock-o',
+                'title' => 'تأخير ' . $dpd . ' يوم',
+                'description' => 'يجب المتابعة الفورية للحفاظ على معدل التحصيل',
+                'cta' => ['label' => 'تابع', 'action' => 'call'],
+            ];
+        }
+
+        // Legal flag
+        if (in_array($contract->status, ['judiciary', 'legal_department'])) {
+            $alerts[] = [
+                'severity' => 'critical',
+                'icon' => 'fa-gavel',
+                'title' => 'ملف قضائي مفتوح',
+                'description' => 'هذا العقد في المرحلة القضائية — تطبق قيود على الإجراءات',
+                'cta' => null,
+            ];
+        }
+
+        // Missing contact info
+        $customer = null;
+        if ($contract->contractsCustomers) {
+            foreach ($contract->contractsCustomers as $cc) {
+                if ($cc->customer_type === 'client') {
+                    $customer = \backend\modules\customers\models\Customers::findOne($cc->customer_id);
+                    break;
+                }
+            }
+        }
+        if ($customer && empty($customer->primary_phone_number)) {
+            $alerts[] = [
+                'severity' => 'info',
+                'icon' => 'fa-address-book-o',
+                'title' => 'نقص بيانات تواصل',
+                'description' => 'لا يوجد رقم هاتف أساسي للعميل. يجب تحديث البيانات',
+                'cta' => null,
+            ];
+        }
+
+        return $alerts;
+    }
+
+    /**
+     * AJAX: Save a new follow-up entry from OCP side panels
+     */
+    public function actionSaveFollowUp()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        if (!$request->isPost) {
+            return ['success' => false, 'message' => 'طريقة الطلب غير صحيحة'];
+        }
+
+        $contractId = (int)$request->post('contract_id');
+        $contract = Contracts::findOne($contractId);
+        if (!$contract) {
+            return ['success' => false, 'message' => 'العقد غير موجود'];
+        }
+
+        $model = new FollowUp();
+        $model->contract_id = $contractId;
+        $model->created_by = Yii::$app->user->id;
+        $model->connection_goal = (int)$request->post('connection_goal', 1);
+        $model->feeling = $request->post('feeling', '');
+        $model->reminder = $request->post('reminder', date('Y-m-d', strtotime('+3 days')));
+        $model->notes = $request->post('notes', '');
+        $model->promise_to_pay_at = $request->post('promise_to_pay_at') ?: null;
+
+        if ($model->save()) {
+            // Log audit event
+            $this->logAudit($contractId, 'follow_up_created', [
+                'follow_up_id' => $model->id,
+                'action_type' => $request->post('action_type', 'call'),
+                'feeling' => $model->feeling,
+            ]);
+
+            // Auto-create SLA for promise
+            if (!empty($model->promise_to_pay_at)) {
+                $this->createPromiseSLA($contractId, $model->promise_to_pay_at);
+            }
+
+            return ['success' => true, 'message' => 'تم الحفظ بنجاح', 'id' => $model->id];
+        }
+
+        return ['success' => false, 'message' => 'خطأ في الحفظ: ' . implode(', ', $model->getFirstErrors())];
+    }
+
+    /**
+     * AJAX: Create a new Kanban task
+     */
+    public function actionCreateTask()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        if (!$request->isPost) {
+            return ['success' => false, 'message' => 'طريقة الطلب غير صحيحة'];
+        }
+
+        $task = new FollowUpTask();
+        $task->contract_id = (int)$request->post('contract_id');
+        $task->title = $request->post('title', '');
+        $task->description = $request->post('description', '');
+        $task->stage = $request->post('stage', 'new');
+        $task->priority = $request->post('priority', 'medium');
+        $task->due_date = $request->post('due_date') ?: null;
+        $task->action_type = $request->post('action_type', '');
+        $task->assigned_to = Yii::$app->user->id;
+        $task->created_by = Yii::$app->user->id;
+        $task->status = FollowUpTask::STATUS_PENDING;
+
+        if ($task->save()) {
+            $this->logAudit($task->contract_id, 'task_created', [
+                'task_id' => $task->id,
+                'stage' => $task->stage,
+                'title' => $task->title,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'تم إنشاء المهمة بنجاح',
+                'task' => $task->toKanbanArray(),
+            ];
+        }
+
+        return ['success' => false, 'message' => 'خطأ: ' . implode(', ', $task->getFirstErrors())];
+    }
+
+    /**
+     * AJAX: Move a Kanban task to another stage
+     */
+    public function actionMoveTask()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        if (!$request->isPost) {
+            return ['success' => false, 'message' => 'طريقة الطلب غير صحيحة'];
+        }
+
+        $taskId = (int)$request->post('task_id');
+        $targetStage = $request->post('target_stage');
+        $task = FollowUpTask::findOne($taskId);
+
+        if (!$task) {
+            return ['success' => false, 'message' => 'المهمة غير موجودة'];
+        }
+
+        $oldStage = $task->stage;
+        $task->stage = $targetStage;
+
+        // Governance: escalation requires reason
+        if (in_array($targetStage, ['escalation', 'legal'])) {
+            $task->escalation_reason = $request->post('escalation_reason', '');
+            $task->escalation_type = $request->post('escalation_type', '');
+            $task->requires_approval = 1;
+
+            if (empty($task->escalation_reason)) {
+                return ['success' => false, 'message' => 'سبب التصعيد مطلوب'];
+            }
+        }
+
+        // Mark as done if moved to closed
+        if ($targetStage === 'closed') {
+            $task->status = FollowUpTask::STATUS_DONE;
+            $task->completed_at = date('Y-m-d H:i:s');
+        }
+
+        if ($task->save()) {
+            $this->logAudit($task->contract_id, 'task_moved', [
+                'task_id' => $task->id,
+                'from_stage' => $oldStage,
+                'to_stage' => $targetStage,
+                'escalation_reason' => $task->escalation_reason,
+            ]);
+
+            return ['success' => true, 'message' => 'تم نقل المهمة'];
+        }
+
+        return ['success' => false, 'message' => 'خطأ في النقل'];
+    }
+
+    /**
+     * AJAX: Record AI recommendation feedback
+     */
+    public function actionAiFeedback()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        $contractId = (int)$request->post('contract_id');
+        $feedback = $request->post('feedback');
+
+        // Store feedback in ai_recommendations table
+        try {
+            Yii::$app->db->createCommand()->insert('{{%ai_recommendations}}', [
+                'contract_id' => $contractId,
+                'recommendation_type' => 'next_best_action',
+                'action' => 'feedback_recorded',
+                'user_feedback' => $feedback,
+                'executed_by' => Yii::$app->user->id,
+                'executed_at' => date('Y-m-d H:i:s'),
+                'created_at' => date('Y-m-d H:i:s'),
+            ])->execute();
+        } catch (\Exception $e) {
+            // Non-critical — don't fail the request
+        }
+
+        return ['success' => true];
+    }
+
+    /**
+     * AJAX: Get timeline HTML (for refresh without full page reload)
+     */
+    public function actionGetTimeline($contract_id)
+    {
+        $timeline = $this->buildTimeline($contract_id);
+        return $this->renderPartial('panel/_timeline', ['timeline' => $timeline]);
+    }
+
+    /**
+     * Log an audit event
+     */
+    private function logAudit($contractId, $eventType, $data = [], $oldValue = null, $newValue = null)
+    {
+        try {
+            Yii::$app->db->createCommand()->insert('{{%ocp_audit_log}}', [
+                'contract_id' => $contractId,
+                'event_type' => $eventType,
+                'event_data' => Json::encode($data),
+                'old_value' => $oldValue,
+                'new_value' => $newValue,
+                'performed_by' => Yii::$app->user->id,
+                'created_at' => date('Y-m-d H:i:s'),
+            ])->execute();
+        } catch (\Exception $e) {
+            Yii::error('OCP Audit Log Error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Auto-create SLA for promise-to-pay
+     */
+    private function createPromiseSLA($contractId, $promiseDate)
+    {
+        try {
+            $dueAt = date('Y-m-d H:i:s', strtotime($promiseDate . ' +24 hours'));
+            Yii::$app->db->createCommand()->insert('{{%sla_status}}', [
+                'contract_id' => $contractId,
+                'rule_code' => 'promise_followup_24h',
+                'rule_description' => 'متابعة بعد وعد الدفع خلال 24 ساعة',
+                'status' => 'compliant',
+                'due_at' => $dueAt,
+                'created_at' => date('Y-m-d H:i:s'),
+            ])->execute();
+        } catch (\Exception $e) {
+            Yii::error('SLA Creation Error: ' . $e->getMessage());
         }
     }
 }

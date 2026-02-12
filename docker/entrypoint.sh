@@ -45,6 +45,8 @@ for i in $(seq 1 30); do
         mysql -h mysql -u root -prootpassword namaa_jadal < /var/www/html/docker/migration_permissions.sql 2>/dev/null && echo "Action-level permissions applied."
         # Create Vision API usage tracking table
         mysql -h mysql -u root -prootpassword namaa_jadal < /var/www/html/docker/vision_api_table.sql 2>/dev/null && echo "Vision API usage table created."
+        # Create OCP (Operational Control Panel) tables
+        mysql -h mysql -u root -prootpassword namaa_jadal < /var/www/html/docker/ocp_tables.sql 2>/dev/null && echo "OCP tables created."
         break
     fi
     echo "Waiting for MySQL... attempt $i"
