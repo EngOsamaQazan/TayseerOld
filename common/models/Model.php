@@ -53,7 +53,20 @@ class Model extends \yii\db\ActiveRecord {
 
         if (!empty($multipleModels)) {
             $keys = array_keys(yii\helpers\ArrayHelper::map($multipleModels, 'id', 'id'));
-            $multipleModels = array_combine($keys, $multipleModels);
+            // حماية: إذا اختلف عدد العناصر بسبب تكرار المعرفات (IDs مكررة أو فارغة)
+            if (count($keys) === count($multipleModels)) {
+                $multipleModels = array_combine($keys, $multipleModels);
+            } else {
+                // إعادة فهرسة باستخدام المعرفات المتاحة مع تجاهل التكرارات
+                $reindexed = [];
+                foreach ($multipleModels as $m) {
+                    $id = isset($m->id) ? $m->id : null;
+                    if ($id !== null && $id !== '') {
+                        $reindexed[$id] = $m;
+                    }
+                }
+                $multipleModels = $reindexed;
+            }
         }
 
         if ($post && is_array($post)) {

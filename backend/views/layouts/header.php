@@ -149,7 +149,7 @@ Yii::$app->view->registerJsVar('base_url', Yii::$app->request->hostInfo . Yii::$
                                  onerror="<?= $onError ?>"
                                  style="width:34px;height:34px;border-radius:50%;object-fit:cover;background:#ddd;border:2px solid rgba(255,255,255,.3)"
                                  alt="<?= Yii::t('app', 'صورة المستخدم') ?>">
-                            <span class="hidden-xs" style="font-size:13px;font-weight:600;color:#fff"><?= Html::encode(Yii::$app->user->identity['username']) ?></span>
+                            <span class="hidden-xs" style="font-size:13px;font-weight:600;color:#fff"><?= Html::encode(Yii::$app->user->identity ? Yii::$app->user->identity['username'] : 'مستخدم') ?></span>
                         </a>
 
                         <ul class="dropdown-menu">
@@ -158,7 +158,7 @@ Yii::$app->view->registerJsVar('base_url', Yii::$app->request->hostInfo . Yii::$
                                      onerror="<?= $onError ?>"
                                      style="width:60px;height:60px;border-radius:50%;object-fit:cover;background:#ddd"
                                      alt="<?= Yii::t('app', 'صورة المستخدم') ?>">
-                                <p><?= Html::encode(Yii::$app->user->identity['username']) ?></p>
+                                <p><?= Html::encode(Yii::$app->user->identity ? Yii::$app->user->identity['username'] : 'مستخدم') ?></p>
                             </li>
                             <li class="user-footer">
                                 <div class="pull-left">

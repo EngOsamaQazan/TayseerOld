@@ -309,6 +309,10 @@ return [
         'urlManager' => [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
+            'normalizer' => [
+                'class' => 'yii\web\UrlNormalizer',
+                'action' => \yii\web\UrlNormalizer::ACTION_REDIRECT_TEMPORARY,
+            ],
             'rules' => call_user_func(function () {
                 /*
                  * URL Shortening Rules

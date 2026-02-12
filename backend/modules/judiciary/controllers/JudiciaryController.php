@@ -618,6 +618,7 @@ class JudiciaryController extends Controller
                 'model' => $model,
                 'contract_id' => $contract_id,
                 'contract_model' => $contract_model,
+                'modelCustomerAction' => new JudiciaryCustomersActions(),
                 'modelsPhoneNumbersFollwUps' => [new \backend\modules\followUpReport\models\FollowUpReport],
             ]);
         }

@@ -502,6 +502,7 @@ class ContractsController extends Controller
 
         return [
             'model'          => $model,
+            'customers'      => [],  // يتم تحميل العملاء عبر AJAX — نمرر مصفوفة فارغة لتجنب خطأ Undefined variable
             'companies'      => $companies,
             'inventoryItems' => $inventoryItems,
             'scannedSerials' => $scannedSerials,
