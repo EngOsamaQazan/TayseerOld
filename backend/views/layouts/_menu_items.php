@@ -49,12 +49,20 @@ $mainMenuItems = [
 
     ['label' => 'الموارد', 'options' => ['class' => 'header']],
 
-    // ─── 7. إدارة الموظفين ───
+    // ─── 7. الموارد البشرية (HR) ───
     [
-        'label' => 'إدارة الموظفين',
+        'label' => 'الموارد البشرية',
         'icon'  => 'id-card',
         'items' => [
-            ['label' => 'الموظفين',          'icon' => 'user',              'url' => ['/employee/employee/index'],                         'privilege' => Permissions::EMPLOYEE],
+            ['label' => 'لوحة تحكم HR',      'icon' => 'tachometer',        'url' => ['/hr/hr-dashboard/index']],
+            ['label' => 'سجل الموظفين',      'icon' => 'users',             'url' => ['/hr/hr-employee/index']],
+            ['label' => 'الحضور والانصراف',   'icon' => 'clock-o',           'url' => ['/hr/hr-attendance/index']],
+            ['label' => 'مسيرات الرواتب',    'icon' => 'money',             'url' => ['/hr/hr-payroll/index']],
+            ['label' => 'السلف والقروض',     'icon' => 'credit-card',       'url' => ['/hr/hr-loan/index']],
+            ['label' => 'تقييمات الأداء',     'icon' => 'star-half-o',       'url' => ['/hr/hr-evaluation/index']],
+            ['label' => 'المهام الميدانية',   'icon' => 'map-marker',        'url' => ['/hr/hr-field/index']],
+            ['label' => 'تقارير HR',         'icon' => 'bar-chart',         'url' => ['/hr/hr-report/index']],
+            ['label' => 'الموظفين (قديم)',    'icon' => 'user',              'url' => ['/employee/employee/index'],                         'privilege' => Permissions::EMPLOYEE],
             ['label' => 'طلبات الإجازات',    'icon' => 'calendar-minus-o',  'url' => ['/leaveRequest/leave-request/index'],                'privilege' => Permissions::LEAVE_REQUEST],
             ['label' => 'الإجازات المعلقة',  'icon' => 'calendar-times-o',  'url' => ['/leaveRequest/leave-request/suspended-vacations'],  'privilege' => Permissions::LEAVE_REQUEST],
             ['label' => 'العطل الرسمية',     'icon' => 'calendar',          'url' => ['/holidays/holidays/index'],                         'privilege' => Permissions::HOLIDAYS],

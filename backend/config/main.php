@@ -231,6 +231,9 @@ return [
         [
             'class' => 'backend\modules\JudiciaryInformAddress\JudiciaryInformAddress',
         ],
+        'hr' => [
+            'class' => 'backend\modules\hr\Module',
+        ],
         'gridview' => [
             'class' => '\kartik\grid\Module'
         ],
@@ -531,6 +534,24 @@ return [
                     $rules["{$moduleId}/<action:[\\w-]+>/<id:\\d+>"] = "{$moduleId}/{$controllerId}/<action>";
                     $rules["{$moduleId}/<action:[\\w-]+>"]           = "{$moduleId}/{$controllerId}/<action>";
                     $rules["{$moduleId}"]                            = "{$moduleId}/{$controllerId}/index";
+                }
+
+                // --- HR Module: multi-controller shortened rules ---
+                $hrControllers = [
+                    'hr/dashboard'   => 'hr-dashboard',
+                    'hr/employees'   => 'hr-employee',
+                    'hr/attendance'  => 'hr-attendance',
+                    'hr/payroll'     => 'hr-payroll',
+                    'hr/field'       => 'hr-field',
+                    'hr/evaluations' => 'hr-evaluation',
+                    'hr/loans'       => 'hr-loan',
+                    'hr/documents'   => 'hr-document',
+                    'hr/reports'     => 'hr-report',
+                ];
+                foreach ($hrControllers as $shortUrl => $controllerId) {
+                    $rules["{$shortUrl}/<action:[\\w-]+>/<id:\\d+>"] = "hr/{$controllerId}/<action>";
+                    $rules["{$shortUrl}/<action:[\\w-]+>"]           = "hr/{$controllerId}/<action>";
+                    $rules["{$shortUrl}"]                            = "hr/{$controllerId}/index";
                 }
 
                 return $rules;
