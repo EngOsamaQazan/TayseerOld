@@ -299,6 +299,100 @@
     margin-top: 4px;
 }
 
+/* ── Document Upload Zone (per-row in identifiers) ── */
+.sm-doc-zone {
+    border: 2px dashed #d5d5d5;
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+    background: #fafafa;
+    cursor: pointer;
+    transition: all .2s;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+.sm-doc-zone:hover, .sm-doc-zone.dragover {
+    border-color: var(--clr-primary, #800020);
+    background: rgba(128, 0, 32, .04);
+}
+.sm-doc-zone.uploading {
+    pointer-events: none;
+    opacity: .7;
+}
+.sm-doc-zone.uploading::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,.6);
+    border-radius: 6px;
+}
+.sm-doc-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: #888;
+    font-size: 12px;
+}
+.sm-doc-placeholder i {
+    font-size: 24px;
+    color: var(--clr-primary-400, #a94464);
+    opacity: .6;
+}
+.sm-doc-preview {
+    position: relative;
+    width: 100%;
+    max-height: 120px;
+}
+.sm-doc-preview img {
+    max-width: 100%;
+    max-height: 100px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+.sm-doc-preview.is-pdf {
+    padding: 12px;
+    background: #f0f0f0;
+    border-radius: 6px;
+    color: #666;
+    font-size: 12px;
+}
+.sm-doc-preview.is-pdf i {
+    font-size: 28px;
+    color: #c62828;
+    display: block;
+    margin-bottom: 4px;
+}
+.sm-doc-remove {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0,0,0,.6);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: background .2s;
+}
+.sm-doc-remove:hover {
+    background: var(--clr-danger, #dc3545);
+}
+.sm-doc-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
 /* ── Document Type Select ── */
 .sm-type-select {
     width: 100%;

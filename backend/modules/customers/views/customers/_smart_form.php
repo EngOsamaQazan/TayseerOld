@@ -169,7 +169,13 @@ if (!$isNew) {
                     <h3 class="so-fieldset-title"><i class="fa fa-phone"></i> بيانات التواصل</h3>
                     <div class="so-grid so-grid-3">
                         <div><?= $form->field($model, 'primary_phone_number')->widget(PhoneInput::class, [
-                            'jsOptions' => ['preferredCountries' => ['jo']],
+                            'jsOptions' => [
+                                'preferredCountries' => ['jo'],
+                                'initialCountry' => 'jo',
+                                'separateDialCode' => true,
+                                'placeholderNumberType' => 'MOBILE',
+                            ],
+                            'options' => ['class' => 'form-control', 'inputmode' => 'tel', 'autocomplete' => 'tel', 'placeholder' => '07 9012 3456'],
                         ])->label('الهاتف الرئيسي') ?></div>
                         <div><?= $form->field($model, 'email')->textInput(['type' => 'email', 'placeholder' => 'example@email.com'])->label('البريد الإلكتروني') ?></div>
                         <div><?= $form->field($model, 'hear_about_us')->dropDownList(ArrayHelper::map($hearAboutUs, 'id', 'name'), ['prompt' => '-- كيف سمعت عنا --'])->label('كيف سمعت عنا') ?></div>
@@ -273,31 +279,42 @@ if (!$isNew) {
                         <div><?= $form->field($model, 'bank_branch')->textInput(['maxlength' => true, 'placeholder' => 'اسم الفرع'])->label('الفرع') ?></div>
                         <div><?= $form->field($model, 'account_number')->textInput(['maxlength' => true, 'placeholder' => 'رقم الحساب'])->label('رقم الحساب') ?></div>
                     </div>
-                    <div class="so-grid so-grid-2" style="margin-top: 16px">
-                        <div><?= $form->field($model, 'facebook_account')->textInput(['maxlength' => true, 'placeholder' => 'حساب فيسبوك'])->label('فيسبوك') ?></div>
-                    </div>
                 </div>
 
-                <div class="so-fieldset">
+                <div class="so-fieldset so-ss-fieldset">
                     <h3 class="so-fieldset-title"><i class="fa fa-shield"></i> الضمان والتقاعد</h3>
-                    <div class="so-grid so-grid-3">
-                        <div><?= $form->field($model, 'is_social_security')->dropDownList([0 => 'لا', 1 => 'نعم'], ['prompt' => '--'])->label('مشترك بالضمان؟') ?></div>
-                        <div class="js-social-field" style="display:<?= (!$isNew && $model->is_social_security == 1) ? 'block' : 'none' ?>">
-                            <?= $form->field($model, 'social_security_number')->textInput(['placeholder' => 'رقم الضمان'])->label('رقم الضمان') ?>
+
+                    <!-- 1. مشترك بالضمان؟ -->
+                    <div class="so-ss-row">
+                        <?= $form->field($model, 'is_social_security')->dropDownList([0 => 'لا', 1 => 'نعم'], ['prompt' => '-- مشترك بالضمان؟ --', 'class' => 'form-control js-ss-trigger'])->label('مشترك بالضمان؟') ?>
+                    </div>
+                    <div class="js-social-number-row so-ss-conditional" style="display:<?= (!$isNew && $model->is_social_security == 1) ? 'block' : 'none' ?>">
+                        <?= $form->field($model, 'social_security_number')->textInput(['placeholder' => 'رقم اشتراك الضمان'])->label('رقم اشتراك الضمان') ?>
+                    </div>
+
+                    <!-- 2. راتب تقاعد؟ -->
+                    <div class="so-ss-row" style="margin-top: 16px">
+                        <?= $form->field($model, 'has_social_security_salary')->dropDownList(['yes' => 'نعم', 'no' => 'لا'], ['prompt' => '-- يتقاضى رواتب تقاعدية؟ --', 'class' => 'form-control js-ss-trigger'])->label('يتقاضى رواتب تقاعدية؟') ?>
+                    </div>
+                    <div class="js-salary-source-row so-ss-conditional" style="display:<?= (!$isNew && $model->has_social_security_salary == 'yes') ? 'block' : 'none' ?>">
+                        <div style="margin-top: 12px"><?= $form->field($model, 'social_security_salary_source')->dropDownList(Yii::$app->params['socialSecuritySources'] ?? [], ['prompt' => '-- المصدر --', 'class' => 'form-control js-ss-trigger'])->label('مصدر الراتب') ?></div>
+                        <div class="js-retirement-fields so-grid so-grid-2" style="margin-top: 12px; display:<?= in_array($model->social_security_salary_source ?? '', ['retirement_directorate', 'both']) ? 'flex' : 'none' ?>">
+                            <div><?= $form->field($model, 'retirement_status')->dropDownList(['effective' => 'فعّال', 'stopped' => 'متوقف'], ['prompt' => '--'])->label('حالة التقاعد') ?></div>
+                            <div><?= $form->field($model, 'total_retirement_income')->textInput(['type' => 'number', 'step' => '0.01', 'placeholder' => '0.00'])->label('دخل التقاعد') ?></div>
                         </div>
-                        <div><?= $form->field($model, 'has_social_security_salary')->dropDownList(['yes' => 'نعم', 'no' => 'لا'], ['prompt' => '--'])->label('راتب ضمان؟') ?></div>
                     </div>
-                    <div class="so-grid so-grid-3" style="margin-top: 16px">
-                        <div><?= $form->field($model, 'social_security_salary_source')->dropDownList(Yii::$app->params['socialSecuritySources'] ?? [], ['prompt' => '-- المصدر --'])->label('مصدر الراتب') ?></div>
-                        <div><?= $form->field($model, 'retirement_status')->dropDownList(['effective' => 'فعّال', 'stopped' => 'متوقف'], ['prompt' => '--'])->label('حالة التقاعد') ?></div>
-                        <div><?= $form->field($model, 'total_retirement_income')->textInput(['type' => 'number', 'step' => '0.01', 'placeholder' => '0.00'])->label('دخل التقاعد') ?></div>
-                    </div>
-                    <div class="so-grid so-grid-2" style="margin-top: 16px">
-                        <div><?= $form->field($model, 'last_income_query_date')->widget(DatePicker::class, [
+
+                    <!-- 3. آخر استعلام دخل -->
+                    <div class="so-ss-row" style="margin-top: 16px">
+                        <?= $form->field($model, 'last_income_query_date')->widget(DatePicker::class, [
                             'options' => ['placeholder' => 'آخر استعلام دخل'],
                             'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
-                        ])->label('آخر استعلام دخل') ?></div>
-                        <div><?= $form->field($model, 'do_have_any_property')->dropDownList([0 => 'لا', 1 => 'نعم'], ['prompt' => '--'])->label('يملك عقارات؟') ?></div>
+                        ])->label('آخر استعلام دخل') ?>
+                    </div>
+
+                    <!-- 4. يملك عقارات؟ -->
+                    <div class="so-ss-row" style="margin-top: 16px">
+                        <?= $form->field($model, 'do_have_any_property')->dropDownList([0 => 'لا', 1 => 'نعم'], ['prompt' => '-- يملك عقارات؟ --', 'class' => 'form-control js-ss-trigger'])->label('يملك عقارات؟') ?>
                     </div>
                 </div>
 

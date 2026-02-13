@@ -2,7 +2,7 @@ services:
   php-apache:
     build: .
     ports:
-      - "80:80"
+      - "8888:80"
     volumes:
       - ./:/var/www/html/
     depends_on:
@@ -18,7 +18,7 @@ services:
       MYSQL_USER: osama
       MYSQL_PASSWORD: "O$$amaDaTaBase@123"
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./namaa_jadal.sql:/docker-entrypoint-initdb.d/namaa_jadal.sql

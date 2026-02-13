@@ -24,6 +24,18 @@ use common\models\User;
 class HrFieldController extends Controller
 {
     /**
+     * Disable CSRF for API endpoints (mobile fetch calls)
+     */
+    public function beforeAction($action)
+    {
+        $apiActions = ['api-start-session', 'api-end-session', 'api-send-location', 'api-tasks', 'api-task-update', 'api-log-event'];
+        if (in_array($action->id, $apiActions)) {
+            $this->enableCsrfValidation = false;
+        }
+        return parent::beforeAction($action);
+    }
+
+    /**
      * @inheritdoc
      */
     public function behaviors()
@@ -31,9 +43,19 @@ class HrFieldController extends Controller
         return [
             'access' => [
                 'class' => AccessControl::class,
+                'denyCallback' => function ($rule, $action) {
+                    // For mobile actions: redirect to our lightweight login instead of heavy backend login
+                    $mobileActions = ['mobile', 'api-start-session', 'api-end-session',
+                        'api-send-location', 'api-tasks', 'api-task-update', 'api-log-event'];
+                    if (in_array($action->id, $mobileActions)) {
+                        return $action->controller->redirect(['mobile-login']);
+                    }
+                    // Default: redirect to standard login
+                    return $action->controller->redirect(['/site/login']);
+                },
                 'rules' => [
                     [
-                        'actions' => ['login', 'error'],
+                        'actions' => ['mobile-login', 'error'],
                         'allow' => true,
                     ],
                     [
@@ -46,6 +68,12 @@ class HrFieldController extends Controller
                 'class' => VerbFilter::class,
                 'actions' => [
                     'delete' => ['POST'],
+                    'api-start-session' => ['POST'],
+                    'api-end-session' => ['POST'],
+                    'api-send-location' => ['POST'],
+                    'api-task-update' => ['POST'],
+                    'api-log-event' => ['POST'],
+                    'mobile-login' => ['GET', 'POST'],
                 ],
             ],
         ];
@@ -557,12 +585,302 @@ class HrFieldController extends Controller
         ]);
     }
 
+    // ═══════════════════════════════════════════════════════
+    //  Mobile Interface + API Endpoints
+    // ═══════════════════════════════════════════════════════
+
+    /**
+     * صفحة تسجيل دخول خفيفة للمندوب الميداني (بدون Layout)
+     * يمكن لأي شخص الوصول لها (Guest allowed)
+     * يستخدم dektrium Finder + Password helper مباشرة
+     */
+    public function actionMobileLogin()
+    {
+        // If already logged in, go straight to mobile duty screen
+        if (!Yii::$app->user->isGuest) {
+            return $this->redirect(['mobile']);
+        }
+
+        $this->layout = false;
+        $error = '';
+
+        if (Yii::$app->request->isPost) {
+            $login    = trim(Yii::$app->request->post('LoginForm')['username'] ?? '');
+            $password = Yii::$app->request->post('LoginForm')['password'] ?? '';
+
+            if (empty($login) || empty($password)) {
+                $error = 'يرجى إدخال اسم المستخدم وكلمة المرور';
+            } else {
+                // Use dektrium Finder to locate user by username or email
+                $user = null;
+                try {
+                    if (filter_var($login, FILTER_VALIDATE_EMAIL)) {
+                        $user = User::find()->where(['email' => $login])->one();
+                    } else {
+                        $user = User::find()->where(['username' => $login])->one();
+                    }
+                } catch (\Exception $e) {
+                    $error = 'خطأ في النظام، حاول مرة أخرى';
+                }
+
+                if ($user && !$user->blocked_at) {
+                    // Validate password using dektrium's helper
+                    if (\dektrium\user\helpers\Password::validate($password, $user->password_hash)) {
+                        // Login with "Remember Me" = 30 days
+                        Yii::$app->user->login($user, 3600 * 24 * 30);
+                        $user->updateAttributes(['last_login_at' => time()]);
+                        return $this->redirect(['mobile']);
+                    } else {
+                        $error = 'اسم المستخدم أو كلمة المرور غير صحيحة';
+                    }
+                } elseif ($user && $user->blocked_at) {
+                    $error = 'هذا الحساب محظور، تواصل مع المدير';
+                } else {
+                    $error = 'اسم المستخدم أو كلمة المرور غير صحيحة';
+                }
+            }
+        }
+
+        return $this->renderPartial('mobile-login', [
+            'error' => $error,
+        ]);
+    }
+
+    /**
+     * تسجيل خروج المندوب — يعيد توجيهه لصفحة login الخفيفة
+     */
+    public function actionMobileLogout()
+    {
+        Yii::$app->user->logout();
+        return $this->redirect(['mobile-login']);
+    }
+
+    /**
+     * واجهة المندوب الميداني — صفحة خفيفة بدون Layout
+     */
+    public function actionMobile()
+    {
+        $this->layout = false;
+        return $this->render('mobile');
+    }
+
+    /**
+     * API: بدء جلسة ميدانية
+     */
+    public function actionApiStartSession()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $userId = Yii::$app->user->id;
+        $lat = Yii::$app->request->post('latitude');
+        $lng = Yii::$app->request->post('longitude');
+
+        try {
+            // Close any existing active session
+            Yii::$app->db->createCommand()->update(
+                '{{%hr_field_session}}',
+                ['status' => 'ended', 'ended_at' => date('Y-m-d H:i:s'), 'updated_at' => time()],
+                ['user_id' => $userId, 'status' => 'active']
+            )->execute();
+
+            $session = new HrFieldSession();
+            $session->user_id = $userId;
+            $session->started_at = date('Y-m-d H:i:s');
+            $session->start_lat = $lat;
+            $session->start_lng = $lng;
+            $session->status = 'active';
+            $session->created_at = time();
+            $session->updated_at = time();
+
+            if ($session->save(false)) {
+                // Save first location point
+                $this->saveLocationPoint($userId, $session->id, $lat, $lng, null, null, null, null);
+
+                return ['success' => true, 'session_id' => $session->id];
+            }
+            return ['success' => false, 'message' => 'فشل في إنشاء الجلسة'];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * API: إنهاء جلسة ميدانية
+     */
+    public function actionApiEndSession()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $sessionId = Yii::$app->request->post('session_id');
+        $lat = Yii::$app->request->post('latitude');
+        $lng = Yii::$app->request->post('longitude');
+
+        try {
+            $session = HrFieldSession::findOne($sessionId);
+            if (!$session || $session->user_id != Yii::$app->user->id) {
+                return ['success' => false, 'message' => 'جلسة غير صالحة'];
+            }
+
+            $session->ended_at = date('Y-m-d H:i:s');
+            $session->end_lat = $lat;
+            $session->end_lng = $lng;
+            $session->status = 'ended';
+            $session->updated_at = time();
+            $session->save(false);
+
+            // Save final location
+            $this->saveLocationPoint(Yii::$app->user->id, $session->id, $lat, $lng, null, null, null, null);
+
+            return ['success' => true];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * API: إرسال نقطة موقع GPS
+     */
+    public function actionApiSendLocation()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $userId = Yii::$app->user->id;
+
+        try {
+            $this->saveLocationPoint(
+                $userId,
+                Yii::$app->request->post('session_id'),
+                Yii::$app->request->post('latitude'),
+                Yii::$app->request->post('longitude'),
+                Yii::$app->request->post('accuracy'),
+                Yii::$app->request->post('altitude'),
+                Yii::$app->request->post('speed'),
+                Yii::$app->request->post('battery_level')
+            );
+            return ['success' => true];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * API: قائمة مهام الموظف الحالي
+     */
+    public function actionApiTasks()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $userId = Yii::$app->user->id;
+
+        try {
+            $tasks = (new Query())
+                ->select([
+                    't.id', 't.title', 't.task_type', 't.priority', 't.status',
+                    't.due_date', 't.target_lat', 't.target_lng', 't.target_address',
+                    't.amount_collected', 't.description',
+                    'c.name as customer_name',
+                ])
+                ->from('{{%hr_field_task}} t')
+                ->leftJoin('{{%customers}} c', 'c.id = t.customer_id')
+                ->where(['t.assigned_to' => $userId, 't.is_deleted' => 0])
+                ->andWhere(['or',
+                    ['t.status' => ['pending', 'accepted', 'en_route', 'arrived']],
+                    ['and', ['t.status' => ['completed', 'failed']], ['>=', 't.due_date', date('Y-m-d')]],
+                ])
+                ->orderBy(['t.priority' => SORT_DESC, 't.due_date' => SORT_ASC])
+                ->all();
+
+            return ['success' => true, 'tasks' => $tasks];
+        } catch (\Exception $e) {
+            return ['success' => true, 'tasks' => []];
+        }
+    }
+
+    /**
+     * API: تحديث حالة مهمة
+     */
+    public function actionApiTaskUpdate()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $taskId = Yii::$app->request->post('task_id');
+
+        try {
+            $task = HrFieldTask::findOne(['id' => $taskId, 'assigned_to' => Yii::$app->user->id]);
+            if (!$task) {
+                return ['success' => false, 'message' => 'مهمة غير موجودة'];
+            }
+
+            $newStatus = Yii::$app->request->post('status');
+            $task->status = $newStatus;
+
+            if ($newStatus === 'arrived') {
+                $task->arrived_at = date('Y-m-d H:i:s');
+            } elseif ($newStatus === 'completed') {
+                $task->completed_at = date('Y-m-d H:i:s');
+                $task->result = Yii::$app->request->post('result', '');
+                $task->notes = Yii::$app->request->post('notes', '');
+                $amount = Yii::$app->request->post('amount_collected');
+                if ($amount) $task->amount_collected = $amount;
+            } elseif ($newStatus === 'failed') {
+                $task->completed_at = date('Y-m-d H:i:s');
+                $task->failure_reason = Yii::$app->request->post('notes', '');
+            }
+
+            $task->updated_at = time();
+            $task->save(false);
+
+            return ['success' => true];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * API: تسجيل حدث ميداني
+     */
+    public function actionApiLogEvent()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            $event = new HrFieldEvent();
+            $event->user_id = Yii::$app->user->id;
+            $event->session_id = Yii::$app->request->post('session_id');
+            $event->task_id = Yii::$app->request->post('task_id');
+            $event->event_type = Yii::$app->request->post('event_type', 'note');
+            $event->latitude = Yii::$app->request->post('latitude');
+            $event->longitude = Yii::$app->request->post('longitude');
+            $event->captured_at = date('Y-m-d H:i:s');
+            $event->note = Yii::$app->request->post('note', '');
+            $event->amount_collected = Yii::$app->request->post('amount_collected');
+            $event->created_at = time();
+            $event->updated_at = time();
+            $event->save(false);
+
+            return ['success' => true, 'event_id' => $event->id];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Helper: حفظ نقطة موقع GPS
+     */
+    private function saveLocationPoint($userId, $sessionId, $lat, $lng, $accuracy, $altitude, $speed, $battery)
+    {
+        Yii::$app->db->createCommand()->insert('{{%hr_location_point}}', [
+            'user_id'       => $userId,
+            'session_id'    => $sessionId,
+            'captured_at'   => date('Y-m-d H:i:s'),
+            'latitude'      => $lat,
+            'longitude'     => $lng,
+            'accuracy'      => $accuracy,
+            'altitude'      => $altitude,
+            'speed'         => $speed,
+            'battery_level' => $battery,
+            'is_mock'       => 0,
+            'created_at'    => time(),
+        ])->execute();
+    }
+
     /**
      * Finds the HrFieldTask model.
-     *
-     * @param int $id
-     * @return HrFieldTask
-     * @throws NotFoundHttpException
      */
     protected function findTaskModel($id)
     {

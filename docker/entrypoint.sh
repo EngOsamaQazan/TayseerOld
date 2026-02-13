@@ -47,6 +47,8 @@ for i in $(seq 1 30); do
         mysql -h mysql -u root -prootpassword namaa_jadal < /var/www/html/docker/vision_api_table.sql 2>/dev/null && echo "Vision API usage table created."
         # Create OCP (Operational Control Panel) tables
         mysql -h mysql -u root -prootpassword namaa_jadal < /var/www/html/docker/ocp_tables.sql 2>/dev/null && echo "OCP tables created."
+        # Apply HR Module migration (CREATE TABLE IF NOT EXISTS = safe to re-run)
+        mysql -h mysql -u root -prootpassword namaa_jadal < /var/www/html/database/migrations/2026_02_12_hr_module.sql 2>/dev/null && echo "HR module tables created."
         break
     fi
     echo "Waiting for MySQL... attempt $i"

@@ -17,7 +17,7 @@ DynamicFormWidget::begin([
     'deleteButton' => '.phone-numbers-remove-item',
     'model' => $modelsPhoneNumbers[0],
     'formId' => 'smart-onboarding-form',
-    'formFields' => ['address'],
+    'formFields' => ['phone_number', 'owner_name', 'phone_number_owner'],
 ]);
 ?>
 

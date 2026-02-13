@@ -22,6 +22,7 @@
         initLiveValidation();
         initDuplicateCheck();
         initConditionalFields();
+        initDocumentUploads();
         triggerRiskCalc(); // initial
     });
 
@@ -184,7 +185,7 @@
         data.is_social_security = $f.find('#customers-is_social_security').val();
         data.has_ss_salary   = $f.find('#customers-has_social_security_salary').val();
         data.has_property    = $f.find('#customers-do_have_any_property').val();
-        data.facebook        = $f.find('#customers-facebook_account').val();
+        data.facebook        = $f.find('#customers-facebook_account').val() || $f.find('[name*="[fb_account]"]').first().val();
 
         // Count dynamic items
         data.documents_count = $('.customer-doc-row:visible').length || $f.find('[name*="CustomersDocument"]').length;
@@ -375,13 +376,126 @@
        CONDITIONAL FIELDS
        ══════════════════════════════════════════ */
     function initConditionalFields() {
+        // مشترك بالضمان؟ → رقم اشتراك الضمان
         $(document).on('change', '#customers-is_social_security', function() {
-            $('.js-social-field').toggle($(this).val() == 1);
+            var v = $(this).val();
+            $('.js-social-number-row').toggle(v == 1);
+            if (v != 1) $('#customers-social_security_number').val('');
             triggerRiskCalc();
         });
+        // يتقاضى رواتب تقاعدية؟ → مصدر الراتب + حقول التقاعد
+        $(document).on('change', '#customers-has_social_security_salary', function() {
+            var v = $(this).val();
+            $('.js-salary-source-row').toggle(v == 'yes');
+            if (v != 'yes') {
+                $('#customers-social_security_salary_source').val('');
+                $('#customers-retirement_status').val('');
+                $('#customers-total_retirement_income').val('');
+            }
+            updateRetirementFieldsVisibility();
+            triggerRiskCalc();
+        });
+        // مصدر الراتب → إظهار حقول التقاعد عند مديرية التقاعد أو كلاهما
+        $(document).on('change', '#customers-social_security_salary_source', function() {
+            updateRetirementFieldsVisibility();
+            triggerRiskCalc();
+        });
+        function updateRetirementFieldsVisibility() {
+            var hasSalary = $('#customers-has_social_security_salary').val() == 'yes';
+            var source = $('#customers-social_security_salary_source').val();
+            var showRetirement = hasSalary && (source === 'retirement_directorate' || source === 'both');
+            $('.js-retirement-fields').toggle(showRetirement);
+        }
+        // يملك عقارات؟ → قسم العقارات
         $(document).on('change', '#customers-do_have_any_property', function() {
             $('.js-real-estate-section').toggle($(this).val() == 1);
             triggerRiskCalc();
+        });
+        // تطبيق الحالة الأولية عند تحميل الصفحة
+        updateRetirementFieldsVisibility();
+    }
+
+    /* ══════════════════════════════════════════
+       DOCUMENT UPLOAD ZONES (per-row)
+       ══════════════════════════════════════════ */
+    function initDocumentUploads() {
+        $(document).off('click.dropzone change.dropzone dragover.dropzone dragleave.dropzone drop.dropzone', '.sm-doc-zone');
+        $(document).on('click', '.sm-doc-zone .sm-doc-placeholder', function() {
+            $(this).closest('.sm-doc-zone').find('input[type="file"]').click();
+        });
+        $(document).on('click', '.sm-doc-remove', function(e) {
+            e.stopPropagation();
+            var $zone = $(this).closest('.sm-doc-zone');
+            $zone.find('.sm-doc-path-input').val('');
+            $zone.find('.sm-doc-placeholder').show();
+            $zone.find('.sm-doc-preview').hide();
+        });
+        $(document).on('change', '.sm-doc-zone input[type="file"]', function() {
+            var file = this.files[0];
+            if (file) uploadDocFile($(this).closest('.sm-doc-zone'), file);
+            this.value = '';
+        });
+        $(document).on('dragover dragenter', '.sm-doc-zone', function(e) {
+            e.preventDefault(); e.stopPropagation();
+            $(this).addClass('dragover');
+        });
+        $(document).on('dragleave drop', '.sm-doc-zone', function(e) {
+            e.preventDefault(); e.stopPropagation();
+            $(this).removeClass('dragover');
+        });
+        $(document).on('drop', '.sm-doc-zone', function(e) {
+            var file = e.originalEvent.dataTransfer.files[0];
+            if (file) uploadDocFile($(this), file);
+        });
+    }
+    function uploadDocFile($zone, file) {
+        var allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+        if (allowed.indexOf(file.type) === -1) {
+            showToast('نوع الملف غير مدعوم', 'warning');
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            showToast('حجم الملف أكبر من 10MB', 'warning');
+            return;
+        }
+        $zone.addClass('uploading');
+        var formData = new FormData();
+        formData.append('file', file);
+        formData.append('customer_id', $('input[name="customer_id_for_media"]').val() || '');
+        formData.append('auto_classify', '0');
+        $.ajax({
+            url: window.smConfig ? window.smConfig.uploadUrl : '/customers/smart-media/upload',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(resp) {
+                $zone.removeClass('uploading');
+                if (resp.success && resp.file && resp.file.path) {
+                    $zone.find('.sm-doc-path-input').val(resp.file.path);
+                    var $preview = $zone.find('.sm-doc-preview');
+                    var isPdf = (resp.file.mime || '').indexOf('pdf') !== -1;
+                    if (isPdf) {
+                        $preview.addClass('is-pdf').find('img').hide();
+                        if (!$preview.find('.sm-doc-pdf-label').length) {
+                            $preview.prepend('<div class="sm-doc-pdf-label"><i class="fa fa-file-pdf-o"></i> PDF</div>');
+                        }
+                    } else {
+                        var thumb = resp.file.thumb || resp.file.path;
+                        var imgSrc = (thumb.indexOf('/') === 0 ? thumb : '/' + thumb);
+                        $preview.removeClass('is-pdf').find('img').attr('src', imgSrc).show();
+                        $preview.find('.sm-doc-pdf-label').remove();
+                    }
+                    $zone.find('.sm-doc-placeholder').hide();
+                    $preview.show();
+                } else {
+                    showToast('فشل الرفع', 'danger');
+                }
+            },
+            error: function() {
+                $zone.removeClass('uploading');
+                showToast('خطأ في الاتصال', 'danger');
+            }
         });
     }
 

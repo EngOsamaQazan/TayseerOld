@@ -34,9 +34,9 @@ class CustomersDocument extends Model {
         return [
             [['document_type', 'document_number'], 'required'],
             [['customer_id', 'created_at', 'updated_at', 'created_by'], 'integer'],
-            [['customer_images','customer_id','image_manager_id'], 'safe'],
+            [['customer_images','customer_id','image_manager_id','document_image','images'], 'safe'],
             [['document_type', 'document_number'], 'string', 'max' => 100],
-            [['document_image'], 'string', 'max' => 255],
+            [['document_image', 'images'], 'string', 'max' => 255],
             [['customer_id'], 'exist', 'skipOnError' => true, 'targetClass' => Customers::className(), 'targetAttribute' => ['customer_id' => 'id']],
 
         ];

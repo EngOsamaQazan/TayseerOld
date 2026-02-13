@@ -68,6 +68,9 @@ mysql_data/
 # Database dumps (large files)
 *.sql
 
+# Deploy config (contains credentials)
+deploy.config
+
 # Google Cloud credentials — NEVER commit
 backend/config/credentials/
 *.gserviceaccount.json

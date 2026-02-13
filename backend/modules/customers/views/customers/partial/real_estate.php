@@ -14,7 +14,7 @@ DynamicFormWidget::begin([
     'insertButton' => '.real-estate-add-item',
     'deleteButton' => '.real-estate-remove-item',
     'model' => $modelRealEstate[0],
-    'formId' => 'dynamic-form',
+    'formId' => 'smart-onboarding-form',
     'formFields' => ['property_type', 'property_number'],
 ]);
 ?>

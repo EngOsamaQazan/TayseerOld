@@ -40,7 +40,7 @@ class CustomersController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'update-contact', 'customer-data', 'search-customers', 'calculate-risk', 'check-duplicate'],
+                        'actions' => ['logout', 'index', 'view', 'update', 'create', 'create-summary', 'delete', 'update-contact', 'customer-data', 'search-customers', 'calculate-risk', 'check-duplicate'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -180,7 +180,7 @@ class CustomersController extends Controller
                         Yii::$app->notifications->sendByRule(['Manager'], 'customers/customers/update?id=' . $model->id, Notification::GENERAL, Yii::t('app', ' اضافة عميل  ') . $model->name . Yii::t('app', '       الى العملاء من قبل') . Yii::$app->user->identity['username'], Yii::t('app', 'اضافة  ') . $model->name . Yii::t('app', '  الى العملاء من قبل') . Yii::$app->user->identity['username'], Yii::$app->user->id);
                         Yii::$app->cache->set(Yii::$app->params['key_customers'],Yii::$app->db->createCommand(Yii::$app->params['customers_query'])->queryAll(), Yii::$app->params['time_duration']);
                         Yii::$app->cache->set(Yii::$app->params['key_customers_name'],Yii::$app->db->createCommand(Yii::$app->params['customers_name_query'])->queryAll(), Yii::$app->params['time_duration']);
-                        return $this->redirect(['update', 'id' => $model->id]);
+                        return $this->redirect(['create-summary', 'id' => $model->id]);
                     }
                 } catch (Exception $e) {
                     $transaction->rollBack();
@@ -191,10 +191,31 @@ class CustomersController extends Controller
                 'model' => $model,
                 'modelsAddress' => (empty($modelsAddress)) ? [new Address] : $modelsAddress,
                 'modelsPhoneNumbers' => (empty($modelsPhoneNumbers)) ? [new PhoneNumbers] : $modelsPhoneNumbers,
-                'customerDocumentsModel' => (empty($customerDocumentsModel)) ? [new CustomersDocument] : $customerDocumentsModel,
+                'customerDocumentsModel' => (empty($modelCustomerDocuments)) ? [new CustomersDocument] : $modelCustomerDocuments,
                 'modelRealEstate' => (empty($modelRealEstate)) ? [new RealEstate] : $modelRealEstate
             ]);
         }
+    }
+
+    /**
+     * ملخص إضافة العميل — يعرض بعد إنشاء عميل جديد
+     * يحتوي على زر إنشاء عقد
+     * @param integer $id
+     * @return mixed
+     */
+    public function actionCreateSummary($id)
+    {
+        $model = $this->findModel($id);
+        $modelsAddress = Address::find()->where(['customers_id' => $id])->all();
+        $modelsPhoneNumbers = PhoneNumbers::find()->where(['customers_id' => $id])->all();
+        $modelRealEstate = RealEstate::find()->where(['customer_id' => $id])->all();
+
+        return $this->render('create-summary', [
+            'model' => $model,
+            'modelsAddress' => $modelsAddress,
+            'modelsPhoneNumbers' => $modelsPhoneNumbers,
+            'modelRealEstate' => $modelRealEstate,
+        ]);
     }
 
     /**

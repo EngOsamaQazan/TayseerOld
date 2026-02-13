@@ -133,6 +133,10 @@ class ContractsController extends Controller
             $model->monthly_installment_value = Contracts::MONTHLY_INSTALLMENT_VALE;
 
         if (!Yii::$app->request->isPost) {
+            $customerId = Yii::$app->request->get('id');
+            if ($customerId) {
+                $model->customer_id = $customerId;
+            }
             return $this->render('create', $this->buildFormParams($model));
         }
 
