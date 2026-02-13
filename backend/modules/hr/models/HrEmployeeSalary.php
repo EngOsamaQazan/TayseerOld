@@ -26,7 +26,7 @@ use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
  * @property int $created_at
  * @property int $created_by
  * @property int $updated_at
- * @property int $last_updated_by
+ * @property int $updated_by
  */
 class HrEmployeeSalary extends ActiveRecord
 {
@@ -47,7 +47,7 @@ class HrEmployeeSalary extends ActiveRecord
             [
                 'class' => BlameableBehavior::class,
                 'createdByAttribute' => 'created_by',
-                'updatedByAttribute' => 'last_updated_by',
+                'updatedByAttribute' => 'updated_by',
             ],
             [
                 'class' => TimestampBehavior::class,
@@ -70,7 +70,7 @@ class HrEmployeeSalary extends ActiveRecord
     {
         return [
             [['user_id', 'component_id', 'amount', 'effective_from'], 'required'],
-            [['user_id', 'component_id', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'last_updated_by'], 'integer'],
+            [['user_id', 'component_id', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'updated_by'], 'integer'],
             [['amount'], 'number'],
             [['effective_from', 'effective_to'], 'safe'],
             [['currency'], 'string', 'max' => 10],
@@ -96,7 +96,7 @@ class HrEmployeeSalary extends ActiveRecord
             'created_at' => Yii::t('app', 'تاريخ الإنشاء'),
             'created_by' => Yii::t('app', 'أنشئ بواسطة'),
             'updated_at' => Yii::t('app', 'تاريخ التعديل'),
-            'last_updated_by' => Yii::t('app', 'عُدّل بواسطة'),
+            'updated_by' => Yii::t('app', 'عُدّل بواسطة'),
         ];
     }
 

@@ -14,7 +14,8 @@ use yii\db\ActiveRecord;
  * @property int $component_id
  * @property string|null $component_type
  * @property float|null $amount
- * @property string|null $notes
+ * @property string|null $description
+ * @property int|null $sort_order
  */
 class HrPayslipLine extends ActiveRecord
 {
@@ -32,11 +33,11 @@ class HrPayslipLine extends ActiveRecord
     public function rules()
     {
         return [
-            [['payslip_id', 'component_id'], 'required'],
-            [['payslip_id', 'component_id'], 'integer'],
+            [['payslip_id', 'component_id', 'component_type'], 'required'],
+            [['payslip_id', 'component_id', 'sort_order'], 'integer'],
             [['amount'], 'number'],
-            [['component_type'], 'string', 'max' => 30],
-            [['notes'], 'string'],
+            [['component_type'], 'in', 'range' => ['earning', 'deduction']],
+            [['description'], 'string', 'max' => 200],
         ];
     }
 
@@ -51,7 +52,8 @@ class HrPayslipLine extends ActiveRecord
             'component_id' => Yii::t('app', 'مكون الراتب'),
             'component_type' => Yii::t('app', 'نوع المكون'),
             'amount' => Yii::t('app', 'المبلغ'),
-            'notes' => Yii::t('app', 'ملاحظات'),
+            'description' => Yii::t('app', 'الوصف'),
+            'sort_order' => Yii::t('app', 'الترتيب'),
         ];
     }
 

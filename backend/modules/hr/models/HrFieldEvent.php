@@ -26,7 +26,7 @@ use yii\db\Expression;
  * @property int $created_at
  * @property int $created_by
  * @property int $updated_at
- * @property int $last_updated_by
+ * @property int $updated_by
  */
 class HrFieldEvent extends ActiveRecord
 {
@@ -47,7 +47,7 @@ class HrFieldEvent extends ActiveRecord
             [
                 'class' => BlameableBehavior::class,
                 'createdByAttribute' => 'created_by',
-                'updatedByAttribute' => 'last_updated_by',
+                'updatedByAttribute' => 'updated_by',
             ],
             [
                 'class' => TimestampBehavior::class,
@@ -63,7 +63,7 @@ class HrFieldEvent extends ActiveRecord
     {
         return [
             [['user_id'], 'required'],
-            [['user_id', 'session_id', 'task_id', 'created_at', 'created_by', 'updated_at', 'last_updated_by'], 'integer'],
+            [['user_id', 'session_id', 'task_id', 'created_at', 'created_by', 'updated_at', 'updated_by'], 'integer'],
             [['event_type'], 'string', 'max' => 50],
             [['event_time'], 'safe'],
             [['lat', 'lng'], 'string', 'max' => 30],
@@ -92,7 +92,7 @@ class HrFieldEvent extends ActiveRecord
             'created_at' => Yii::t('app', 'تاريخ الإنشاء'),
             'created_by' => Yii::t('app', 'أنشئ بواسطة'),
             'updated_at' => Yii::t('app', 'تاريخ التعديل'),
-            'last_updated_by' => Yii::t('app', 'عُدّل بواسطة'),
+            'updated_by' => Yii::t('app', 'عُدّل بواسطة'),
         ];
     }
 

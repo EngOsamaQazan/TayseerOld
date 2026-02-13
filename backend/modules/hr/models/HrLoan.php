@@ -20,10 +20,10 @@ use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
  * @property float $monthly_deduction
  * @property int $installments
  * @property int|null $remaining_installments
- * @property float|null $remaining_amount
+ * @property float|null $repaid
  * @property string|null $start_date
+ * @property string|null $loan_type
  * @property string|null $status
- * @property string|null $reason
  * @property int|null $approved_by
  * @property string|null $approved_at
  * @property string|null $notes
@@ -31,7 +31,7 @@ use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
  * @property int $created_at
  * @property int $created_by
  * @property int $updated_at
- * @property int $last_updated_by
+ * @property int $updated_by
  */
 class HrLoan extends ActiveRecord
 {
@@ -52,7 +52,7 @@ class HrLoan extends ActiveRecord
             [
                 'class' => BlameableBehavior::class,
                 'createdByAttribute' => 'created_by',
-                'updatedByAttribute' => 'last_updated_by',
+                'updatedByAttribute' => 'updated_by',
             ],
             [
                 'class' => TimestampBehavior::class,
@@ -74,12 +74,13 @@ class HrLoan extends ActiveRecord
     public function rules()
     {
         return [
-            [['user_id', 'amount', 'monthly_deduction', 'installments'], 'required'],
-            [['user_id', 'installments', 'remaining_installments', 'approved_by', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'last_updated_by'], 'integer'],
-            [['amount', 'monthly_deduction', 'remaining_amount'], 'number'],
-            [['start_date', 'approved_at'], 'safe'],
-            [['status'], 'string', 'max' => 30],
-            [['reason', 'notes'], 'string'],
+            [['user_id', 'amount', 'monthly_deduction', 'installments', 'remaining_installments', 'start_date'], 'required'],
+            [['user_id', 'installments', 'remaining_installments', 'approved_by', 'approved_at', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'updated_by'], 'integer'],
+            [['amount', 'monthly_deduction', 'repaid'], 'number'],
+            [['start_date'], 'safe'],
+            [['loan_type'], 'in', 'range' => ['advance', 'loan', 'penalty']],
+            [['status'], 'in', 'range' => ['pending', 'active', 'completed', 'cancelled']],
+            [['notes'], 'string'],
         ];
     }
 
@@ -95,10 +96,10 @@ class HrLoan extends ActiveRecord
             'monthly_deduction' => Yii::t('app', 'الخصم الشهري'),
             'installments' => Yii::t('app', 'عدد الأقساط'),
             'remaining_installments' => Yii::t('app', 'الأقساط المتبقية'),
-            'remaining_amount' => Yii::t('app', 'المبلغ المتبقي'),
+            'repaid' => Yii::t('app', 'المبلغ المسدد'),
             'start_date' => Yii::t('app', 'تاريخ البدء'),
+            'loan_type' => Yii::t('app', 'نوع السلفة'),
             'status' => Yii::t('app', 'الحالة'),
-            'reason' => Yii::t('app', 'السبب'),
             'approved_by' => Yii::t('app', 'اعتمد بواسطة'),
             'approved_at' => Yii::t('app', 'تاريخ الاعتماد'),
             'notes' => Yii::t('app', 'ملاحظات'),
@@ -106,7 +107,7 @@ class HrLoan extends ActiveRecord
             'created_at' => Yii::t('app', 'تاريخ الإنشاء'),
             'created_by' => Yii::t('app', 'أنشئ بواسطة'),
             'updated_at' => Yii::t('app', 'تاريخ التعديل'),
-            'last_updated_by' => Yii::t('app', 'عُدّل بواسطة'),
+            'updated_by' => Yii::t('app', 'عُدّل بواسطة'),
         ];
     }
 

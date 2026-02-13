@@ -17,16 +17,22 @@ use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
  * @property int $id
  * @property int $payroll_run_id
  * @property int $user_id
- * @property float|null $gross_salary
+ * @property float|null $basic_salary
+ * @property float|null $total_earnings
  * @property float|null $total_deductions
  * @property float|null $net_salary
+ * @property int|null $working_days
+ * @property int|null $present_days
+ * @property int|null $absent_days
+ * @property int|null $leave_days
+ * @property float|null $overtime_hours
+ * @property float|null $late_deduction
  * @property string|null $status
- * @property string|null $notes
  * @property int $is_deleted
  * @property int $created_at
  * @property int $created_by
  * @property int $updated_at
- * @property int $last_updated_by
+ * @property int $updated_by
  */
 class HrPayslip extends ActiveRecord
 {
@@ -47,7 +53,7 @@ class HrPayslip extends ActiveRecord
             [
                 'class' => BlameableBehavior::class,
                 'createdByAttribute' => 'created_by',
-                'updatedByAttribute' => 'last_updated_by',
+                'updatedByAttribute' => 'updated_by',
             ],
             [
                 'class' => TimestampBehavior::class,
@@ -70,10 +76,9 @@ class HrPayslip extends ActiveRecord
     {
         return [
             [['payroll_run_id', 'user_id'], 'required'],
-            [['payroll_run_id', 'user_id', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'last_updated_by'], 'integer'],
-            [['gross_salary', 'total_deductions', 'net_salary'], 'number'],
-            [['status'], 'string', 'max' => 30],
-            [['notes'], 'string'],
+            [['payroll_run_id', 'user_id', 'working_days', 'present_days', 'absent_days', 'leave_days', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'updated_by'], 'integer'],
+            [['basic_salary', 'total_earnings', 'total_deductions', 'net_salary', 'overtime_hours', 'late_deduction'], 'number'],
+            [['status'], 'in', 'range' => ['draft', 'confirmed', 'paid']],
         ];
     }
 
@@ -86,16 +91,22 @@ class HrPayslip extends ActiveRecord
             'id' => Yii::t('app', 'المعرف'),
             'payroll_run_id' => Yii::t('app', 'دورة الرواتب'),
             'user_id' => Yii::t('app', 'الموظف'),
-            'gross_salary' => Yii::t('app', 'إجمالي الراتب'),
+            'basic_salary' => Yii::t('app', 'الراتب الأساسي'),
+            'total_earnings' => Yii::t('app', 'إجمالي المستحقات'),
             'total_deductions' => Yii::t('app', 'إجمالي الخصومات'),
             'net_salary' => Yii::t('app', 'صافي الراتب'),
+            'working_days' => Yii::t('app', 'أيام العمل'),
+            'present_days' => Yii::t('app', 'أيام الحضور'),
+            'absent_days' => Yii::t('app', 'أيام الغياب'),
+            'leave_days' => Yii::t('app', 'أيام الإجازة'),
+            'overtime_hours' => Yii::t('app', 'ساعات العمل الإضافي'),
+            'late_deduction' => Yii::t('app', 'خصم التأخير'),
             'status' => Yii::t('app', 'الحالة'),
-            'notes' => Yii::t('app', 'ملاحظات'),
             'is_deleted' => Yii::t('app', 'محذوف'),
             'created_at' => Yii::t('app', 'تاريخ الإنشاء'),
             'created_by' => Yii::t('app', 'أنشئ بواسطة'),
             'updated_at' => Yii::t('app', 'تاريخ التعديل'),
-            'last_updated_by' => Yii::t('app', 'عُدّل بواسطة'),
+            'updated_by' => Yii::t('app', 'عُدّل بواسطة'),
         ];
     }
 

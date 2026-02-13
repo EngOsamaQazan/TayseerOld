@@ -37,12 +37,11 @@ $statusMap = [
     'Probation'  => ['label' => 'تحت التجربة', 'class' => 'hr-status--probation'],
 ];
 
-$employmentTypeMap = [
-    'full_time'  => 'دوام كامل',
-    'part_time'  => 'دوام جزئي',
-    'contract'   => 'عقد',
-    'temporary'  => 'مؤقت',
-    'internship' => 'تدريب',
+$contractTypeMap = [
+    'permanent' => 'دائم',
+    'contract'  => 'مؤقت/عقد',
+    'probation' => 'تحت التجربة',
+    'freelance'  => 'عمل حر',
 ];
 
 $bloodGroupMap = [
@@ -215,38 +214,14 @@ if (!empty($user->job_title)) {
                                 <tr>
                                     <th>رقم الهوية</th>
                                     <td><?= Html::encode($ext('national_id')) ?></td>
-                                    <th>تاريخ انتهاء الهوية</th>
-                                    <td>
-                                        <?php
-                                        $natExpiry = $ext('national_id_expiry');
-                                        echo Html::encode($natExpiry);
-                                        if ($natExpiry !== '—' && strtotime($natExpiry) < time()) {
-                                            echo ' <span class="label label-danger" style="font-size:10px">منتهية</span>';
-                                        }
-                                        ?>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>رقم الجواز</th>
-                                    <td><?= Html::encode($ext('passport_number')) ?></td>
-                                    <th>تاريخ انتهاء الجواز</th>
-                                    <td>
-                                        <?php
-                                        $passExpiry = $ext('passport_expiry');
-                                        echo Html::encode($passExpiry);
-                                        if ($passExpiry !== '—' && strtotime($passExpiry) < time()) {
-                                            echo ' <span class="label label-danger" style="font-size:10px">منتهي</span>';
-                                        }
-                                        ?>
-                                    </td>
-                                </tr>
-                                <tr>
                                     <th>تاريخ الميلاد</th>
                                     <td><?= Html::encode($ext('date_of_birth')) ?></td>
+                                </tr>
+                                <tr>
                                     <th>فصيلة الدم</th>
-                                    <td>
+                                    <td colspan="3">
                                         <?php
-                                        $bg = $ext('blood_group');
+                                        $bg = $ext('blood_type');
                                         echo ($bg !== '—')
                                             ? '<span class="hr-badge hr-badge--blood">' . Html::encode($bg) . '</span>'
                                             : '—';
@@ -261,12 +236,10 @@ if (!empty($user->job_title)) {
                             <table class="table hr-info-table">
                                 <tr>
                                     <th>نوع العقد</th>
-                                    <td><?= Html::encode($ext('contract_type')) ?></td>
-                                    <th>نوع التوظيف</th>
-                                    <td>
+                                    <td colspan="3">
                                         <?php
-                                        $empType = $extended->employment_type ?? null;
-                                        echo $empType ? Html::encode($employmentTypeMap[$empType] ?? $empType) : '—';
+                                        $ct = $extended->contract_type ?? null;
+                                        echo $ct ? Html::encode($contractTypeMap[$ct] ?? $ct) : '—';
                                         ?>
                                     </td>
                                 </tr>
@@ -302,13 +275,12 @@ if (!empty($user->job_title)) {
                                         <?php
                                         $salary = $ext('basic_salary');
                                         echo ($salary !== '—')
-                                            ? '<strong style="color:#800020">' . number_format((float)$salary, 2) . '</strong> '
-                                              . Html::encode($ext('salary_currency', 'ر.س'))
+                                            ? '<strong style="color:#800020">' . number_format((float)$salary, 2) . '</strong> د.أ'
                                             : '—';
                                         ?>
                                     </td>
-                                    <th>اسم البنك</th>
-                                    <td><?= Html::encode($ext('bank_name')) ?></td>
+                                    <th>رقم الحساب البنكي</th>
+                                    <td><?= Html::encode($ext('bank_account_no')) ?></td>
                                 </tr>
                                 <tr>
                                     <th>رقم الآيبان</th>

@@ -13,19 +13,19 @@ $this->title = 'لوحة الحضور والانصراف';
 
 $presentCount = (int) ($todayStats['present'] ?? 0);
 $absentCount  = (int) ($todayStats['absent'] ?? 0);
-$leaveCount   = (int) ($todayStats['on_leave'] ?? 0);
-$lateCount    = (int) ($todayStats['late'] ?? 0);
-$fieldCount   = (int) ($todayStats['field_duty'] ?? 0);
+$leaveCount   = (int) ($todayStats['leave'] ?? 0);
+$holidayCount = (int) ($todayStats['holiday'] ?? 0);
+$halfDayCount = (int) ($todayStats['half_day'] ?? 0);
+$remoteCount  = (int) ($todayStats['remote'] ?? 0);
 $totalCount   = (int) ($todayStats['total_records'] ?? 0);
 
 $statusMap = [
     'present'    => ['label' => 'حاضر',     'color' => '#28a745'],
     'absent'     => ['label' => 'غائب',     'color' => '#dc3545'],
-    'late'       => ['label' => 'متأخر',    'color' => '#fd7e14'],
-    'on_leave'   => ['label' => 'إجازة',    'color' => '#17a2b8'],
-    'half_day'   => ['label' => 'نصف يوم',  'color' => '#6f42c1'],
-    'field_duty' => ['label' => 'ميداني',   'color' => '#6c757d'],
+    'leave'      => ['label' => 'إجازة',    'color' => '#17a2b8'],
     'holiday'    => ['label' => 'عطلة',     'color' => '#adb5bd'],
+    'half_day'   => ['label' => 'نصف يوم',  'color' => '#6f42c1'],
+    'remote'     => ['label' => 'عن بُعد',  'color' => '#6c757d'],
 ];
 ?>
 
@@ -154,10 +154,10 @@ $statusMap = [
             <?= Html::dropDownList('status', $filterStatus, [
                 'present'    => 'حاضر',
                 'absent'     => 'غائب',
-                'late'       => 'متأخر',
-                'on_leave'   => 'إجازة',
+                'leave'      => 'إجازة',
+                'holiday'    => 'عطلة',
                 'half_day'   => 'نصف يوم',
-                'field_duty' => 'ميداني',
+                'remote'     => 'عن بُعد',
             ], [
                 'class' => 'form-control',
                 'prompt' => '— جميع الحالات —',
@@ -186,10 +186,10 @@ $statusMap = [
             <div class="card-value"><?= number_format($absentCount) ?></div>
             <div class="card-label">غائب</div>
         </div>
-        <div class="hr-summary-card" style="--card-color:#fd7e14">
+        <div class="hr-summary-card" style="--card-color:#6f42c1">
             <div class="card-icon"><i class="fa fa-clock-o"></i></div>
-            <div class="card-value"><?= number_format($lateCount) ?></div>
-            <div class="card-label">متأخر</div>
+            <div class="card-value"><?= number_format($halfDayCount) ?></div>
+            <div class="card-label">نصف يوم</div>
         </div>
         <div class="hr-summary-card" style="--card-color:#17a2b8">
             <div class="card-icon"><i class="fa fa-plane"></i></div>
@@ -197,9 +197,14 @@ $statusMap = [
             <div class="card-label">إجازة</div>
         </div>
         <div class="hr-summary-card" style="--card-color:#6c757d">
-            <div class="card-icon"><i class="fa fa-map-marker"></i></div>
-            <div class="card-value"><?= number_format($fieldCount) ?></div>
-            <div class="card-label">ميداني</div>
+            <div class="card-icon"><i class="fa fa-laptop"></i></div>
+            <div class="card-value"><?= number_format($remoteCount) ?></div>
+            <div class="card-label">عن بُعد</div>
+        </div>
+        <div class="hr-summary-card" style="--card-color:#adb5bd">
+            <div class="card-icon"><i class="fa fa-calendar"></i></div>
+            <div class="card-value"><?= number_format($holidayCount) ?></div>
+            <div class="card-label">عطلة</div>
         </div>
         <div class="hr-summary-card" style="--card-color:#800020">
             <div class="card-icon"><i class="fa fa-users"></i></div>
@@ -233,34 +238,34 @@ $statusMap = [
                     },
                 ],
                 [
-                    'attribute' => 'check_in',
+                    'attribute' => 'check_in_time',
                     'header' => 'الدخول',
                     'format' => 'raw',
                     'value' => function ($model) {
-                        if ($model->check_in) {
-                            return '<i class="fa fa-sign-in text-success"></i> ' . Yii::$app->formatter->asTime($model->check_in, 'HH:mm');
+                        if ($model->check_in_time) {
+                            return '<i class="fa fa-sign-in text-success"></i> ' . Yii::$app->formatter->asTime($model->check_in_time, 'HH:mm');
                         }
                         return '<span class="text-muted">—</span>';
                     },
                 ],
                 [
-                    'attribute' => 'check_out',
+                    'attribute' => 'check_out_time',
                     'header' => 'الخروج',
                     'format' => 'raw',
                     'value' => function ($model) {
-                        if ($model->check_out) {
-                            return '<i class="fa fa-sign-out text-danger"></i> ' . Yii::$app->formatter->asTime($model->check_out, 'HH:mm');
+                        if ($model->check_out_time) {
+                            return '<i class="fa fa-sign-out text-danger"></i> ' . Yii::$app->formatter->asTime($model->check_out_time, 'HH:mm');
                         }
                         return '<span class="text-muted">—</span>';
                     },
                 ],
                 [
-                    'attribute' => 'work_hours',
+                    'attribute' => 'total_hours',
                     'header' => 'الساعات',
                     'format' => 'raw',
                     'value' => function ($model) {
-                        if ($model->work_hours !== null) {
-                            return '<strong>' . number_format((float) $model->work_hours, 1) . '</strong> ساعة';
+                        if ($model->total_hours !== null) {
+                            return '<strong>' . number_format((float) $model->total_hours, 1) . '</strong> ساعة';
                         }
                         return '<span class="text-muted">—</span>';
                     },
@@ -285,11 +290,10 @@ $statusMap = [
                         $statusMap = [
                             'present'    => ['label' => 'حاضر',     'color' => '#28a745'],
                             'absent'     => ['label' => 'غائب',     'color' => '#dc3545'],
-                            'late'       => ['label' => 'متأخر',    'color' => '#fd7e14'],
-                            'on_leave'   => ['label' => 'إجازة',    'color' => '#17a2b8'],
-                            'half_day'   => ['label' => 'نصف يوم',  'color' => '#6f42c1'],
-                            'field_duty' => ['label' => 'ميداني',   'color' => '#6c757d'],
+                            'leave'      => ['label' => 'إجازة',    'color' => '#17a2b8'],
                             'holiday'    => ['label' => 'عطلة',     'color' => '#adb5bd'],
+                            'half_day'   => ['label' => 'نصف يوم',  'color' => '#6f42c1'],
+                            'remote'     => ['label' => 'عن بُعد',  'color' => '#6c757d'],
                         ];
                         $st = $model->status ?? 'absent';
                         $info = $statusMap[$st] ?? ['label' => $st, 'color' => '#999'];

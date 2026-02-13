@@ -17,21 +17,20 @@ use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
  * @property int $id
  * @property int $user_id
  * @property string $attendance_date
- * @property string|null $check_in
- * @property string|null $check_out
+ * @property string|null $check_in_time
+ * @property string|null $check_out_time
  * @property string|null $status
- * @property string|null $source
  * @property int|null $shift_id
- * @property float|null $work_hours
+ * @property float|null $total_hours
  * @property float|null $overtime_hours
- * @property string|null $late_minutes
- * @property string|null $early_leave_minutes
+ * @property int|null $late_minutes
+ * @property int|null $early_leave_minutes
  * @property string|null $notes
  * @property int $is_deleted
  * @property int $created_at
  * @property int $created_by
  * @property int $updated_at
- * @property int $last_updated_by
+ * @property int $updated_by
  */
 class HrAttendance extends ActiveRecord
 {
@@ -52,7 +51,7 @@ class HrAttendance extends ActiveRecord
             [
                 'class' => BlameableBehavior::class,
                 'createdByAttribute' => 'created_by',
-                'updatedByAttribute' => 'last_updated_by',
+                'updatedByAttribute' => 'updated_by',
             ],
             [
                 'class' => TimestampBehavior::class,
@@ -75,13 +74,14 @@ class HrAttendance extends ActiveRecord
     {
         return [
             [['user_id', 'attendance_date'], 'required'],
-            [['user_id', 'shift_id', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'last_updated_by'], 'integer'],
-            [['attendance_date', 'check_in', 'check_out'], 'safe'],
-            [['work_hours', 'overtime_hours'], 'number'],
-            [['late_minutes', 'early_leave_minutes'], 'string', 'max' => 10],
-            [['status'], 'string', 'max' => 30],
-            [['source'], 'string', 'max' => 30],
-            [['notes'], 'string'],
+            [['user_id', 'shift_id', 'late_minutes', 'early_leave_minutes', 'is_adjusted', 'adjusted_by', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'updated_by'], 'integer'],
+            [['attendance_date', 'check_in_time', 'check_out_time'], 'safe'],
+            [['check_in_lat', 'check_in_lng', 'check_out_lat', 'check_out_lng', 'total_hours', 'overtime_hours'], 'number'],
+            [['check_in_method'], 'in', 'range' => ['manual', 'gps', 'qr', 'biometric', 'system']],
+            [['check_out_method'], 'in', 'range' => ['manual', 'gps', 'qr', 'biometric', 'system']],
+            [['status'], 'in', 'range' => ['present', 'absent', 'leave', 'holiday', 'half_day', 'remote']],
+            [['check_in_note', 'check_out_note'], 'string', 'max' => 300],
+            [['adjustment_reason', 'notes'], 'string'],
         ];
     }
 
@@ -94,21 +94,25 @@ class HrAttendance extends ActiveRecord
             'id' => Yii::t('app', 'المعرف'),
             'user_id' => Yii::t('app', 'الموظف'),
             'attendance_date' => Yii::t('app', 'تاريخ الحضور'),
-            'check_in' => Yii::t('app', 'وقت الحضور'),
-            'check_out' => Yii::t('app', 'وقت الانصراف'),
+            'check_in_time' => Yii::t('app', 'وقت الدخول'),
+            'check_out_time' => Yii::t('app', 'وقت الخروج'),
+            'check_in_method' => Yii::t('app', 'طريقة الدخول'),
+            'check_out_method' => Yii::t('app', 'طريقة الخروج'),
             'status' => Yii::t('app', 'الحالة'),
-            'source' => Yii::t('app', 'المصدر'),
             'shift_id' => Yii::t('app', 'الوردية'),
-            'work_hours' => Yii::t('app', 'ساعات العمل'),
+            'total_hours' => Yii::t('app', 'إجمالي الساعات'),
             'overtime_hours' => Yii::t('app', 'ساعات العمل الإضافي'),
             'late_minutes' => Yii::t('app', 'دقائق التأخير'),
             'early_leave_minutes' => Yii::t('app', 'دقائق المغادرة المبكرة'),
+            'is_adjusted' => Yii::t('app', 'معدّل'),
+            'adjusted_by' => Yii::t('app', 'معدّل بواسطة'),
+            'adjustment_reason' => Yii::t('app', 'سبب التعديل'),
             'notes' => Yii::t('app', 'ملاحظات'),
             'is_deleted' => Yii::t('app', 'محذوف'),
             'created_at' => Yii::t('app', 'تاريخ الإنشاء'),
             'created_by' => Yii::t('app', 'أنشئ بواسطة'),
             'updated_at' => Yii::t('app', 'تاريخ التعديل'),
-            'last_updated_by' => Yii::t('app', 'عُدّل بواسطة'),
+            'updated_by' => Yii::t('app', 'عُدّل بواسطة'),
         ];
     }
 

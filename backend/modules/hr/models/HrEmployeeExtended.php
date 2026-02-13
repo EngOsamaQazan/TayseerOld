@@ -18,18 +18,22 @@ use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
  * @property int $user_id
  * @property string|null $employee_code
  * @property string|null $national_id
- * @property string|null $national_id_expiry
- * @property string|null $passport_number
- * @property string|null $passport_expiry
  * @property string|null $date_of_birth
- * @property string|null $blood_group
+ * @property string|null $blood_type
  * @property float|null $basic_salary
- * @property string|null $salary_currency
- * @property string|null $bank_name
+ * @property string|null $address_text
+ * @property int|null $city_id
+ * @property int|null $bank_id
+ * @property string|null $bank_account_no
+ * @property string|null $social_security_no
+ * @property string|null $tax_number
  * @property string|null $iban
  * @property int|null $grade_id
  * @property int|null $branch_id
  * @property int|null $shift_id
+ * @property int|null $is_field_staff
+ * @property string|null $field_role
+ * @property string|null $termination_reason
  * @property string|null $contract_type
  * @property string|null $contract_start
  * @property string|null $contract_end
@@ -39,7 +43,7 @@ use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
  * @property int $created_at
  * @property int $created_by
  * @property int $updated_at
- * @property int $last_updated_by
+ * @property int $updated_by
  */
 class HrEmployeeExtended extends ActiveRecord
 {
@@ -60,7 +64,7 @@ class HrEmployeeExtended extends ActiveRecord
             [
                 'class' => BlameableBehavior::class,
                 'createdByAttribute' => 'created_by',
-                'updatedByAttribute' => 'last_updated_by',
+                'updatedByAttribute' => 'updated_by',
             ],
             [
                 'class' => TimestampBehavior::class,
@@ -83,15 +87,17 @@ class HrEmployeeExtended extends ActiveRecord
     {
         return [
             [['user_id'], 'required'],
-            [['user_id', 'grade_id', 'branch_id', 'shift_id', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'last_updated_by'], 'integer'],
+            [['user_id', 'city_id', 'bank_id', 'grade_id', 'branch_id', 'shift_id', 'is_field_staff', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'updated_by'], 'integer'],
             [['basic_salary'], 'number'],
-            [['date_of_birth', 'national_id_expiry', 'passport_expiry', 'contract_start', 'contract_end', 'probation_end'], 'safe'],
-            [['employee_code', 'national_id', 'passport_number'], 'string', 'max' => 50],
-            [['blood_group'], 'string', 'max' => 10],
-            [['salary_currency'], 'string', 'max' => 10],
-            [['bank_name', 'iban'], 'string', 'max' => 100],
-            [['contract_type'], 'string', 'max' => 50],
-            [['notes'], 'string'],
+            [['date_of_birth', 'contract_start', 'contract_end', 'probation_end'], 'safe'],
+            [['employee_code', 'national_id', 'social_security_no', 'tax_number'], 'string', 'max' => 20],
+            [['blood_type'], 'in', 'range' => ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']],
+            [['address_text'], 'string', 'max' => 500],
+            [['bank_account_no'], 'string', 'max' => 30],
+            [['iban'], 'string', 'max' => 34],
+            [['contract_type'], 'in', 'range' => ['permanent', 'contract', 'probation', 'freelance']],
+            [['field_role'], 'in', 'range' => ['collector', 'inspector', 'driver', 'messenger', 'lawyer', 'other']],
+            [['termination_reason', 'notes'], 'string'],
             [['user_id'], 'unique'],
         ];
     }
@@ -106,18 +112,22 @@ class HrEmployeeExtended extends ActiveRecord
             'user_id' => Yii::t('app', 'الموظف'),
             'employee_code' => Yii::t('app', 'الرقم الوظيفي'),
             'national_id' => Yii::t('app', 'رقم الهوية'),
-            'national_id_expiry' => Yii::t('app', 'تاريخ انتهاء الهوية'),
-            'passport_number' => Yii::t('app', 'رقم الجواز'),
-            'passport_expiry' => Yii::t('app', 'تاريخ انتهاء الجواز'),
             'date_of_birth' => Yii::t('app', 'تاريخ الميلاد'),
-            'blood_group' => Yii::t('app', 'فصيلة الدم'),
+            'blood_type' => Yii::t('app', 'فصيلة الدم'),
             'basic_salary' => Yii::t('app', 'الراتب الأساسي'),
-            'salary_currency' => Yii::t('app', 'عملة الراتب'),
-            'bank_name' => Yii::t('app', 'اسم البنك'),
+            'address_text' => Yii::t('app', 'العنوان'),
+            'city_id' => Yii::t('app', 'المدينة'),
+            'bank_id' => Yii::t('app', 'البنك'),
+            'bank_account_no' => Yii::t('app', 'رقم الحساب البنكي'),
+            'social_security_no' => Yii::t('app', 'رقم الضمان الاجتماعي'),
+            'tax_number' => Yii::t('app', 'الرقم الضريبي'),
             'iban' => Yii::t('app', 'رقم الآيبان'),
             'grade_id' => Yii::t('app', 'الدرجة الوظيفية'),
             'branch_id' => Yii::t('app', 'الفرع'),
             'shift_id' => Yii::t('app', 'الوردية'),
+            'termination_reason' => Yii::t('app', 'سبب إنهاء الخدمة'),
+            'is_field_staff' => Yii::t('app', 'موظف ميداني'),
+            'field_role' => Yii::t('app', 'الدور الميداني'),
             'contract_type' => Yii::t('app', 'نوع العقد'),
             'contract_start' => Yii::t('app', 'بداية العقد'),
             'contract_end' => Yii::t('app', 'نهاية العقد'),
@@ -127,7 +137,7 @@ class HrEmployeeExtended extends ActiveRecord
             'created_at' => Yii::t('app', 'تاريخ الإنشاء'),
             'created_by' => Yii::t('app', 'أنشئ بواسطة'),
             'updated_at' => Yii::t('app', 'تاريخ التعديل'),
-            'last_updated_by' => Yii::t('app', 'عُدّل بواسطة'),
+            'updated_by' => Yii::t('app', 'عُدّل بواسطة'),
         ];
     }
 
@@ -145,15 +155,6 @@ class HrEmployeeExtended extends ActiveRecord
     public function getGrade()
     {
         return $this->hasOne(HrGrade::class, ['id' => 'grade_id']);
-    }
-
-    /**
-     * @return \yii\db\ActiveQuery
-     */
-    public function getBranch()
-    {
-        return $this->hasOne(\common\models\User::class, ['id' => 'branch_id'])
-            ->from('os_location');
     }
 
     /**

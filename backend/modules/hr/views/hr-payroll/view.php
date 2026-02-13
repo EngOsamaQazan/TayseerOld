@@ -37,7 +37,7 @@ $totalGross = 0;
 $totalDeductions = 0;
 $totalNet = 0;
 foreach ($payslips as $ps) {
-    $totalGross += (float) ($ps->gross_salary ?? 0);
+    $totalGross += (float) ($ps->total_earnings ?? 0);
     $totalDeductions += (float) ($ps->total_deductions ?? 0);
     $totalNet += (float) ($ps->net_salary ?? 0);
 }
@@ -148,7 +148,7 @@ foreach ($payslips as $ps) {
         <div class="hr-actions">
             <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['index'], ['class' => 'btn btn-default btn-sm']) ?>
 
-            <?php if (in_array($st, ['draft', 'preview'])): ?>
+            <?php if (in_array($st, ['draft', 'calculated'])): ?>
                 <?= Html::a('<i class="fa fa-calculator"></i> حساب', ['calculate', 'id' => $model->id], [
                     'class' => 'btn btn-info btn-sm',
                     'data-method' => 'post',
@@ -156,7 +156,7 @@ foreach ($payslips as $ps) {
                 ]) ?>
             <?php endif; ?>
 
-            <?php if ($st === 'preview'): ?>
+            <?php if ($st === 'calculated'): ?>
                 <?= Html::a('<i class="fa fa-check-circle"></i> اعتماد', ['approve', 'id' => $model->id], [
                     'class' => 'btn btn-success btn-sm',
                     'data-method' => 'post',
@@ -250,7 +250,7 @@ foreach ($payslips as $ps) {
                             $idx++;
                             $user = $ps->user;
                             $empName = $user ? ($user->name ?: $user->username) : '—';
-                            $gross = (float) ($ps->gross_salary ?? 0);
+                            $gross = (float) ($ps->total_earnings ?? 0);
                             $deductions = (float) ($ps->total_deductions ?? 0);
                             $net = (float) ($ps->net_salary ?? 0);
                             $psStatus = $ps->status ?? 'draft';

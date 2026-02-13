@@ -120,10 +120,6 @@ class HrLoanController extends Controller
             $model->repaid = 0;
             $model->status = 'active'; // Will require approval in practice
             $model->remaining_installments = $model->installments;
-            $model->created_at = time();
-            $model->updated_at = time();
-            $model->created_by = Yii::$app->user->id;
-            $model->updated_by = Yii::$app->user->id;
 
             // Auto-calculate monthly deduction if not provided
             if (empty($model->monthly_deduction) && $model->amount > 0 && $model->installments > 0) {
@@ -195,9 +191,6 @@ class HrLoanController extends Controller
         }
 
         if ($model->load($request->post())) {
-            $model->updated_at = time();
-            $model->updated_by = Yii::$app->user->id;
-
             $transaction = Yii::$app->db->beginTransaction();
             try {
                 if (!$model->save()) {
@@ -269,8 +262,6 @@ class HrLoanController extends Controller
             $model->approved_by = Yii::$app->user->id;
             $model->approved_at = time();
             $model->status = 'active';
-            $model->updated_at = time();
-            $model->updated_by = Yii::$app->user->id;
 
             if (!$model->save()) {
                 throw new \Exception('فشل اعتماد القرض: ' . implode(', ', $model->getFirstErrors()));
@@ -305,7 +296,7 @@ class HrLoanController extends Controller
     public function actionView($id)
     {
         $model = $this->findModel($id);
-        $employee = User::findOne($model->user_id);
+        $employee = $model->user;
         $approver = $model->approved_by ? User::findOne($model->approved_by) : null;
 
         // Calculate repayment schedule

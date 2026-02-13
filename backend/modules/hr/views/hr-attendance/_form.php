@@ -64,17 +64,17 @@ use kartik\select2\Select2;
     <!-- أوقات الدخول والخروج -->
     <div class="hr-form-row">
         <div class="form-group">
-            <label for="hrattendance-check_in">وقت الدخول</label>
-            <?= Html::activeInput('time', $model, 'check_in', [
+            <label for="hrattendance-check_in_time">وقت الدخول</label>
+            <?= Html::activeInput('time', $model, 'check_in_time', [
                 'class' => 'form-control',
-                'id' => 'hrattendance-check_in',
+                'id' => 'hrattendance-check_in_time',
             ]) ?>
         </div>
         <div class="form-group">
-            <label for="hrattendance-check_out">وقت الخروج</label>
-            <?= Html::activeInput('time', $model, 'check_out', [
+            <label for="hrattendance-check_out_time">وقت الخروج</label>
+            <?= Html::activeInput('time', $model, 'check_out_time', [
                 'class' => 'form-control',
-                'id' => 'hrattendance-check_out',
+                'id' => 'hrattendance-check_out_time',
             ]) ?>
         </div>
     </div>
@@ -83,11 +83,10 @@ use kartik\select2\Select2;
     <?= $form->field($model, 'status')->dropDownList([
         'present'    => 'حاضر',
         'absent'     => 'غائب',
-        'late'       => 'متأخر',
-        'on_leave'   => 'إجازة',
-        'half_day'   => 'نصف يوم',
-        'field_duty' => 'ميداني',
+        'leave'      => 'إجازة',
         'holiday'    => 'عطلة',
+        'half_day'   => 'نصف يوم',
+        'remote'     => 'عن بُعد',
     ], [
         'prompt' => '— اختر الحالة —',
         'class' => 'form-control',

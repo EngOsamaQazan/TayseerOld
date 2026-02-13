@@ -25,7 +25,7 @@ use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
  * @property int $created_at
  * @property int $created_by
  * @property int $updated_at
- * @property int $last_updated_by
+ * @property int $updated_by
  */
 class HrEmergencyContact extends ActiveRecord
 {
@@ -46,7 +46,7 @@ class HrEmergencyContact extends ActiveRecord
             [
                 'class' => BlameableBehavior::class,
                 'createdByAttribute' => 'created_by',
-                'updatedByAttribute' => 'last_updated_by',
+                'updatedByAttribute' => 'updated_by',
             ],
             [
                 'class' => TimestampBehavior::class,
@@ -69,7 +69,7 @@ class HrEmergencyContact extends ActiveRecord
     {
         return [
             [['user_id', 'contact_name', 'phone'], 'required'],
-            [['user_id', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'last_updated_by'], 'integer'],
+            [['user_id', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'updated_by'], 'integer'],
             [['contact_name', 'relationship'], 'string', 'max' => 100],
             [['phone'], 'string', 'max' => 30],
             [['email'], 'string', 'max' => 150],
@@ -95,7 +95,7 @@ class HrEmergencyContact extends ActiveRecord
             'created_at' => Yii::t('app', 'تاريخ الإنشاء'),
             'created_by' => Yii::t('app', 'أنشئ بواسطة'),
             'updated_at' => Yii::t('app', 'تاريخ التعديل'),
-            'last_updated_by' => Yii::t('app', 'عُدّل بواسطة'),
+            'updated_by' => Yii::t('app', 'عُدّل بواسطة'),
         ];
     }
 

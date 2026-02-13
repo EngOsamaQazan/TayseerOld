@@ -181,7 +181,8 @@ $statusMap = [
                     'header' => 'الموظف',
                     'format' => 'raw',
                     'value' => function ($model) {
-                        $name = $model->employee->name ?? ($model->employee->username ?? '—');
+                        $user = $model->user;
+                        $name = $user ? ($user->name ?? $user->username ?? '—') : '—';
                         return '<strong>' . Html::encode($name) . '</strong>';
                     },
                 ],

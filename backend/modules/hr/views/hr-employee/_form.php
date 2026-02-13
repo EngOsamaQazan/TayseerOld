@@ -59,15 +59,14 @@ if (!isset($banks)) {
 
 /* ─── خريطة أنواع العقود ─── */
 $contractTypes = [
-    'permanent'  => 'دائم',
-    'temporary'  => 'مؤقت',
-    'seasonal'   => 'موسمي',
-    'part_time'  => 'دوام جزئي',
-    'freelance'  => 'عمل حر',
+    'permanent' => 'دائم',
+    'contract'  => 'مؤقت/عقد',
+    'probation' => 'تحت التجربة',
+    'freelance' => 'عمل حر',
 ];
 
 /* ─── خريطة فصائل الدم ─── */
-$bloodGroups = [
+$bloodTypes = [
     'A+'  => 'A+',
     'A-'  => 'A-',
     'B+'  => 'B+',
@@ -80,13 +79,12 @@ $bloodGroups = [
 
 /* ─── خريطة الأدوار الميدانية ─── */
 $fieldRoles = [
-    'driver'      => 'سائق',
-    'technician'  => 'فني',
-    'supervisor'  => 'مشرف ميداني',
-    'sales_rep'   => 'مندوب مبيعات',
-    'collector'   => 'محصّل',
-    'inspector'   => 'مفتش',
-    'other'       => 'أخرى',
+    'collector' => 'محصّل',
+    'inspector' => 'مفتش',
+    'driver'    => 'سائق',
+    'messenger' => 'مراسل',
+    'lawyer'    => 'محامي',
+    'other'     => 'أخرى',
 ];
 
 $isNewRecord = $model->isNewRecord;
@@ -144,7 +142,7 @@ $isNewRecord = $model->isNewRecord;
             <div class="row">
                 <div class="col-md-4">
                     <?= $form->field($model, 'employee_code')->textInput([
-                        'maxlength' => 50,
+                        'maxlength' => 20,
                         'placeholder' => 'مثال: EMP-0001',
                         'dir' => 'ltr',
                         'class' => 'form-control hr-form-input text-left',
@@ -152,23 +150,14 @@ $isNewRecord = $model->isNewRecord;
                 </div>
                 <div class="col-md-4">
                     <?= $form->field($model, 'national_id')->textInput([
-                        'maxlength' => 50,
+                        'maxlength' => 20,
                         'placeholder' => 'رقم الهوية الوطنية',
                         'dir' => 'ltr',
                         'class' => 'form-control hr-form-input text-left',
                     ]) ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'national_id_expiry')->widget(DatePicker::class, [
-                        'options' => ['placeholder' => 'تاريخ انتهاء الهوية', 'dir' => 'ltr', 'autocomplete' => 'off'],
-                        'type' => DatePicker::TYPE_INPUT,
-                        'pluginOptions' => [
-                            'format' => 'yyyy-mm-dd',
-                            'autoclose' => true,
-                            'todayHighlight' => true,
-                            'rtl' => true,
-                        ],
-                    ]) ?>
+                    <!-- placeholder for alignment -->
                 </div>
             </div>
 
@@ -186,33 +175,16 @@ $isNewRecord = $model->isNewRecord;
                     ]) ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'blood_group')->dropDownList($bloodGroups, [
+                    <?= $form->field($model, 'blood_type')->dropDownList($bloodTypes, [
                         'prompt' => '— اختر فصيلة الدم —',
                     ]) ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'passport_number')->textInput([
-                        'maxlength' => 50,
-                        'placeholder' => 'رقم جواز السفر',
-                        'dir' => 'ltr',
-                        'class' => 'form-control hr-form-input text-left',
-                    ]) ?>
+                    <!-- placeholder for alignment -->
                 </div>
             </div>
 
             <div class="row">
-                <div class="col-md-4">
-                    <?= $form->field($model, 'passport_expiry')->widget(DatePicker::class, [
-                        'options' => ['placeholder' => 'تاريخ انتهاء الجواز', 'dir' => 'ltr', 'autocomplete' => 'off'],
-                        'type' => DatePicker::TYPE_INPUT,
-                        'pluginOptions' => [
-                            'format' => 'yyyy-mm-dd',
-                            'autoclose' => true,
-                            'todayHighlight' => true,
-                            'rtl' => true,
-                        ],
-                    ]) ?>
-                </div>
                 <div class="col-md-4">
                     <?= $form->field($model, 'contract_type')->dropDownList($contractTypes, [
                         'prompt' => '— اختر نوع العقد —',
@@ -285,24 +257,60 @@ $isNewRecord = $model->isNewRecord;
                     ]) ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'salary_currency')->dropDownList([
-                        'SAR' => 'ريال سعودي (ر.س)',
-                        'AED' => 'درهم إماراتي',
-                        'KWD' => 'دينار كويتي',
-                        'QAR' => 'ريال قطري',
-                        'BHD' => 'دينار بحريني',
-                        'OMR' => 'ريال عماني',
-                        'EGP' => 'جنيه مصري',
-                        'JOD' => 'دينار أردني',
-                        'USD' => 'دولار أمريكي',
-                    ], [
-                        'prompt' => '— اختر العملة —',
+                    <?= $form->field($model, 'bank_id')->widget(Select2::class, [
+                        'data' => $banks,
+                        'options' => ['placeholder' => 'اختر البنك...', 'dir' => 'rtl'],
+                        'pluginOptions' => [
+                            'allowClear' => true,
+                            'dir' => 'rtl',
+                        ],
                     ]) ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'bank_name')->textInput([
-                        'maxlength' => 100,
-                        'placeholder' => 'اسم البنك',
+                    <?= $form->field($model, 'bank_account_no')->textInput([
+                        'maxlength' => 50,
+                        'placeholder' => 'رقم الحساب البنكي',
+                        'dir' => 'ltr',
+                        'class' => 'form-control hr-form-input text-left',
+                    ]) ?>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <?= $form->field($model, 'social_security_no')->textInput([
+                        'maxlength' => 50,
+                        'placeholder' => 'رقم الضمان الاجتماعي',
+                        'dir' => 'ltr',
+                        'class' => 'form-control hr-form-input text-left',
+                    ]) ?>
+                </div>
+                <div class="col-md-4">
+                    <?= $form->field($model, 'tax_number')->textInput([
+                        'maxlength' => 50,
+                        'placeholder' => 'الرقم الضريبي',
+                        'dir' => 'ltr',
+                        'class' => 'form-control hr-form-input text-left',
+                    ]) ?>
+                </div>
+                <div class="col-md-4">
+                    <?= $form->field($model, 'city_id')->widget(Select2::class, [
+                        'data' => $cities,
+                        'options' => ['placeholder' => 'اختر المدينة...', 'dir' => 'rtl'],
+                        'pluginOptions' => [
+                            'allowClear' => true,
+                            'dir' => 'rtl',
+                        ],
+                    ]) ?>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <?= $form->field($model, 'address_text')->textarea([
+                        'rows' => 2,
+                        'placeholder' => 'العنوان التفصيلي',
+                        'class' => 'form-control hr-form-textarea',
                     ]) ?>
                 </div>
             </div>
@@ -310,7 +318,7 @@ $isNewRecord = $model->isNewRecord;
             <div class="row">
                 <div class="col-md-6">
                     <?= $form->field($model, 'iban')->textInput([
-                        'maxlength' => 100,
+                        'maxlength' => 34,
                         'placeholder' => 'مثال: SA0000000000000000000000',
                         'dir' => 'ltr',
                         'class' => 'form-control hr-form-input text-left',

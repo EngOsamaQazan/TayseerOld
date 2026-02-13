@@ -19,7 +19,7 @@ use yii\db\Expression;
  * @property int $created_at
  * @property int $created_by
  * @property int $updated_at
- * @property int $last_updated_by
+ * @property int $updated_by
  */
 class HrFieldConfig extends ActiveRecord
 {
@@ -40,7 +40,7 @@ class HrFieldConfig extends ActiveRecord
             [
                 'class' => BlameableBehavior::class,
                 'createdByAttribute' => 'created_by',
-                'updatedByAttribute' => 'last_updated_by',
+                'updatedByAttribute' => 'updated_by',
             ],
             [
                 'class' => TimestampBehavior::class,
@@ -56,7 +56,7 @@ class HrFieldConfig extends ActiveRecord
     {
         return [
             [['config_key'], 'required'],
-            [['created_at', 'created_by', 'updated_at', 'last_updated_by'], 'integer'],
+            [['created_at', 'created_by', 'updated_at', 'updated_by'], 'integer'],
             [['config_key'], 'string', 'max' => 100],
             [['config_value'], 'string'],
             [['config_group'], 'string', 'max' => 50],
@@ -79,7 +79,7 @@ class HrFieldConfig extends ActiveRecord
             'created_at' => Yii::t('app', 'تاريخ الانشاء'),
             'created_by' => Yii::t('app', 'انشئ بواسطة'),
             'updated_at' => Yii::t('app', 'تاريخ التعديل'),
-            'last_updated_by' => Yii::t('app', 'عدل بواسطة'),
+            'updated_by' => Yii::t('app', 'عدل بواسطة'),
         ];
     }
 }

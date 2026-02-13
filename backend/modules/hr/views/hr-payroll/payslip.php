@@ -34,7 +34,7 @@ foreach ($lines as $line) {
     }
 }
 
-$totalEarnings = (float) ($payslip->gross_salary ?? 0);
+$totalEarnings = (float) ($payslip->total_earnings ?? 0);
 $totalDeductions = (float) ($payslip->total_deductions ?? 0);
 $netSalary = (float) ($payslip->net_salary ?? 0);
 ?>
@@ -216,7 +216,7 @@ $netSalary = (float) ($payslip->net_salary ?? 0);
                     <?php else: ?>
                         <?php foreach ($earnings as $line): ?>
                         <tr>
-                            <td><?= Html::encode($line->notes ?: ($line->component ? $line->component->name : 'بند #' . $line->component_id)) ?></td>
+                            <td><?= Html::encode($line->description ?: 'بند #' . $line->component_id) ?></td>
                             <td class="amount-col amount-earning"><?= number_format((float) ($line->amount ?? 0), 2) ?></td>
                         </tr>
                         <?php endforeach; ?>
@@ -241,7 +241,7 @@ $netSalary = (float) ($payslip->net_salary ?? 0);
                     <?php else: ?>
                         <?php foreach ($deductions as $line): ?>
                         <tr>
-                            <td><?= Html::encode($line->notes ?: ($line->component ? $line->component->name : 'بند #' . $line->component_id)) ?></td>
+                            <td><?= Html::encode($line->description ?: 'بند #' . $line->component_id) ?></td>
                             <td class="amount-col amount-deduction"><?= number_format((float) ($line->amount ?? 0), 2) ?></td>
                         </tr>
                         <?php endforeach; ?>

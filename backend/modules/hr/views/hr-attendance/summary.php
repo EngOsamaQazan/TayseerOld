@@ -190,7 +190,7 @@ $arabicMonths = [
                             </td>
                             <td><?= Html::encode($row['department_name'] ?? '—') ?></td>
                             <td class="num-cell"><?= $totalRecords ?></td>
-                            <td class="good-cell"><?= $presentDays + $lateDays ?></td>
+                            <td class="good-cell"><?= $presentDays ?></td>
                             <td class="<?= $absentDays > 0 ? 'warn-cell' : 'num-cell' ?>"><?= $absentDays ?></td>
                             <td class="num-cell"><?= $lateDays ?></td>
                             <td class="num-cell" style="color:#17a2b8"><?= $leaveDays ?></td>

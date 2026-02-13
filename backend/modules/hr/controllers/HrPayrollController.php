@@ -62,7 +62,6 @@ class HrPayrollController extends Controller
     {
         $dataProvider = new ActiveDataProvider([
             'query' => HrPayrollRun::find()
-                ->where(['is_deleted' => 0])
                 ->orderBy(['period_year' => SORT_DESC, 'period_month' => SORT_DESC]),
             'pagination' => ['pageSize' => 20],
         ]);
@@ -86,10 +85,6 @@ class HrPayrollController extends Controller
             // Generate run code
             $model->run_code = 'PAY-' . $model->period_year . '-' . str_pad($model->period_month, 2, '0', STR_PAD_LEFT);
             $model->status = 'draft';
-            $model->created_at = time();
-            $model->updated_at = time();
-            $model->created_by = Yii::$app->user->id;
-            $model->updated_by = Yii::$app->user->id;
 
             $transaction = Yii::$app->db->beginTransaction();
             try {
@@ -181,7 +176,7 @@ class HrPayrollController extends Controller
 
         $run = $this->findModel($id);
 
-        if (!in_array($run->status, ['draft', 'preview'])) {
+        if (!in_array($run->status, ['draft', 'calculated'])) {
             return [
                 'success' => false,
                 'message' => 'لا يمكن إعادة الحساب — حالة المسيرة: ' . $run->status,
@@ -339,17 +334,12 @@ class HrPayrollController extends Controller
                 $payslip->total_earnings = $earnings;
                 $payslip->total_deductions = $deductions;
                 $payslip->net_salary = $netSalary;
-                $payslip->currency = 'JOD';
                 $payslip->working_days = $workingDaysInMonth;
                 $payslip->present_days = $presentDays;
                 $payslip->absent_days = $absentDays;
                 $payslip->leave_days = $leaveDays;
                 $payslip->overtime_hours = $overtimeHours;
                 $payslip->status = 'draft';
-                $payslip->created_at = time();
-                $payslip->updated_at = time();
-                $payslip->created_by = Yii::$app->user->id;
-                $payslip->updated_by = Yii::$app->user->id;
 
                 if (!$payslip->save()) {
                     throw new \Exception("فشل إنشاء كشف راتب للموظف #{$userId}: " . implode(', ', $payslip->getFirstErrors()));
@@ -380,9 +370,7 @@ class HrPayrollController extends Controller
             $run->total_gross = $totalGross;
             $run->total_deductions = $totalDeductions;
             $run->total_net = $totalNet;
-            $run->status = 'preview';
-            $run->updated_at = time();
-            $run->updated_by = Yii::$app->user->id;
+            $run->status = 'calculated';
 
             if (!$run->save()) {
                 throw new \Exception('فشل تحديث مسيرة الرواتب: ' . implode(', ', $run->getFirstErrors()));
@@ -412,7 +400,7 @@ class HrPayrollController extends Controller
     {
         $run = $this->findModel($id);
 
-        if ($run->status !== 'preview') {
+        if ($run->status !== 'calculated') {
             if (Yii::$app->request->isAjax) {
                 Yii::$app->response->format = Response::FORMAT_JSON;
                 return ['success' => false, 'message' => 'لا يمكن اعتماد المسيرة — الحالة الحالية: ' . $run->status];
@@ -426,12 +414,10 @@ class HrPayrollController extends Controller
             $run->status = 'approved';
             $run->approved_by = Yii::$app->user->id;
             $run->approved_at = time();
-            $run->updated_at = time();
-            $run->updated_by = Yii::$app->user->id;
 
-            // Finalize all payslips
+            // Confirm all payslips
             HrPayslip::updateAll(
-                ['status' => 'finalized', 'updated_at' => time(), 'updated_by' => Yii::$app->user->id],
+                ['status' => 'confirmed'],
                 ['payroll_run_id' => $id, 'is_deleted' => 0]
             );
 
