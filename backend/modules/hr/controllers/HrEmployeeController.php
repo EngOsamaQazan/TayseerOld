@@ -390,6 +390,8 @@ class HrEmployeeController extends Controller
             throw new NotFoundHttpException('الموظف المطلوب غير موجود.');
         }
 
+        $success = false;
+
         $transaction = Yii::$app->db->beginTransaction();
         try {
             // Note: employee_type stores activation state ('Active'/'Suspended')
@@ -415,6 +417,7 @@ class HrEmployeeController extends Controller
             }
 
             $transaction->commit();
+            $success = true;
             Yii::$app->session->setFlash($flashType, $flashMessage);
         } catch (\Exception $e) {
             $transaction->rollBack();
@@ -424,7 +427,7 @@ class HrEmployeeController extends Controller
         if (Yii::$app->request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
             return [
-                'success' => true,
+                'success' => $success,
                 'forceReload' => '#crud-datatable-pjax',
             ];
         }

@@ -204,10 +204,12 @@ $contractModel = $contractCalculations->contract_model;
                     <h5 style="margin-bottom:12px"><i class="fa fa-picture-o"></i> صور العملاء <span class="badge"><?= count($allImages) ?></span></h5>
                     <div class="row">
                         <?php
-                            // رابط ثابت للملف كما في النظام القديم: /images/imagemanager/{id}_{fileHash}.{ext}
-                            // يُستخدم موقع الطلب الحالي (جدل → jadal.aqssat.co، نماء → namaa.aqssat.co) ما لم يُعرّف customerImagesBaseUrl
+                            // رابط ثابت: /images/imagemanager/{id}_{fileHash}.{ext}
+                            // الملفات الفعلية مخزنة على سيرفر جادل فقط → عند الدخول من نماء نحمّل الصور من جادل
                             if (isset(Yii::$app->params['customerImagesBaseUrl']) && Yii::$app->params['customerImagesBaseUrl'] !== '') {
                                 $imagesBase = rtrim((string) Yii::$app->params['customerImagesBaseUrl'], '/');
+                            } elseif (stripos((string) Yii::$app->request->hostInfo, 'namaa') !== false) {
+                                $imagesBase = 'https://jadal.aqssat.co';
                             } else {
                                 $imagesBase = Yii::$app->request->baseUrl ?: '';
                             }
