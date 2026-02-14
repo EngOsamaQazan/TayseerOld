@@ -17,8 +17,11 @@ use yii\helpers\Url;
 /** @var backend\modules\hr\models\HrEmergencyContact[] $emergencyContacts */
 /** @var array $attendanceSummary */
 /** @var backend\modules\hr\models\HrEmployeeSalary[] $salaryComponents */
+/** @var backend\modules\hr\models\HrAnnualIncrement[] $increments */
 
 $this->title = 'ملف الموظف — ' . ($user->name ?: $user->username);
+
+$increments = $increments ?? [];
 
 /* ─── تسجيل CSS ─── */
 $this->registerCssFile(Yii::getAlias('@web') . '/css/hr.css', ['depends' => ['yii\web\YiiAsset']]);
@@ -182,6 +185,14 @@ if (!empty($user->job_title)) {
                     <i class="fa fa-money"></i> الراتب
                     <?php if (!empty($salaryComponents)): ?>
                         <span class="badge hr-tab-badge"><?= count($salaryComponents) ?></span>
+                    <?php endif ?>
+                </a>
+            </li>
+            <li role="presentation">
+                <a href="#tab-increments" aria-controls="tab-increments" role="tab" data-toggle="tab">
+                    <i class="fa fa-line-chart"></i> العلاوات السنوية
+                    <?php if (!empty($increments)): ?>
+                        <span class="badge hr-tab-badge"><?= count($increments) ?></span>
                     <?php endif ?>
                 </a>
             </li>
@@ -552,6 +563,86 @@ if (!empty($user->job_title)) {
                                     <td colspan="5"><strong style="color:#800020;font-size:16px"><?= number_format($totalEarnings - $totalDeductions, 2) ?></strong></td>
                                 </tr>
                             </tfoot>
+                        </table>
+                    </div>
+                <?php endif ?>
+            </div>
+
+            <!-- ═════════════════════════════════
+                 تبويب: العلاوات السنوية
+                 ═════════════════════════════════ -->
+            <div role="tabpanel" class="tab-pane fade" id="tab-increments">
+                <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                    <h4 class="hr-info-section-title" style="margin:0;"><i class="fa fa-line-chart"></i> العلاوات السنوية</h4>
+                    <?= Html::a('<i class="fa fa-plus"></i> إضافة علاوة سنوية', ['/hr/hr-payroll/increment-create', 'user_id' => $user->id], ['class' => 'btn hr-btn-primary btn-sm', 'style' => 'border-radius:8px']) ?>
+                </div>
+                <?php if (empty($increments)): ?>
+                    <div class="hr-empty-state">
+                        <i class="fa fa-line-chart"></i>
+                        <p>لا توجد علاوات سنوية مسجلة لهذا الموظف.</p>
+                        <?= Html::a('<i class="fa fa-plus"></i> إضافة علاوة', ['/hr/hr-payroll/increment-create', 'user_id' => $user->id], ['class' => 'btn hr-btn-primary btn-sm']) ?>
+                    </div>
+                <?php else: ?>
+                    <?php
+                    $incStatusMap = ['pending' => 'بانتظار', 'approved' => 'معتمدة', 'applied' => 'مطبّقة', 'cancelled' => 'ملغية'];
+                    $incTypeMap = ['fixed' => 'مبلغ ثابت', 'percentage' => 'نسبة %'];
+                    ?>
+                    <div class="table-responsive">
+                        <table class="table hr-detail-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>سنة الخدمة / المرجع</th>
+                                    <th>نوع العلاوة</th>
+                                    <th>القيمة</th>
+                                    <th>المبلغ المحسوب</th>
+                                    <th>الراتب السابق → الجديد</th>
+                                    <th>تاريخ السريان</th>
+                                    <th>الحالة</th>
+                                    <th>إجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($increments as $i => $inc): ?>
+                                <tr>
+                                    <td><?= $i + 1 ?></td>
+                                    <td><strong><?= $inc->getYearLabel() ?></strong></td>
+                                    <td><?= $incTypeMap[$inc->increment_type] ?? $inc->increment_type ?></td>
+                                    <td>
+                                        <?php if ($inc->increment_type === 'percentage'): ?>
+                                            <strong><?= $inc->amount ?>%</strong>
+                                        <?php else: ?>
+                                            <?= number_format($inc->amount, 2) ?>
+                                        <?php endif ?>
+                                    </td>
+                                    <td><strong><?= number_format($inc->calculated_amount ?? 0, 2) ?></strong></td>
+                                    <td>
+                                        <span style="color:#94a3b8"><?= number_format($inc->previous_salary ?? 0, 2) ?></span>
+                                        <i class="fa fa-arrow-left" style="margin:0 4px;color:#800020"></i>
+                                        <strong style="color:#166534"><?= number_format($inc->new_salary ?? 0, 2) ?></strong>
+                                    </td>
+                                    <td><?= Html::encode($inc->effective_date) ?></td>
+                                    <td>
+                                        <?php
+                                        $st = $incStatusMap[$inc->status] ?? $inc->status;
+                                        $stClass = $inc->status === 'applied' ? 'label-success' : ($inc->status === 'pending' ? 'label-warning' : 'label-default');
+                                        ?>
+                                        <span class="label <?= $stClass ?>"><?= $st ?></span>
+                                    </td>
+                                    <td>
+                                        <?php if ($inc->status === 'pending'): ?>
+                                            <?= Html::a('<i class="fa fa-check"></i> تطبيق', ['/hr/hr-payroll/apply-increment', 'id' => $inc->id], [
+                                                'class' => 'btn btn-xs btn-success',
+                                                'data-confirm' => 'هل أنت متأكد من تطبيق هذه العلاوة؟ سيتم تحديث الراتب الأساسي.',
+                                                'data-method' => 'post',
+                                            ]) ?>
+                                        <?php elseif ($inc->status === 'applied'): ?>
+                                            <span class="text-muted"><i class="fa fa-check-circle"></i> مطبّقة</span>
+                                        <?php endif ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach ?>
+                            </tbody>
                         </table>
                     </div>
                 <?php endif ?>

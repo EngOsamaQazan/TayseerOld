@@ -82,7 +82,7 @@ class AIEngine
         $this->contract = $contract;
         $riskEngine = new RiskEngine($contract);
         $this->risk = $riskEngine->assess();
-        $this->calc = new ContractCalculations($contract);
+        $this->calc = new ContractCalculations($contract->id);
         $this->dpd = $riskEngine->getDPD();
         $this->brokenPromises = $riskEngine->getBrokenPromisesCount();
         $this->lastContactDate = $riskEngine->getLastContactDate();

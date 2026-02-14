@@ -22,39 +22,66 @@ use kartik\select2\Select2;
 $this->registerCssFile(Yii::getAlias('@web') . '/css/hr.css', ['depends' => ['yii\web\YiiAsset']]);
 
 /* ─── جلب بيانات القوائم المنسدلة إن لم تمرر من المتحكم ─── */
+/* كل استعلام محمي بـ try/catch حتى لا تنهار الصفحة بسبب فشل قائمة منسدلة واحدة */
+
 if (!isset($grades)) {
-    $grades = ArrayHelper::map(
-        (new Query())->select(['id', 'name'])->from('{{%hr_grade}}')->where(['is_deleted' => 0])->all(),
-        'id', 'name'
-    );
+    try {
+        $grades = ArrayHelper::map(
+            (new Query())->select(['id', 'name'])->from('{{%hr_grade}}')->where(['is_deleted' => 0])->all(),
+            'id', 'name'
+        );
+    } catch (\Exception $e) {
+        $grades = [];
+        Yii::warning('فشل جلب الدرجات الوظيفية: ' . $e->getMessage(), __METHOD__);
+    }
 }
 
 if (!isset($branches)) {
-    $branches = ArrayHelper::map(
-        (new Query())->select(['id', 'name'])->from('{{%location}}')->all(),
-        'id', 'name'
-    );
+    try {
+        $branches = ArrayHelper::map(
+            (new Query())->select(['id', 'name'])->from('{{%location}}')->all(),
+            'id', 'name'
+        );
+    } catch (\Exception $e) {
+        $branches = [];
+        Yii::warning('فشل جلب الفروع: ' . $e->getMessage(), __METHOD__);
+    }
 }
 
 if (!isset($shifts)) {
-    $shifts = ArrayHelper::map(
-        (new Query())->select(['id', 'name'])->from('{{%hr_work_shift}}')->where(['is_deleted' => 0])->all(),
-        'id', 'name'
-    );
+    try {
+        $shifts = ArrayHelper::map(
+            (new Query())->select(['id', 'name'])->from('{{%hr_work_shift}}')->where(['is_deleted' => 0])->all(),
+            'id', 'name'
+        );
+    } catch (\Exception $e) {
+        $shifts = [];
+        Yii::warning('فشل جلب الورديات: ' . $e->getMessage(), __METHOD__);
+    }
 }
 
 if (!isset($cities)) {
-    $cities = ArrayHelper::map(
-        (new Query())->select(['id', 'name'])->from('{{%city}}')->all(),
-        'id', 'name'
-    );
+    try {
+        $cities = ArrayHelper::map(
+            (new Query())->select(['id', 'name'])->from('{{%city}}')->all(),
+            'id', 'name'
+        );
+    } catch (\Exception $e) {
+        $cities = [];
+        Yii::warning('فشل جلب المدن: ' . $e->getMessage(), __METHOD__);
+    }
 }
 
 if (!isset($banks)) {
-    $banks = ArrayHelper::map(
-        (new Query())->select(['id', 'name'])->from('{{%bank}}')->all(),
-        'id', 'name'
-    );
+    try {
+        $banks = ArrayHelper::map(
+            (new Query())->select(['id', 'name'])->from('{{%bancks}}')->all(),
+            'id', 'name'
+        );
+    } catch (\Exception $e) {
+        $banks = [];
+        Yii::warning('فشل جلب البنوك: ' . $e->getMessage(), __METHOD__);
+    }
 }
 
 /* ─── خريطة أنواع العقود ─── */
@@ -105,7 +132,7 @@ $isNewRecord = $model->isNewRecord;
         ],
     ]); ?>
 
-    <?php if ($form->errorSummary($model) !== ''): ?>
+    <?php if ($model->hasErrors()): ?>
         <div class="alert alert-danger hr-alert">
             <i class="fa fa-exclamation-triangle"></i>
             <?= $form->errorSummary($model) ?>

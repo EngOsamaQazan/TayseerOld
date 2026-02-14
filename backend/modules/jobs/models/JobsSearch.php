@@ -5,29 +5,30 @@ namespace backend\modules\jobs\models;
 use Yii;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
-use backend\modules\jobs\models\Jobs;
+
 /**
- * JobsSearch represents the model behind the search form about `backend\modules\jobs\models\Jobs`.
+ * JobsSearch represents the model behind the search form of `backend\modules\jobs\models\Jobs`.
  */
 class JobsSearch extends Jobs
 {
+    public $customersCount;
+
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function rules()
     {
         return [
-            [['id', 'job_type'], 'integer'],
-            [['name'], 'safe'],
+            [['id', 'job_type', 'status'], 'integer'],
+            [['name', 'address_city', 'address_area', 'email'], 'safe'],
         ];
     }
 
     /**
-     * @inheritdoc
+     * {@inheritdoc}
      */
     public function scenarios()
     {
-        // bypass scenarios() implementation in the parent class
         return Model::scenarios();
     }
 
@@ -35,7 +36,6 @@ class JobsSearch extends Jobs
      * Creates data provider instance with search query applied
      *
      * @param array $params
-     *
      * @return ActiveDataProvider
      */
     public function search($params)
@@ -44,22 +44,30 @@ class JobsSearch extends Jobs
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
+            'sort' => [
+                'defaultOrder' => ['id' => SORT_DESC],
+            ],
+            'pagination' => [
+                'pageSize' => 20,
+            ],
         ]);
 
         $this->load($params);
 
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
             return $dataProvider;
         }
 
         $query->andFilterWhere([
             'id' => $this->id,
             'job_type' => $this->job_type,
+            'status' => $this->status,
         ]);
 
-        $query->andFilterWhere(['like', 'name', $this->name]);
+        $query->andFilterWhere(['like', 'name', $this->name])
+            ->andFilterWhere(['like', 'address_city', $this->address_city])
+            ->andFilterWhere(['like', 'address_area', $this->address_area])
+            ->andFilterWhere(['like', 'email', $this->email]);
 
         return $dataProvider;
     }

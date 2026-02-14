@@ -16,7 +16,7 @@ use yii\bootstrap\Modal;
         <?= Html::csrfMetaTags() ?>
         <?php $this->head() ?>
     </head>
-    <body class="hold-transition skin-blue sidebar-mini">
+    <body class="hold-transition skin-blue sidebar-mini layout-print">
         <?php $this->beginBody() ?>
             <?= $this->render('content.php', ['content' => $content]) ?>
         <?php $this->endBody() ?>

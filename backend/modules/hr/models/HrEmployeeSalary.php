@@ -73,7 +73,8 @@ class HrEmployeeSalary extends ActiveRecord
             [['user_id', 'component_id', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'updated_by'], 'integer'],
             [['amount'], 'number'],
             [['effective_from', 'effective_to'], 'safe'],
-            [['currency'], 'string', 'max' => 10],
+            // currency column removed from DB schema
+            // [['currency'], 'string', 'max' => 10],
             [['notes'], 'string'],
         ];
     }

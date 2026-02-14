@@ -56,6 +56,7 @@ $mainMenuItems = [
         'items' => [
             ['label' => 'لوحة تحكم HR',      'icon' => 'tachometer',        'url' => ['/hr/hr-dashboard/index']],
             ['label' => 'سجل الموظفين',      'icon' => 'users',             'url' => ['/hr/hr-employee/index']],
+            ['label' => 'العلاوات السنوية',  'icon' => 'line-chart',        'url' => ['/hr/hr-payroll/increments']],
             ['label' => 'الحضور والانصراف',   'icon' => 'clock-o',           'url' => ['/hr/hr-attendance/index']],
             ['label' => 'مسيرات الرواتب',    'icon' => 'money',             'url' => ['/hr/hr-payroll/index']],
             ['label' => 'السلف والقروض',     'icon' => 'credit-card',       'url' => ['/hr/hr-loan/index']],

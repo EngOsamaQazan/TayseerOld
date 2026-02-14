@@ -101,7 +101,7 @@ return [
         'buttons' => [
             'all' => fn($url, $m) => ButtonDropdown::widget([
                 'encodeLabel' => false,
-                'label' => '<i class="fa fa-cogs"></i>',
+                'label' => '<i class="fa fa-ellipsis-v"></i>',
                 'dropdown' => [
                     'encodeLabels' => false,
                     'items' => [
@@ -113,7 +113,7 @@ return [
                         '<li class="divider"></li>',
                         ['label' => '<i class="fa fa-trash text-danger"></i> حذف', 'url' => ['delete', 'id' => $m->id], 'linkOptions' => ['data' => ['method' => 'post', 'confirm' => 'هل أنت متأكد من حذف هذا العميل؟']]],
                     ],
-                    'options' => ['class' => 'dropdown-menu-right'],
+                    'options' => ['class' => 'dropdown-menu-left'],
                 ],
                 'options' => ['class' => 'btn-default btn-xs'],
                 'split' => false,

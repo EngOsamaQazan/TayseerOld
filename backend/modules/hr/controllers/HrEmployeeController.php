@@ -13,6 +13,7 @@ use yii\data\ArrayDataProvider;
 use yii\data\SqlDataProvider;
 use yii\db\Query;
 use yii\helpers\ArrayHelper;
+use backend\modules\hr\models\HrAnnualIncrement;
 use backend\modules\hr\models\HrEmployeeExtended;
 use backend\modules\hr\models\HrEmergencyContact;
 use backend\modules\hr\models\HrEmployeeDocument;
@@ -48,6 +49,7 @@ class HrEmployeeController extends Controller
                 'class' => VerbFilter::class,
                 'actions' => [
                     'delete' => ['POST'],
+                    'toggle-status' => ['POST'],
                 ],
             ],
         ];
@@ -75,7 +77,8 @@ class HrEmployeeController extends Controller
                 'u.name',
                 'u.email',
                 'u.mobile',
-                'u.employee_status',
+                'u.employee_type',       // activation state: Active/Suspended
+                'u.employee_status',     // employment type: Full_time/Part_time
                 'u.date_of_hire',
                 'u.avatar',
                 'ext.employee_code',
@@ -104,7 +107,8 @@ class HrEmployeeController extends Controller
             $query->andWhere(['u.department' => $searchDepartment]);
         }
         if (!empty($searchStatus)) {
-            $query->andWhere(['u.employee_status' => $searchStatus]);
+            // employee_type stores activation state (Active/Suspended)
+            $query->andWhere(['u.employee_type' => $searchStatus]);
         }
 
         $query->andWhere(['not', ['u.confirmed_at' => null]]);
@@ -192,6 +196,12 @@ class HrEmployeeController extends Controller
             ->orderBy(['effective_from' => SORT_DESC])
             ->all();
 
+        // العلاوات السنوية لهذا الموظف
+        $increments = HrAnnualIncrement::find()
+            ->where(['user_id' => $id, 'is_deleted' => 0])
+            ->orderBy(['increment_year' => SORT_DESC, 'id' => SORT_DESC])
+            ->all();
+
         $request = Yii::$app->request;
         if ($request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
@@ -204,6 +214,7 @@ class HrEmployeeController extends Controller
                     'emergencyContacts' => $emergencyContacts,
                     'attendanceSummary' => $attendanceSummary,
                     'salaryComponents' => $salaryComponents,
+                    'increments' => $increments,
                 ]),
             ];
         }
@@ -215,6 +226,7 @@ class HrEmployeeController extends Controller
             'emergencyContacts' => $emergencyContacts,
             'attendanceSummary' => $attendanceSummary,
             'salaryComponents' => $salaryComponents,
+            'increments' => $increments,
         ]);
     }
 
@@ -365,6 +377,62 @@ class HrEmployeeController extends Controller
     }
 
     /**
+     * Toggle employee active/suspended status.
+     * Sets employee_status and blocked_at accordingly.
+     *
+     * @param int $id User ID (os_user.id)
+     * @return Response
+     */
+    public function actionToggleStatus($id)
+    {
+        $user = User::findOne($id);
+        if ($user === null) {
+            throw new NotFoundHttpException('الموظف المطلوب غير موجود.');
+        }
+
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            // Note: employee_type stores activation state ('Active'/'Suspended')
+            //       employee_status stores employment type ('Full_time'/'Part_time')
+            if ($user->employee_type === 'Suspended' || $user->blocked_at !== null) {
+                // ── تفعيل الموظف ──
+                $user->employee_type = 'Active';
+                $user->blocked_at = null;
+                $flashMessage = 'تم تفعيل الموظف "' . ($user->name ?: $user->username) . '" بنجاح.';
+                $flashType = 'success';
+            } else {
+                // ── تعطيل الموظف ──
+                $user->employee_type = 'Suspended';
+                $user->blocked_at = time();
+                $flashMessage = 'تم تعطيل الموظف "' . ($user->name ?: $user->username) . '" بنجاح.';
+                $flashType = 'warning';
+            }
+
+            $user->updated_at = time();
+
+            if (!$user->save(false)) {
+                throw new \Exception('فشل تحديث حالة الموظف: ' . implode(', ', $user->getFirstErrors()));
+            }
+
+            $transaction->commit();
+            Yii::$app->session->setFlash($flashType, $flashMessage);
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::$app->session->setFlash('error', $e->getMessage());
+        }
+
+        if (Yii::$app->request->isAjax) {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+            return [
+                'success' => true,
+                'forceReload' => '#crud-datatable-pjax',
+            ];
+        }
+
+        return $this->redirect(['index']);
+    }
+
+    /**
      * Export employees to CSV.
      *
      * @return void
@@ -439,6 +507,90 @@ class HrEmployeeController extends Controller
 
         fclose($fp);
         Yii::$app->end();
+    }
+
+    /**
+     * كشف حساب الموظف السنوي — Employee Annual Statement
+     *
+     * @param int $id User ID
+     * @param int|null $year
+     * @return string
+     */
+    public function actionStatement($id, $year = null)
+    {
+        $user = User::findOne($id);
+        if (!$user) {
+            throw new NotFoundHttpException('الموظف غير موجود.');
+        }
+
+        $year = $year ?: (int) date('Y');
+
+        // Get all payslips for this employee for the year
+        $payslips = (new Query())
+            ->select([
+                'ps.id as payslip_id',
+                'ps.basic_salary',
+                'ps.total_earnings',
+                'ps.total_deductions',
+                'ps.net_salary',
+                'ps.working_days',
+                'ps.present_days',
+                'ps.absent_days',
+                'ps.leave_days',
+                'ps.overtime_hours',
+                'ps.status as payslip_status',
+                'pr.period_month',
+                'pr.period_year',
+                'pr.run_code',
+                'pr.status as run_status',
+            ])
+            ->from('{{%hr_payslip}} ps')
+            ->innerJoin('{{%hr_payroll_run}} pr', 'pr.id = ps.payroll_run_id AND pr.is_deleted = 0')
+            ->where([
+                'ps.user_id' => $id,
+                'ps.is_deleted' => 0,
+                'pr.period_year' => $year,
+            ])
+            ->orderBy(['pr.period_month' => SORT_ASC])
+            ->all();
+
+        // Get payslip lines for each payslip
+        $payslipIds = array_column($payslips, 'payslip_id');
+        $lines = [];
+        if (!empty($payslipIds)) {
+            $allLines = (new Query())
+                ->select(['payslip_id', 'component_type', 'description', 'amount', 'sort_order'])
+                ->from('{{%hr_payslip_line}}')
+                ->where(['payslip_id' => $payslipIds])
+                ->orderBy(['payslip_id' => SORT_ASC, 'sort_order' => SORT_ASC])
+                ->all();
+
+            foreach ($allLines as $line) {
+                $lines[$line['payslip_id']][] = $line;
+            }
+        }
+
+        // Calculate yearly totals
+        $yearlyTotals = [
+            'total_earnings' => 0,
+            'total_deductions' => 0,
+            'total_net' => 0,
+            'total_basic' => 0,
+        ];
+        foreach ($payslips as $ps) {
+            $yearlyTotals['total_earnings'] += (float)$ps['total_earnings'];
+            $yearlyTotals['total_deductions'] += (float)$ps['total_deductions'];
+            $yearlyTotals['total_net'] += (float)$ps['net_salary'];
+            $yearlyTotals['total_basic'] += (float)$ps['basic_salary'];
+        }
+
+        return $this->render('statement', [
+            'user' => $user,
+            'year' => $year,
+            'payslips' => $payslips,
+            'lines' => $lines,
+            'yearlyTotals' => $yearlyTotals,
+        ]);
     }
 
     /**

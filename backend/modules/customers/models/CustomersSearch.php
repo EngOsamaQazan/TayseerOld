@@ -63,6 +63,7 @@ class CustomersSearch extends Customers
 
             $dataProvider = new ActiveDataProvider([
                 'query' => $query,
+                'sort' => ['defaultOrder' => ['id' => SORT_DESC]],
                 'pagination' => [
                     'pageSize' => $params['CustomersSearch']['number_row'],
                 ],
@@ -70,6 +71,7 @@ class CustomersSearch extends Customers
         }else{
             $dataProvider = new ActiveDataProvider([
                 'query' => $query,
+                'sort' => ['defaultOrder' => ['id' => SORT_DESC]],
             ]);
         }
 

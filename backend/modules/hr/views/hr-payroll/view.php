@@ -149,6 +149,10 @@ foreach ($payslips as $ps) {
             <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['index'], ['class' => 'btn btn-default btn-sm']) ?>
 
             <?php if (in_array($st, ['draft', 'calculated'])): ?>
+                <?= Html::a('<i class="fa fa-sliders"></i> عمولات وتعديلات', ['adjustments', 'id' => $model->id], [
+                    'class' => 'btn btn-warning btn-sm',
+                    'title' => 'إضافة عمولات أو تعديلات شهرية قبل الحساب',
+                ]) ?>
                 <?= Html::a('<i class="fa fa-calculator"></i> حساب', ['calculate', 'id' => $model->id], [
                     'class' => 'btn btn-info btn-sm',
                     'data-method' => 'post',

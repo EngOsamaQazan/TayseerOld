@@ -2,35 +2,34 @@
 
 use yii\helpers\Url;
 use yii\helpers\Html;
-use yii\bootstrap\Modal;
 use kartik\grid\GridView;
-use johnitvn\ajaxcrud\CrudAsset;
-use johnitvn\ajaxcrud\BulkButtonWidget;
+use yii\bootstrap\Modal;
 
-/* @var $this yii\web\View */
-/* @var $searchModel backend\modules\jobs\models\JobsSearch */
-/* @var $dataProvider yii\data\ActiveDataProvider */
-
-$this->title = Yii::t('app', 'Jobs');
+$this->title = 'جهات العمل';
 $this->params['breadcrumbs'][] = $this->title;
-
-CrudAsset::register($this);
-
 ?>
+
 <div class="jobs-index">
+
+    <?= $this->render('_search', ['model' => $searchModel]) ?>
+
     <div id="ajaxCrudDatatable">
         <?= GridView::widget([
             'id' => 'crud-datatable',
             'dataProvider' => $dataProvider,
             'filterModel' => $searchModel,
-            'summary' => '',
+            'summary' => '<div class="text-muted">عرض {begin}-{end} من أصل {totalCount} جهة عمل</div>',
+            'pjax' => true,
+            'pjaxSettings' => [
+                'options' => ['id' => 'crud-datatable-pjax'],
+            ],
             'columns' => require(__DIR__ . '/_columns.php'),
             'toolbar' => [
                 ['content' =>
-                    Html::a('<i class="glyphicon glyphicon-plus"></i>', ['create'],
-                        ['title' => 'Create new Jobs', 'class' => 'btn btn-default']) .
-                    Html::a('<i class="glyphicon glyphicon-repeat"></i>', [''],
-                        ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'Reset Grid']) .
+                    Html::a('<i class="fa fa-plus"></i> إضافة جهة عمل', ['create'],
+                        ['class' => 'btn btn-success', 'title' => 'إضافة جهة عمل جديدة']) .
+                    Html::a('<i class="fa fa-refresh"></i>', [''],
+                        ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'تحديث']) .
                     '{toggleData}' .
                     '{export}'
                 ],
@@ -38,14 +37,11 @@ CrudAsset::register($this);
             'striped' => true,
             'condensed' => true,
             'responsive' => true,
+            'hover' => true,
             'panel' => [
                 'type' => 'default',
-            ]
+                'heading' => '<i class="fa fa-building"></i> قائمة جهات العمل',
+            ],
         ]) ?>
     </div>
 </div>
-<?php Modal::begin([
-    "id" => "ajaxCrudModal",
-    "footer" => "",// always need it for jquery plugin
-]) ?>
-<?php Modal::end(); ?>

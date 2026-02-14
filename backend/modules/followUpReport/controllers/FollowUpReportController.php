@@ -65,9 +65,7 @@ class FollowUpReportController extends Controller
      */
     public function actionIndex()
     {
-        $searchModel = new FollowUpReportSearch();
-        $searchModel->reminder = date("Y-m-d");
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        // إنشاء/تحديث الـ VIEW أولاً قبل أي استخدام للموديل
         $sql = "CREATE OR REPLACE VIEW os_follow_up_report AS SELECT
     c.*,
     f.date_time,
@@ -133,6 +131,14 @@ WHERE
         $connection = Yii::$app->getDb();
         $command = $connection->createCommand($sql);
         $command->execute();
+
+        // تحديث schema cache بعد إعادة إنشاء الـ VIEW
+        $connection->getSchema()->refreshTableSchema('os_follow_up_report');
+
+        // الآن يمكن استخدام الموديل بأمان
+        $searchModel = new FollowUpReportSearch();
+        $searchModel->reminder = date("Y-m-d");
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $counter = $searchModel->searchCounter(Yii::$app->request->queryParams);
         $custamerCounter = $searchModel->searchCustamerCounter(Yii::$app->request->queryParams);
         return $this->render('index', [

@@ -128,33 +128,100 @@
     }, 200);
   });
 
-  /* ========== ACTIONS MENU ========== */
+  /* ========== ACTIONS MENU (portal approach) ========== */
+  var $activePortal = null;  // the cloned menu currently in <body>
+  var $activeWrap   = null;  // the .ct-act-wrap that owns it
+
+  function closeActMenu() {
+    if ($activePortal) {
+      $activePortal.remove();
+      $activePortal = null;
+    }
+    if ($activeWrap) {
+      $activeWrap.removeClass('open');
+      // Restore original menu visibility
+      $activeWrap.find('.ct-act-menu').css('display', '');
+      $activeWrap = null;
+    }
+  }
+
+  function openActMenu($wrap) {
+    var $trigger = $wrap.find('.ct-act-trigger');
+    var $menu    = $wrap.find('.ct-act-menu');
+
+    // Clone menu and append to body so it escapes overflow:hidden
+    var $portal = $menu.clone(true, true);
+    $portal.removeClass('ct-act-menu').addClass('ct-act-menu-portal');
+    $portal.css('display', ''); // ensure portal is not hidden
+    $('body').append($portal);
+
+    // Hide the original menu (portal will be visible instead)
+    $menu.css('display', 'none');
+
+    // Measure after appending (so dimensions are correct)
+    var triggerRect = $trigger[0].getBoundingClientRect();
+    var menuHeight  = $portal.outerHeight();
+    var menuWidth   = $portal.outerWidth();
+    var viewH = window.innerHeight;
+    var viewW = window.innerWidth;
+    var gap = 4;
+
+    // Vertical: prefer below, fallback above
+    var spaceBelow = viewH - triggerRect.bottom - gap;
+    var spaceAbove = triggerRect.top - gap;
+    var top;
+    if (spaceBelow >= menuHeight) {
+      top = triggerRect.bottom + gap;
+    } else if (spaceAbove >= menuHeight) {
+      top = triggerRect.top - menuHeight - gap;
+    } else {
+      top = spaceBelow >= spaceAbove
+        ? triggerRect.bottom + gap
+        : Math.max(gap, triggerRect.top - menuHeight - gap);
+    }
+
+    // Horizontal: align to right edge of trigger (RTL)
+    var left = triggerRect.right - menuWidth;
+    if (left < gap) left = gap;
+    if (left + menuWidth > viewW - gap) left = viewW - menuWidth - gap;
+
+    $portal.css({ top: top + 'px', left: left + 'px' });
+
+    $wrap.addClass('open');
+    $activePortal = $portal;
+    $activeWrap   = $wrap;
+  }
+
   $(document).on('click', '.ct-act-trigger', function (e) {
     e.stopPropagation();
     var $wrap = $(this).closest('.ct-act-wrap');
     var wasOpen = $wrap.hasClass('open');
 
-    // Close all menus
-    $('.ct-act-wrap').removeClass('open');
+    closeActMenu();
 
     if (!wasOpen) {
-      $wrap.addClass('open');
-
-      // Adjust position if menu goes off screen
-      var $menu = $wrap.find('.ct-act-menu');
-      var menuRect = $menu[0].getBoundingClientRect();
-      if (menuRect.bottom > window.innerHeight) {
-        $menu.css({ top: 'auto', bottom: '100%', marginTop: 0, marginBottom: '4px' });
-      }
+      openActMenu($wrap);
     }
   });
 
-  $(document).on('click', function () {
-    $('.ct-act-wrap').removeClass('open');
+  // Close on outside click
+  $(document).on('click', function (e) {
+    if ($activePortal && !$(e.target).closest('.ct-act-menu-portal').length) {
+      closeActMenu();
+    }
   });
 
-  $(document).on('click', '.ct-act-menu', function (e) {
+  // Prevent portal menu clicks from closing
+  $(document).on('click', '.ct-act-menu-portal', function (e) {
     e.stopPropagation();
+  });
+
+  // Close on scroll / resize so menu doesn't float detached
+  $(window).on('scroll resize', function () {
+    closeActMenu();
+  });
+  $(document).on('scroll', '.ct-table-wrap', function () {
+    closeActMenu();
   });
 
   /* ========== COPY CONTRACT ID ========== */

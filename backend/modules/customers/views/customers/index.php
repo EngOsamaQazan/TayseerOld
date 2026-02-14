@@ -12,6 +12,63 @@ use johnitvn\ajaxcrud\CrudAsset;
 CrudAsset::register($this);
 $this->title = 'العملاء';
 $this->params['breadcrumbs'][] = $this->title;
+
+/* Fix: allow dropdown menus to overflow outside the grid panel */
+$this->registerCss('
+    /* Override ALL parent containers that clip the dropdown */
+    .customers-index .panel,
+    .customers-index .panel-body,
+    .customers-index .kv-grid-container,
+    .customers-index .table-responsive,
+    .customers-index .grid-view,
+    .customers-index #ajaxCrudDatatable,
+    .customers-index .table-bordered {
+        overflow: visible !important;
+    }
+
+    /* RTL fix: force dropdown to open towards the RIGHT (center of page)
+       since the action column is on the LEFT edge in RTL */
+    .customers-index .dropdown-menu {
+        left: 0 !important;
+        right: auto !important;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        border-radius: 6px;
+        z-index: 9999;
+    }
+
+    .customers-index .btn-group .dropdown-toggle {
+        background: #fdf0f3;
+        border: 1px solid #f0c0cc;
+        color: #800020;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    }
+    .customers-index .btn-group .dropdown-toggle:hover,
+    .customers-index .btn-group .dropdown-toggle:focus {
+        background: #800020;
+        color: #fff;
+        border-color: #800020;
+    }
+    .customers-index .btn-group .dropdown-toggle .caret {
+        display: none;
+    }
+    .customers-index .dropdown-menu > li > a {
+        padding: 8px 16px;
+        font-size: 13px;
+        transition: background 0.15s ease;
+    }
+    .customers-index .dropdown-menu > li > a:hover {
+        background: #fdf0f3;
+        color: #800020;
+    }
+');
 ?>
 
 <div class="customers-index">

@@ -41,7 +41,7 @@ class FollowUpController extends Controller
                 'class' => AccessControl::className(),
                 'rules' => [
                     [
-                        'actions' => ['login', 'error'],
+                        'actions' => ['login', 'error', 'verify-statement'],
                         'allow' => true,
                     ],
                     [
@@ -374,6 +374,66 @@ class FollowUpController extends Controller
         $this->layout = '/print-template-1';
         return $this->render('clearance', [
             'contract_id' => $contract_id
+        ]);
+    }
+
+    /**
+     * Verify account statement barcode: فعال / منتهي الصلاحية / غير صحيح
+     * Statement expires when a new payment (دفعة) or expense (مصروف) is added.
+     */
+    public function actionVerifyStatement($c, $d, $t, $s)
+    {
+        $secret = Yii::$app->params['statementVerifySecret'] ?? 'jadal-statement-verify-' . (defined('YII_ENV') ? YII_ENV : 'prod');
+        $payload = $c . '|' . $d . '|' . $t;
+        $expectedSig = hash_hmac('sha256', $payload, $secret);
+
+        $status = 'invalid';   // غير صحيح
+        $label = 'غير صحيح';
+        $message = 'الباركود غير صالح أو تم التلاعب به.';
+
+        if (!hash_equals($expectedSig, $s)) {
+            return $this->render('verify-statement', [
+                'status' => $status,
+                'label' => $label,
+                'message' => $message,
+            ]);
+        }
+
+        $contractId = (int) $c;
+        $statementLastDate = $t; // last movement date at statement print time (Y-m-d)
+
+        $db = Yii::$app->db;
+        $currentMax = $db->createCommand("
+            SELECT MAX(dt) as mx FROM (
+                SELECT DATE(Date_of_sale) AS dt FROM os_contracts WHERE id = :cid
+                UNION ALL
+                SELECT DATE(created_at) FROM os_judiciary WHERE contract_id = :cid
+                UNION ALL
+                SELECT DATE(created_at) FROM os_expenses WHERE contract_id = :cid
+                UNION ALL
+                SELECT DATE(date) FROM os_income WHERE contract_id = :cid
+            ) u
+        ", [':cid' => $contractId])->queryScalar();
+
+        if (!$currentMax) {
+            $status = 'valid';
+            $label = 'فعال';
+            $message = 'كشف الحساب صالح ولم تُضف حركات جديدة بعد تاريخ إصداره.';
+        } elseif ($currentMax > $statementLastDate) {
+            $status = 'expired';
+            $label = 'منتهي الصلاحية';
+            $message = 'تم إضافة دفعة أو مصروف جديد على العقد بعد تاريخ هذا الكشف. يرجى طلب كشف حساب محدث.';
+        } else {
+            $status = 'valid';
+            $label = 'فعال';
+            $message = 'كشف الحساب صالح ولم تُضف حركات جديدة بعد تاريخ إصداره.';
+        }
+
+        return $this->render('verify-statement', [
+            'status' => $status,
+            'label' => $label,
+            'message' => $message,
+            'contract_id' => $contractId,
         ]);
     }
 

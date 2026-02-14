@@ -499,6 +499,19 @@ body:has(.ct-page) .content-header {
 .ct-act-wrap.open .ct-act-menu {
   display: block;
 }
+/* Portal: when menu is appended to body */
+.ct-act-menu-portal {
+  display: block;
+  position: fixed;
+  min-width: 180px;
+  background: var(--clr-surface, #fff);
+  border: 1px solid var(--clr-border, #e0e0e0);
+  border-radius: var(--radius-sm, 6px);
+  box-shadow: var(--shadow-lg, 0 8px 30px rgba(0,0,0,0.12));
+  z-index: 99999;
+  padding: 6px 0;
+  animation: menuIn 0.15s ease;
+}
 .ct-act-menu a {
   display: flex;
   align-items: center;

@@ -27,7 +27,7 @@ class RiskEngine
     public function __construct($contract)
     {
         $this->contract = $contract;
-        $this->calc = new ContractCalculations($contract);
+        $this->calc = new ContractCalculations($contract->id);
     }
 
     /**
