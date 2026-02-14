@@ -52,6 +52,13 @@ $this->registerCssFile('@web/css/image-manager-admin.css');
                 <span class="stat-label">صور يتيمة</span>
             </div>
         </div>
+        <div class="img-stat-card stat-no-customer">
+            <div class="stat-icon"><i class="fa fa-user-times"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="statNoCustomer">—</span>
+                <span class="stat-label">غير مرتبطة بعميل</span>
+            </div>
+        </div>
         <div class="img-stat-card stat-unlinked">
             <div class="stat-icon"><i class="fa fa-unlink"></i></div>
             <div class="stat-info">
@@ -90,6 +97,7 @@ $this->registerCssFile('@web/css/image-manager-admin.css');
                 <button class="filter-tab active" data-filter="all">الكل</button>
                 <button class="filter-tab" data-filter="customers">مرتبطة بعملاء</button>
                 <button class="filter-tab" data-filter="orphans">يتيمة <span class="orphan-badge" id="orphanBadge"></span></button>
+                <button class="filter-tab" data-filter="no_customer">غير مرتبطة بعميل <span class="no-customer-badge" id="noCustomerBadge"></span></button>
                 <button class="filter-tab" data-filter="unlinked">بدون ربط <span class="unlinked-badge" id="unlinkedBadge"></span></button>
                 <button class="filter-tab" data-filter="missing">ملفات مفقودة <span class="missing-badge" id="missingBadge"></span></button>
                 <button class="filter-tab" data-filter="contracts">عقود</button>
@@ -267,11 +275,13 @@ function loadStats() {
             document.getElementById('statLinked').textContent = data.linked.toLocaleString('ar');
             document.getElementById('statOrphans').textContent = data.orphans.toLocaleString('ar');
             document.getElementById('statUnlinked').textContent = (data.unlinked || 0).toLocaleString('ar');
+            document.getElementById('statNoCustomer').textContent = (data.no_customer || 0).toLocaleString('ar');
             document.getElementById('statContracts').textContent = data.contract_images.toLocaleString('ar');
             document.getElementById('statSmart').textContent = (data.smart_media_count || 0).toLocaleString('ar');
             document.getElementById('statMissing').textContent = '~' + data.estimated_missing.toLocaleString('ar');
             document.getElementById('orphanBadge').textContent = data.orphans;
             document.getElementById('unlinkedBadge').textContent = data.unlinked || 0;
+            document.getElementById('noCustomerBadge').textContent = data.no_customer || 0;
             document.getElementById('missingBadge').textContent = '~' + data.estimated_missing;
             document.getElementById('smartBadge').textContent = data.smart_media_count || 0;
             document.getElementById('totalCount').textContent = grandTotal.toLocaleString('ar');

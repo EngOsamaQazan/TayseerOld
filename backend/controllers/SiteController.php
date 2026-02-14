@@ -433,8 +433,11 @@ class SiteController extends Controller
         } elseif ($filter === 'smart_media') {
             $imWhere .= " AND 1=0"; // skip ImageManager
         } elseif ($filter === 'unlinked') {
-            // صور لا ترتبط بأي عميل ولا عقد
+            // صور contractId فارغ أو صفر
             $imWhere .= " AND c.id IS NULL AND (im.contractId IS NULL OR im.contractId = '' OR im.contractId = '0')";
+        } elseif ($filter === 'no_customer') {
+            // كل صورة غير مرتبطة بعميل فعلي (يتيمة + بدون ربط)
+            $imWhere .= " AND im.groupName != 'contracts' AND c.id IS NULL";
         } elseif ($filter === 'missing') {
             // يتم الفلترة لاحقاً بعد التحقق من الملفات — جلب الكل
         }
@@ -459,7 +462,7 @@ class SiteController extends Controller
         $cdParams = [];
         $includeSmartMedia = true;
 
-        if ($filter === 'orphans' || $filter === 'contracts' || $filter === 'unlinked') {
+        if ($filter === 'orphans' || $filter === 'contracts' || $filter === 'unlinked' || $filter === 'no_customer') {
             $includeSmartMedia = false; // Smart Media دائماً مرتبطة بعميل
         }
 
@@ -869,6 +872,12 @@ class SiteController extends Controller
              WHERE c.id IS NULL AND (im.contractId IS NULL OR im.contractId = '' OR im.contractId = '0')"
         )->queryScalar();
 
+        $noCustomer = $db->createCommand(
+            "SELECT COUNT(*) FROM os_ImageManager im 
+             LEFT JOIN os_customers c ON CAST(im.contractId AS UNSIGNED) = c.id AND im.groupName = 'coustmers'
+             WHERE im.groupName != 'contracts' AND c.id IS NULL"
+        )->queryScalar();
+
         // Check missing files across ALL storage locations (sample of 100)
         $sampleImages = $db->createCommand(
             "SELECT id, fileName, fileHash FROM os_ImageManager ORDER BY RAND() LIMIT 100"
@@ -904,6 +913,7 @@ class SiteController extends Controller
             'orphans'           => (int) $orphans,
             'linked'            => (int) $linked,
             'unlinked'          => (int) $unlinked,
+            'no_customer'       => (int) $noCustomer,
             'estimated_missing' => $estimatedMissing,
             'sample_size'       => count($sampleImages),
             'sample_missing'    => $sampleMissing,

@@ -984,6 +984,10 @@
 .s2-meta.phone { color: #0891b2; }
 .s2-message { padding: 16px; text-align: center; color: #999; font-size: 13px; }
 
+/* ═══ No customer stat card ═══ */
+.stat-no-customer { border-right-color: #e67e22; }
+.stat-no-customer .stat-icon { background: rgba(230,126,34,0.1); color: #e67e22; }
+
 /* ═══ Unlinked stat card ═══ */
 .stat-unlinked { border-right-color: #8e44ad; }
 .stat-unlinked .stat-icon { background: rgba(142,68,173,0.1); color: #8e44ad; }
@@ -993,7 +997,7 @@
 .btn-delete:hover { background: var(--img-danger, #e74c3c); color: #fff; border-color: var(--img-danger, #e74c3c); }
 
 /* ═══ Unlinked & Missing badges in filter tabs ═══ */
-.unlinked-badge, .missing-badge {
+.no-customer-badge, .unlinked-badge, .missing-badge {
     display: inline-block;
     font-size: 10px;
     padding: 1px 6px;
@@ -1001,6 +1005,7 @@
     margin-right: 4px;
     color: #fff;
 }
+.no-customer-badge { background: #e67e22; }
 .unlinked-badge { background: #8e44ad; }
 .missing-badge { background: var(--img-warning, #f39c12); }
 
