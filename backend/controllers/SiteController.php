@@ -657,6 +657,10 @@ class SiteController extends Controller
             $results = array_values(array_filter($results, function ($r) { return !$r['fileExists']; }));
             $total = count($results);
             $results = array_slice($results, $offset, $perPage);
+        } elseif ($filter !== 'all') {
+            // استبعاد الملفات المفقودة من كل الفلاتر ما عدا "الكل" و "مفقودة"
+            $results = array_values(array_filter($results, function ($r) { return $r['fileExists']; }));
+            $total = count($results);
         }
 
         // ── تجميع الصور في دفعات (صور رُفعت معاً خلال 2 دقيقة بنفس الـ contractId) ──
