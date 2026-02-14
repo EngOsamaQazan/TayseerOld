@@ -8,6 +8,10 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/deploy.config"
+# استخدام sshpass من مجلد السكربت إن وُجد (للويندوز)
+[ -x "$SCRIPT_DIR/sshpass.exe" ] && export PATH="$SCRIPT_DIR:$PATH"
+# لـ cwrsync على ويندوز: استخدام مسار ويندوز للمصدر (مسارات MSYS مثل /c/...)
+case "$PROJECT_DIR" in /[a-z]/*) RSYNC_SRC="$(cd "$PROJECT_DIR" && pwd -W 2>/dev/null)/"; [ -z "$RSYNC_SRC" ] || [ "$RSYNC_SRC" = "/" ] && RSYNC_SRC="$PROJECT_DIR/" ;; *) RSYNC_SRC="$PROJECT_DIR/" ;; esac
 
 # ألوان للطباعة
 RED='\033[0;31m'
@@ -88,27 +92,23 @@ full_deploy_to_path() {
     if [ -n "$SSH_KEY" ]; then
         ssh_opts="$ssh_opts -i $SSH_KEY"
     fi
-
-    # رفع الملفات
+    # عند استخدام كلمة مرور: rsync يستدعي ssh عبر -e فيجب أن يكون الأمر هو sshpass ssh
+    local rsync_e="ssh $ssh_opts"
     if [ -n "$SSH_PASS" ] && command -v sshpass &>/dev/null; then
-        log_info "→ رفع الملفات (rsync)..."
-        sshpass -p "$SSH_PASS" rsync -avz --delete \
-            -e "ssh $ssh_opts" \
-            "${RSYNC_EXCLUDES[@]}" \
-            "$PROJECT_DIR/" \
-            "$dest/"
-    else
-        if [ -n "$SSH_PASS" ]; then
-            log_error "يجب تثبيت sshpass لاستخدام كلمة المرور: apt install sshpass"
-            exit 1
-        fi
-        log_info "→ رفع الملفات (rsync)..."
-        rsync -avz --delete \
-            -e "ssh $ssh_opts" \
-            "${RSYNC_EXCLUDES[@]}" \
-            "$PROJECT_DIR/" \
-            "$dest/"
+        rsync_e="sshpass -p $SSH_PASS ssh $ssh_opts"
     fi
+
+    # رفع الملفات (تشغيل rsync من داخل المشروع باستخدام . كمصدر لتجنب مشاكل المسار على cwrsync/ويندوز)
+    if [ -n "$SSH_PASS" ] && ! command -v sshpass &>/dev/null; then
+        log_error "يجب تثبيت sshpass لاستخدام كلمة المرور: apt install sshpass"
+        exit 1
+    fi
+    log_info "→ رفع الملفات (rsync)..."
+    (cd "$PROJECT_DIR" && rsync -avz --delete \
+        -e "$rsync_e" \
+        "${RSYNC_EXCLUDES[@]}" \
+        ./ \
+        "$dest/")
 
     # تنفيذ أوامر ما بعد الرفع على السيرفر
     local ssh_cmd="ssh $ssh_opts ${user}@${host}"

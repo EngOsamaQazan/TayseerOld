@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/deploy.config"
 TAR_FILE="$SCRIPT_DIR/.deploy-full-temp.tar.gz"
+[ -x "$SCRIPT_DIR/sshpass.exe" ] && export PATH="$SCRIPT_DIR:$PATH"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

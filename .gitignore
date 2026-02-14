@@ -70,6 +70,7 @@ mysql_data/
 
 # Deploy config (contains credentials)
 deploy.config
+sshpass.exe
 
 # Google Cloud credentials — NEVER commit
 backend/config/credentials/
