@@ -6,18 +6,20 @@ use Yii;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 use backend\modules\followUpReport\models\FollowUpReport;
+use backend\modules\followUpReport\models\FollowUpNoContact;
 
 /**
- * FollowUpReportSearch represents the model behind the search form about `common\models\FollowUpReport`.
+ * FollowUpReportSearch represents the model behind the search form about `FollowUpReport`.
  */
 class FollowUpReportSearch extends FollowUpReport
 {
-
     public $customer_name;
     public $seller_name;
     public $number_row;
     public $users_follow_up;
     public $followed_by;
+    public $never_followed;
+    public $is_can_not_contact;
 
     /**
      * @inheritdoc
@@ -25,9 +27,11 @@ class FollowUpReportSearch extends FollowUpReport
     public function rules()
     {
         return [
-            [['id', 'seller_id', 'is_deleted','number_row','followed_by'], 'integer'],
-            [['type', 'Date_of_sale', 'first_installment_date', 'notes', 'status', 'updated_at', 'selected_image', 'company_id', 'customer_name', 'seller_name', 'date_time', 'promise_to_pay_at', 'reminder'], 'safe'],
-            [['total_value', 'first_installment_value', 'monthly_installment_value','users_follow_up'], 'number'],
+            [['id', 'seller_id', 'is_deleted', 'number_row', 'followed_by', 'never_followed', 'is_can_not_contact'], 'integer'],
+            [['type', 'Date_of_sale', 'first_installment_date', 'notes', 'status', 'updated_at',
+              'selected_image', 'company_id', 'customer_name', 'seller_name',
+              'last_follow_up', 'promise_to_pay_at', 'reminder'], 'safe'],
+            [['total_value', 'first_installment_value', 'monthly_installment_value', 'users_follow_up'], 'number'],
         ];
     }
 
@@ -36,261 +40,253 @@ class FollowUpReportSearch extends FollowUpReport
      */
     public function scenarios()
     {
-        // bypass scenarios() implementation in the parent class
         return Model::scenarios();
     }
 
-    /**
-     * Creates data provider instance with search query applied
-     *
-     * @param array $params
-     *
-     * @return ActiveDataProvider
-     */
+    // ═══════════════════════════════════════════════════
+    //  البحث الرئيسي — تقرير المتابعة
+    // ═══════════════════════════════════════════════════
     public function search($params)
     {
-        $query = FollowUpReport::find()->joinWith(['customersWithoutCondition as c'])->joinWith(['seller as s'])->joinWith(['contract co']);
-        if(!empty($params['FollowUpReportSearch']['number_row'])){
-            $dataProvider = new ActiveDataProvider([
-                'query' => $query,
-                'pagination' => [
-                    'pageSize' => $params['FollowUpReportSearch']['number_row'],
+        $query = FollowUpReport::find()
+            ->joinWith(['customersWithoutCondition as c'])
+            ->joinWith(['seller as s'])
+            ->joinWith(['contract co']);
+
+        $pageSize = !empty($params['FollowUpReportSearch']['number_row'])
+            ? (int)$params['FollowUpReportSearch']['number_row']
+            : 20;
+
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => ['pageSize' => $pageSize],
+            'sort' => [
+                'defaultOrder' => ['never_followed' => SORT_DESC, 'last_follow_up' => SORT_ASC],
+                'attributes' => [
+                    'id',
+                    'Date_of_sale',
+                    'total_value',
+                    'monthly_installment_value',
+                    'first_installment_date',
+                    'last_follow_up',
+                    'due_amount',
+                    'due_installments',
+                    'never_followed',
+                    'customer_name' => [
+                        'asc' => ['c.name' => SORT_ASC],
+                        'desc' => ['c.name' => SORT_DESC],
+                    ],
+                    'seller_name' => [
+                        'asc' => ['s.name' => SORT_ASC],
+                        'desc' => ['s.name' => SORT_DESC],
+                    ],
                 ],
-                'sort' => ['defaultOrder' => ['date_time' => SORT_ASC]],
-
-            ]);
-        }else{
-            $dataProvider = new ActiveDataProvider([
-                'query' => $query,
-                'sort' => ['defaultOrder' => ['date_time' => SORT_ASC]],
-
-            ]);
-        }
-
-        $dataProvider->sort->attributes['customer_name'] = [
-            // The tables are the ones our relation are configured to
-            // in my case they are prefixed with "tbl_"
-            'asc' => ['c.name' => SORT_ASC],
-            'desc' => ['c.name' => SORT_DESC],
-        ];
-        $dataProvider->sort->attributes['seller_name'] = [
-            // The tables are the ones our relation are configured to
-            // in my case they are prefixed with "tbl_"
-            'asc' => ['s.name' => SORT_ASC],
-            'desc' => ['s.name' => SORT_DESC],
-        ];
-
+            ],
+        ]);
 
         $this->load($params);
-
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
             return $dataProvider;
         }
 
+        // ── فلتر بدون أرقام تواصل ──
+        if ($this->is_can_not_contact !== null && $this->is_can_not_contact !== '') {
+            $query->andWhere(['os_follow_up_report.is_can_not_contact' => (int)$this->is_can_not_contact]);
+        }
+
+        // ── فلاتر أساسية ──
         $query->andFilterWhere([
             'os_follow_up_report.id' => $this->id,
             'seller_id' => $this->seller_id,
-            'os_follow_up_report.Date_of_sale' => $this->Date_of_sale,
-            'total_value' => $this->total_value,
-            'os_follow_up_report.first_installment_value' => $this->first_installment_value,
-            'os_follow_up_report.first_installment_date' => $this->first_installment_date,
-            'os_follow_up_report.monthly_installment_value' => $this->monthly_installment_value,
-            'updated_at' => $this->updated_at,
-            'is_deleted' => $this->is_deleted,
-            'date_time' => $this->date_time,
-            'os_follow_up_report.updated_at' => $this->updated_at,
-
-            'os_follow_up_report.is_deleted' => $this->is_deleted,
-            //'reminder' => $this->reminder,
-
         ]);
-        $query->andFilterWhere(['<=', 'promise_to_pay_at', $this->promise_to_pay_at]);
+
+        // ── حالة العقد ──
         if (!empty($this->status)) {
             $query->andFilterWhere(['co.status' => $this->status]);
-        }else{
-            $query->andFilterWhere(['<>', 'co.status', 'finished']);
         }
+
+        // ── فلتر "لم يُتابع أبداً" ──
+        if ($this->never_followed !== null && $this->never_followed !== '') {
+            $query->andFilterWhere(['never_followed' => $this->never_followed]);
+        }
+
+        // ── فلتر التذكير — بشكل لا يستثني العقود بدون متابعات ──
+        if (!empty($this->reminder)) {
+            // اعرض العقود التي تذكيرها <= التاريخ المحدد أو التي لم تُتابع أبداً
+            $query->andWhere([
+                'or',
+                ['<=', 'reminder', $this->reminder],
+                ['never_followed' => 1],
+            ]);
+        }
+
+        // ── فلتر وعد بالدفع ──
+        $query->andFilterWhere(['<=', 'promise_to_pay_at', $this->promise_to_pay_at]);
+
+        // ── بحث نصي ──
         $query->andFilterWhere(['like', 'type', $this->type])
             ->andFilterWhere(['like', 'notes', $this->notes])
-            ->andFilterWhere(['like', 'selected_image', $this->selected_image])
             ->andFilterWhere(['like', 'company_id', $this->company_id]);
-        $query->andFilterWhere(['<=', 'reminder', $this->reminder]);
 
+        // ── العميل ──
         $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
         $query->andFilterWhere(['=', 'c.is_deleted', false]);
+
+        // ── البائع ──
         $query->andFilterWhere(['like', 's.name', $this->seller_name]);
 
-        if((!Yii::$app->user->can('مدير')) ){
-            if (!Yii::$app->user->can('مدير التحصيل')){
-                $query->andFilterWhere(['co.followed_by' => Yii::$app->user->id]);
-            }
-
+        // ── صلاحيات المتابع ──
+        if (!Yii::$app->user->can('مدير') && !Yii::$app->user->can('مدير التحصيل')) {
+            $query->andFilterWhere(['co.followed_by' => Yii::$app->user->id]);
         }
-            $query->andFilterWhere(['co.followed_by' => $this->followed_by]);
-
-        $query->andFilterWhere(['<>', 'co.status', 'finished']);
-
-        $query->andFilterWhere(['<>', 'co.status', 'canceled']);
-
+        $query->andFilterWhere(['co.followed_by' => $this->followed_by]);
 
         return $dataProvider;
     }
-    public function searchCustamerCounter($params)
-    {
-        $query = FollowUpReport::find()->joinWith(['customersWithoutCondition as c'])->joinWith(['seller as s'])->joinWith(['contract co']);
 
-        $dataProvider = new ActiveDataProvider([
-            'query' => $query,
-            'sort' => ['defaultOrder' => ['date_time' => SORT_ASC]],
-        ]);
-
-        $dataProvider->sort->attributes['customer_name'] = [
-            // The tables are the ones our relation are configured to
-            // in my case they are prefixed with "tbl_"
-            'asc' => ['c.name' => SORT_ASC],
-            'desc' => ['c.name' => SORT_DESC],
-        ];
-        $dataProvider->sort->attributes['seller_name'] = [
-            // The tables are the ones our relation are configured to
-            // in my case they are prefixed with "tbl_"
-            'asc' => ['s.name' => SORT_ASC],
-            'desc' => ['s.name' => SORT_DESC],
-        ];
-
-
-        $this->load($params);
-
-        if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
-            return $dataProvider;
-        }
-
-        $query->andFilterWhere([
-            'os_follow_up_report.id' => $this->id,
-            'seller_id' => $this->seller_id,
-            'os_follow_up_report.Date_of_sale' => $this->Date_of_sale,
-            'total_value' => $this->total_value,
-            'os_follow_up_report.first_installment_value' => $this->first_installment_value,
-            'os_follow_up_report.first_installment_date' => $this->first_installment_date,
-            'os_follow_up_report.monthly_installment_value' => $this->monthly_installment_value,
-            'updated_at' => $this->updated_at,
-            'is_deleted' => $this->is_deleted,
-            'date_time' => $this->date_time,
-            'updated_at' => $this->updated_at,
-            'is_deleted' => $this->is_deleted,
-            //'reminder' => $this->reminder,
-
-        ]);
-        $query->andFilterWhere(['<=', 'promise_to_pay_at', $this->promise_to_pay_at]);
-        if (!empty($this->status)) {
-            $query->andFilterWhere(['co.status' => $this->status]);
-        }else{
-            $query->andFilterWhere(['<>', 'co.status', 'finished']);
-        }
-        $query->andFilterWhere(['like', 'type', $this->type])
-            ->andFilterWhere(['like', 'notes', $this->notes])
-            ->andFilterWhere(['like', 'selected_image', $this->selected_image])
-            ->andFilterWhere(['like', 'company_id', $this->company_id]);
-        $query->andFilterWhere(['<=', 'reminder', $this->reminder]);
-
-        $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
-        $query->andFilterWhere(['=', 'c.is_deleted', false]);
-        $query->andFilterWhere(['like', 's.name', $this->seller_name]);
-
-        if((!Yii::$app->user->can('مدير')) ){
-            if (!Yii::$app->user->can('مدير التحصيل')){
-                $query->andFilterWhere(['co.followed_by' => Yii::$app->user->id]);
-            }
-
-        }
-            $query->andFilterWhere(['co.followed_by' => $this->followed_by]);
-
-        $query->andFilterWhere(['<>', 'co.status', 'finished']);
-
-        $query->andFilterWhere(['<>', 'co.status', 'canceled']);
-
-        return $query->count('os_follow_up_report.id');
-
-    }
+    // ═══════════════════════════════════════════════════
+    //  عداد نتائج البحث (يطبق نفس الفلاتر)
+    // ═══════════════════════════════════════════════════
     public function searchCounter($params)
     {
-        $query = FollowUpReport::find()->joinWith(['customersWithoutCondition as c'])->joinWith(['seller as s'])->joinWith(['contract co']);
-
-        $dataProvider = new ActiveDataProvider([
-            'query' => $query,
-            'sort' => ['defaultOrder' => ['date_time' => SORT_ASC]],
-        ]);
-
-        $dataProvider->sort->attributes['customer_name'] = [
-            // The tables are the ones our relation are configured to
-            // in my case they are prefixed with "tbl_"
-            'asc' => ['c.name' => SORT_ASC],
-            'desc' => ['c.name' => SORT_DESC],
-        ];
-        $dataProvider->sort->attributes['seller_name'] = [
-            // The tables are the ones our relation are configured to
-            // in my case they are prefixed with "tbl_"
-            'asc' => ['s.name' => SORT_ASC],
-            'desc' => ['s.name' => SORT_DESC],
-        ];
-
+        $query = FollowUpReport::find()
+            ->joinWith(['customersWithoutCondition as c'])
+            ->joinWith(['seller as s'])
+            ->joinWith(['contract co']);
 
         $this->load($params);
-
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
-            return $dataProvider;
+            return 0;
+        }
+
+        // ── فلتر بدون أرقام تواصل ──
+        if ($this->is_can_not_contact !== null && $this->is_can_not_contact !== '') {
+            $query->andWhere(['os_follow_up_report.is_can_not_contact' => (int)$this->is_can_not_contact]);
         }
 
         $query->andFilterWhere([
             'os_follow_up_report.id' => $this->id,
             'seller_id' => $this->seller_id,
-            'os_follow_up_report.Date_of_sale' => $this->Date_of_sale,
-            'total_value' => $this->total_value,
-            'os_follow_up_report.first_installment_value' => $this->first_installment_value,
-            'os_follow_up_report.first_installment_date' => $this->first_installment_date,
-            'os_follow_up_report.monthly_installment_value' => $this->monthly_installment_value,
-            'updated_at' => $this->updated_at,
-            'is_deleted' => $this->is_deleted,
-            'date_time' => $this->date_time,
-            'updated_at' => $this->updated_at,
-            'is_deleted' => $this->is_deleted,
-            //'reminder' => $this->reminder,
-
         ]);
-        $query->andFilterWhere(['<=', 'promise_to_pay_at', $this->promise_to_pay_at]);
+
         if (!empty($this->status)) {
             $query->andFilterWhere(['co.status' => $this->status]);
         }
-            $query->andFilterWhere(['<>', 'co.status', 'finished']);
 
+        if ($this->never_followed !== null && $this->never_followed !== '') {
+            $query->andFilterWhere(['never_followed' => $this->never_followed]);
+        }
+
+        if (!empty($this->reminder)) {
+            $query->andWhere([
+                'or',
+                ['<=', 'reminder', $this->reminder],
+                ['never_followed' => 1],
+            ]);
+        }
+
+        $query->andFilterWhere(['<=', 'promise_to_pay_at', $this->promise_to_pay_at]);
         $query->andFilterWhere(['like', 'type', $this->type])
             ->andFilterWhere(['like', 'notes', $this->notes])
-            ->andFilterWhere(['like', 'selected_image', $this->selected_image])
             ->andFilterWhere(['like', 'company_id', $this->company_id]);
-        $query->andFilterWhere(['<=', 'reminder', $this->reminder]);
-
         $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
         $query->andFilterWhere(['=', 'c.is_deleted', false]);
         $query->andFilterWhere(['like', 's.name', $this->seller_name]);
 
-        if((!Yii::$app->user->can('مدير')) ){
-            if (!Yii::$app->user->can('مدير التحصيل')){
-                $query->andFilterWhere(['co.followed_by' => Yii::$app->user->id]);
-            }
-
+        if (!Yii::$app->user->can('مدير') && !Yii::$app->user->can('مدير التحصيل')) {
+            $query->andFilterWhere(['co.followed_by' => Yii::$app->user->id]);
         }
-            $query->andFilterWhere(['co.followed_by' => $this->followed_by]);
-
-        $query->andFilterWhere(['<>', 'co.status', 'finished']);
-
-        $query->andFilterWhere(['<>', 'co.status', 'canceled']);
+        $query->andFilterWhere(['co.followed_by' => $this->followed_by]);
 
         return $query->distinct()->count('id');
+    }
 
+    // ═══════════════════════════════════════════════════
+    //  بحث — عقود "لا يمكن التواصل"
+    // ═══════════════════════════════════════════════════
+    public function searchNoContact($params)
+    {
+        $query = FollowUpNoContact::find()
+            ->joinWith(['customersWithoutCondition as c'])
+            ->joinWith(['seller as s'])
+            ->joinWith(['contract co']);
+
+        $pageSize = !empty($params['FollowUpReportSearch']['number_row'])
+            ? (int)$params['FollowUpReportSearch']['number_row']
+            : 20;
+
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => ['pageSize' => $pageSize],
+            'sort' => ['defaultOrder' => ['id' => SORT_DESC]],
+        ]);
+
+        $dataProvider->sort->attributes['customer_name'] = [
+            'asc' => ['c.name' => SORT_ASC],
+            'desc' => ['c.name' => SORT_DESC],
+        ];
+        $dataProvider->sort->attributes['seller_name'] = [
+            'asc' => ['s.name' => SORT_ASC],
+            'desc' => ['s.name' => SORT_DESC],
+        ];
+
+        $this->load($params);
+        if (!$this->validate()) {
+            return $dataProvider;
+        }
+
+        $query->andFilterWhere(['os_follow_up_no_contact.id' => $this->id]);
+        $query->andFilterWhere(['seller_id' => $this->seller_id]);
+        $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
+        $query->andFilterWhere(['=', 'c.is_deleted', false]);
+        $query->andFilterWhere(['like', 's.name', $this->seller_name]);
+
+        if (!empty($this->status)) {
+            $query->andFilterWhere(['co.status' => $this->status]);
+        }
+        $query->andFilterWhere(['<>', 'co.status', 'finished']);
+        $query->andFilterWhere(['<>', 'co.status', 'canceled']);
+
+        if (!Yii::$app->user->can('مدير') && !Yii::$app->user->can('مدير التحصيل')) {
+            $query->andFilterWhere(['co.followed_by' => Yii::$app->user->id]);
+        }
+        $query->andFilterWhere(['co.followed_by' => $this->followed_by]);
+
+        return $dataProvider;
+    }
+
+    /**
+     * عدد عقود "لا يمكن التواصل"
+     */
+    public function searchNoContactCount($params)
+    {
+        $query = FollowUpNoContact::find()
+            ->joinWith(['customersWithoutCondition as c'])
+            ->joinWith(['seller as s'])
+            ->joinWith(['contract co']);
+
+        $this->load($params);
+        if (!$this->validate()) {
+            return 0;
+        }
+
+        $query->andFilterWhere(['os_follow_up_no_contact.id' => $this->id]);
+        $query->andFilterWhere(['seller_id' => $this->seller_id]);
+        $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
+        $query->andFilterWhere(['=', 'c.is_deleted', false]);
+        $query->andFilterWhere(['like', 's.name', $this->seller_name]);
+
+        if (!empty($this->status)) {
+            $query->andFilterWhere(['co.status' => $this->status]);
+        }
+        $query->andFilterWhere(['<>', 'co.status', 'finished']);
+        $query->andFilterWhere(['<>', 'co.status', 'canceled']);
+
+        if (!Yii::$app->user->can('مدير') && !Yii::$app->user->can('مدير التحصيل')) {
+            $query->andFilterWhere(['co.followed_by' => Yii::$app->user->id]);
+        }
+        $query->andFilterWhere(['co.followed_by' => $this->followed_by]);
+
+        return $query->count();
     }
 }

@@ -352,6 +352,9 @@ class Contracts extends \yii\db\ActiveRecord
     public function is_locked()
     {
         $date_expire = $this->follow_up_lock_at;
+        if (empty($date_expire)) {
+            return false;
+        }
         $date = new DateTime($date_expire);
         $now = new DateTime();
         $years = $date->diff($now)->format("%y") * 365 * 24 * 60;

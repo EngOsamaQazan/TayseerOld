@@ -28,6 +28,7 @@ CrudAsset::register($this);
 
 $isLegal = in_array($contract->status, ['judiciary', 'legal_department']);
 $isClosed = in_array($contract->status, ['finished', 'canceled']);
+$hasCase = $isLegal && !empty($judiciaryData['judiciary']);
 
 $this->title = 'لوحة تحكم العقد #' . $contract->id;
 $this->params['breadcrumbs'][] = ['label' => 'تقارير المتابعة', 'url' => ['/followUpReport']];
@@ -138,6 +139,10 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                     <span class="ocp-metric-mini__value ocp-ltr"><?= $lastPayment['date'] !== null ? date('Y/m/d', strtotime($lastPayment['date'])) : '-' ?></span>
                     <span class="ocp-metric-mini__label">آخر دفعة</span>
                 </div>
+                <div class="ocp-metric-mini">
+                    <span class="ocp-metric-mini__value ocp-ltr"><?= !empty($contract->Date_of_sale) ? date('Y/m/d', strtotime($contract->Date_of_sale)) : '-' ?></span>
+                    <span class="ocp-metric-mini__label">تاريخ البيع</span>
+                </div>
             </div>
 
             <div class="ocp-status-bar__divider"></div>
@@ -169,8 +174,8 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                 <?= $riskLevelArabic[$riskLevel] ?? 'غير محدد' ?>
             </div>
 
-            <?php // Judiciary info in status bar for legal contracts ?>
-            <?php if ($isLegal && !empty($judiciaryData['judiciary'])): ?>
+            <?php // Judiciary info in status bar — فقط إذا في قضية فعلاً ?>
+            <?php if ($hasCase): ?>
             <div class="ocp-status-bar__divider"></div>
             <div class="ocp-status-bar__judiciary" style="display:flex;align-items:center;gap:6px;font-size:var(--ocp-font-size-sm)">
                 <i class="fa fa-gavel" style="color:var(--ocp-danger)"></i>
@@ -304,7 +309,7 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                         </div>
                         <?php // Hidden extra actions ?>
                         <div class="ocp-action-grid ocp-hidden" id="ocp-more-actions" style="margin-top:var(--ocp-space-md)">
-                            <?php if ($isLegal): ?>
+                            <?php if ($hasCase): ?>
                             <?php $judiciaryModel = $judiciaryData['judiciary'] ?? null; ?>
                             <a class="ocp-action-btn" href="<?= $judiciaryModel ? Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $contract_id]) : '#' ?>" role="modal-remote" style="text-decoration:none">
                                 <div class="ocp-action-btn__icon" style="background:#FFF3E0;color:#E65100"><i class="fa fa-plus-circle"></i></div>
@@ -354,11 +359,11 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                 <?php // TABS: Timeline / Kanban / Financial / Phones / Payments / Settlements / Judiciary ?>
                 <div class="ocp-section">
                     <?php
-                    // For legal contracts: default to judiciary tab
-                    $defaultTab = $isLegal ? 'judiciary-actions' : 'timeline';
+                    // دائماً الافتراضي هو السجل الزمني
+                    $defaultTab = 'timeline';
                     ?>
                     <div class="ocp-tabs" style="flex-wrap:wrap;gap:4px">
-                        <button class="ocp-tab <?= $defaultTab === 'timeline' ? 'active' : '' ?>" data-tab="timeline" onclick="OCP.switchTab('timeline')">
+                        <button class="ocp-tab active" data-tab="timeline" onclick="OCP.switchTab('timeline')">
                             <i class="fa fa-clock-o"></i> السجل الزمني
                             <span class="ocp-tab__count"><?= count($timeline) ?></span>
                         </button>
@@ -379,16 +384,18 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                         <button class="ocp-tab" data-tab="settlements" onclick="OCP.switchTab('settlements')">
                             <i class="fa fa-balance-scale"></i> التسويات
                         </button>
-                        <button class="ocp-tab <?= $defaultTab === 'judiciary-actions' ? 'active' : '' ?>" data-tab="judiciary-actions" onclick="OCP.switchTab('judiciary-actions')">
+                        <?php if ($hasCase): ?>
+                        <button class="ocp-tab" data-tab="judiciary-actions" onclick="OCP.switchTab('judiciary-actions')">
                             <i class="fa fa-gavel"></i> إجراءات قضائية
-                            <?php if ($isLegal && !empty($judiciaryData['actions'])): ?>
+                            <?php if (!empty($judiciaryData['actions'])): ?>
                             <span class="ocp-tab__count"><?= count($judiciaryData['actions']) ?></span>
                             <?php endif; ?>
                         </button>
+                        <?php endif; ?>
                     </div>
 
-                    <?php // TIMELINE TAB ?>
-                    <div class="ocp-tab-content <?= $defaultTab !== 'timeline' ? 'ocp-hidden' : '' ?>" id="tab-timeline">
+                    <?php // TIMELINE TAB — always default ?>
+                    <div class="ocp-tab-content" id="tab-timeline">
                         <?= $this->render('panel/_timeline', ['timeline' => $timeline]) ?>
                     </div>
 
@@ -434,8 +441,9 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                         </div>
                     </div>
 
-                    <?php // JUDICIARY ACTIONS TAB — rebuilt with operational summary + timeline ?>
-                    <div class="ocp-tab-content <?= $defaultTab !== 'judiciary-actions' ? 'ocp-hidden' : '' ?>" id="tab-judiciary-actions">
+                    <?php // JUDICIARY ACTIONS TAB — يظهر فقط إذا العقد عليه قضية ?>
+                    <?php if ($hasCase): ?>
+                    <div class="ocp-tab-content ocp-hidden" id="tab-judiciary-actions">
                         <?= $this->render('panel/_judiciary_tab', [
                             'contract_id' => $contract_id,
                             'contract' => $contract,
@@ -443,6 +451,7 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                             'model' => $model,
                         ]) ?>
                     </div>
+                    <?php endif; ?>
                 </div>
             </div>
 

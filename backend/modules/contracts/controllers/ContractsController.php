@@ -13,12 +13,10 @@ use yii\web\NotFoundHttpException;
 
 use backend\models\Model;
 use common\components\notificationComponent;
-use backend\modules\followUp\models\FollowUp;
 use backend\modules\customers\models\Customers;
 use backend\modules\contracts\models\Contracts;
 use backend\modules\contracts\models\ContractsSearch;
 use backend\modules\customers\models\ContractsCustomers;
-use backend\modules\followUp\models\FollowUpConnectionReports;
 use backend\modules\inventoryItems\models\ContractInventoryItem;
 use backend\modules\inventoryItems\models\InventoryItems;
 use backend\modules\inventoryItems\models\InventorySerialNumber;
@@ -155,9 +153,6 @@ class ContractsController extends Controller
             // ── حفظ العملاء والكفلاء ──
             $this->saveContractCustomers($model);
 
-            // ── إنشاء متابعة أولية ──
-            $this->createInitialFollowUp($model);
-
             // ── إنشاء ملف مستندات ──
             $docFile = new ContractDocumentFile();
             $docFile->document_type = 'contract file';
@@ -204,12 +199,15 @@ class ContractsController extends Controller
         $model = $this->findModel($id);
 
         if (!Yii::$app->request->isPost) {
-            // تحميل بيانات العملاء الحالية
+            // تحميل بيانات العملاء الحالية — تحويل الكائنات إلى IDs
             if ($model->type === 'solidarity') {
-                $model->customers_ids = $model->customers;
+                $cList = $model->customers;
+                $model->customers_ids = !empty($cList) ? ArrayHelper::getColumn($cList, 'id') : [];
             } else {
-                $model->customer_id = $model->customers;
-                $model->guarantors_ids = $model->guarantor;
+                $cust = $model->customer;
+                $model->customer_id = $cust ? $cust->id : null;
+                $gList = $model->guarantor;
+                $model->guarantors_ids = !empty($gList) ? ArrayHelper::getColumn($gList, 'id') : [];
             }
             return $this->render('update', $this->buildFormParams($model));
         }
@@ -673,22 +671,6 @@ class ContractsController extends Controller
                 }
             }
         }
-    }
-
-    /**
-     * إنشاء متابعة أولية
-     */
-    private function createInitialFollowUp($model)
-    {
-        $fu = new FollowUp();
-        $fu->contract_id = $model->id;
-        $fu->date_time = date('Y-m-d H:i:s');
-        $fu->notes = 'إضافة آلية';
-        $fu->feeling = 'normal';
-        $fu->connection_goal = 1;
-        $fu->reminder = $model->first_installment_date;
-        $fu->created_by = Yii::$app->user->id;
-        $fu->save(false);
     }
 
     /**

@@ -1061,8 +1061,10 @@ $testUrl = Url::to(['test-google-connection']);
 $js = <<<JS
 // Tab navigation (only for non-disabled)
 $('.sys-nav-item:not(.disabled)').on('click', function(e) {
-    e.preventDefault();
     var tab = $(this).data('tab');
+    // إذا العنصر فيه data-tab → تبديل تبويب، وإلا → رابط عادي (مثل إدارة الصور)
+    if (!tab) return; // اسمح للرابط يشتغل طبيعي
+    e.preventDefault();
     $('.sys-nav-item').removeClass('active');
     $(this).addClass('active');
     $('.sys-tab-content').removeClass('active');

@@ -83,11 +83,11 @@
     /* Typography */
     --ocp-font: 'Segoe UI', 'Cairo', 'Noto Sans Arabic', Tahoma, sans-serif;
     --ocp-font-mono: 'JetBrains Mono', 'Cascadia Code', 'Courier New', monospace;
-    --ocp-font-size-xs: 11px;
-    --ocp-font-size-sm: 12.5px;
-    --ocp-font-size-base: 14px;
-    --ocp-font-size-md: 15px;
-    --ocp-font-size-lg: 17px;
+    --ocp-font-size-xs: 12.5px;
+    --ocp-font-size-sm: 13.5px;
+    --ocp-font-size-base: 15px;
+    --ocp-font-size-md: 16px;
+    --ocp-font-size-lg: 18px;
     --ocp-font-size-xl: 20px;
     --ocp-font-size-2xl: 24px;
     --ocp-font-size-3xl: 30px;

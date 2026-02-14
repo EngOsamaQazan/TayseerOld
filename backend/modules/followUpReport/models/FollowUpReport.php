@@ -39,7 +39,6 @@ class FollowUpReport extends \yii\db\ActiveRecord
 
     public static function primaryKey()
     {
-
         return ["id"];
     }
 
@@ -49,11 +48,11 @@ class FollowUpReport extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['id', 'seller_id', 'is_deleted','number_row'], 'integer'],
+            [['id', 'seller_id', 'is_deleted', 'number_row', 'never_followed', 'due_installments'], 'integer'],
             [['type', 'status'], 'required'],
             [['type', 'notes', 'status', 'company_id'], 'string'],
-            [['Date_of_sale', 'first_installment_date', 'updated_at', 'date_time', 'promise_to_pay_at', 'reminder'], 'safe'],
-            [['total_value', 'first_installment_value', 'monthly_installment_value'], 'number'],
+            [['Date_of_sale', 'first_installment_date', 'updated_at', 'last_follow_up', 'promise_to_pay_at', 'reminder'], 'safe'],
+            [['total_value', 'first_installment_value', 'monthly_installment_value', 'total_paid', 'due_amount'], 'number'],
             [['selected_image'], 'string', 'max' => 255],
         ];
     }
@@ -78,10 +77,14 @@ class FollowUpReport extends \yii\db\ActiveRecord
             'is_deleted' => Yii::t('app', 'Is Deleted'),
             'selected_image' => Yii::t('app', 'Selected Image'),
             'company_id' => Yii::t('app', 'Company ID'),
-            'date_time' => Yii::t('app', 'Date Added'),
-            'promise_to_pay_at' => Yii::t('app', 'Promise To Pay At'),
-            'reminder' => Yii::t('app', 'Reminder'),
+            'last_follow_up' => 'آخر متابعة',
+            'promise_to_pay_at' => 'وعد بالدفع',
+            'reminder' => 'التذكير',
             'seller_name' => Yii::t('app', 'Seller Name'),
+            'total_paid' => 'المدفوع',
+            'due_installments' => 'أقساط مستحقة',
+            'due_amount' => 'المبلغ المستحق',
+            'never_followed' => 'لم يُتابع أبداً',
         ];
     }
 

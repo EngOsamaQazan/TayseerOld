@@ -32,7 +32,7 @@ class FollowUpReportController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'no-contact'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -65,8 +65,101 @@ class FollowUpReportController extends Controller
      */
     public function actionIndex()
     {
-        // إنشاء/تحديث الـ VIEW أولاً قبل أي استخدام للموديل
-        $sql = "CREATE OR REPLACE VIEW os_follow_up_report AS SELECT
+        // ═══ إنشاء/تحديث الـ VIEW — المعادلة الجديدة ═══
+        // يشمل: عقود المتابعة العادية + عقود بدون أرقام تواصل
+        $sql = "CREATE OR REPLACE VIEW os_follow_up_report AS
+SELECT
+    c.*,
+    f.date_time      AS last_follow_up,
+    f.promise_to_pay_at,
+    f.reminder,
+    IFNULL(payments.total_paid, 0) AS total_paid,
+    GREATEST(0,
+        PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'), DATE_FORMAT(c.first_installment_date,'%Y%m'))
+        + CASE WHEN DAY(CURDATE()) >= DAY(c.first_installment_date) THEN 1 ELSE 0 END
+    ) AS due_installments,
+    GREATEST(0,
+        (GREATEST(0,
+            PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'), DATE_FORMAT(c.first_installment_date,'%Y%m'))
+            + CASE WHEN DAY(CURDATE()) >= DAY(c.first_installment_date) THEN 1 ELSE 0 END
+        ) * c.monthly_installment_value) - IFNULL(payments.total_paid, 0)
+    ) AS due_amount,
+    CASE WHEN f.id IS NULL THEN 1 ELSE 0 END AS never_followed
+FROM os_contracts c
+LEFT JOIN os_follow_up f ON f.contract_id = c.id
+    AND f.id = (SELECT MAX(id) FROM os_follow_up WHERE contract_id = c.id)
+LEFT JOIN (
+    SELECT contract_id, SUM(amount) AS total_paid
+    FROM os_income GROUP BY contract_id
+) payments ON c.id = payments.contract_id
+WHERE
+    c.status NOT IN ('finished','canceled','refused')
+    AND (
+        /* عقود المتابعة العادية: مبلغ مستحق > 0 */
+        (c.is_can_not_contact = 0 AND
+            ((GREATEST(0,
+                PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'), DATE_FORMAT(c.first_installment_date,'%Y%m'))
+                + CASE WHEN DAY(CURDATE()) >= DAY(c.first_installment_date) THEN 1 ELSE 0 END
+            ) * c.monthly_installment_value) - IFNULL(payments.total_paid, 0)) > 0
+        )
+        OR
+        /* عقود بدون أرقام تواصل: بدون شرط المبلغ */
+        c.is_can_not_contact = 1
+    )
+ORDER BY
+    CASE WHEN f.id IS NULL THEN 0 ELSE 1 END ASC,
+    f.date_time ASC";
+
+        $connection = Yii::$app->getDb();
+        $connection->createCommand($sql)->execute();
+        $connection->getSchema()->refreshTableSchema('os_follow_up_report');
+
+        // ═══ بيانات البحث ═══
+        $searchModel = new FollowUpReportSearch();
+        // إذا لم يحدد المستخدم فلتر is_can_not_contact يدوياً، الافتراضي = 0 (عقود عادية)
+        $params = Yii::$app->request->queryParams;
+        if (!isset($params['FollowUpReportSearch']['is_can_not_contact'])) {
+            $params['FollowUpReportSearch']['is_can_not_contact'] = '0';
+        }
+        $dataProvider = $searchModel->search($params);
+        $dataCount = $searchModel->searchCounter($params);
+
+        // ═══ إحصائيات البطاقات ═══
+        $db = Yii::$app->db;
+        // إجمالي العقود للمتابعة (باستثناء المؤجلين لبعد اليوم + باستثناء بدون تواصل)
+        $activeCount = $db->createCommand(
+            "SELECT COUNT(*) FROM os_follow_up_report WHERE is_can_not_contact = 0 AND (reminder IS NULL OR reminder <= CURDATE() OR never_followed = 1)"
+        )->queryScalar();
+        $neverFollowedCount = $db->createCommand(
+            "SELECT COUNT(*) FROM os_follow_up_report WHERE is_can_not_contact = 0 AND never_followed = 1"
+        )->queryScalar();
+        $overduePromiseCount = $db->createCommand(
+            "SELECT COUNT(*) FROM os_follow_up_report WHERE is_can_not_contact = 0 AND promise_to_pay_at IS NOT NULL AND promise_to_pay_at <= CURDATE()"
+        )->queryScalar();
+        $noContactCount = $db->createCommand(
+            "SELECT COUNT(*) FROM os_follow_up_report WHERE is_can_not_contact = 1"
+        )->queryScalar();
+
+        return $this->render('index', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+            'dataCount' => $dataCount,
+            'activeCount' => (int)$activeCount,
+            'neverFollowedCount' => (int)$neverFollowedCount,
+            'overduePromiseCount' => (int)$overduePromiseCount,
+            'noContactCount' => (int)$noContactCount,
+        ]);
+    }
+
+
+    /**
+     * تقرير العقود التي لا يوجد بها أرقام تواصل
+     * is_can_not_contact = 1
+     */
+    public function actionNoContact()
+    {
+        // إنشاء VIEW خاص بعقود "لا يمكن التواصل"
+        $sql = "CREATE OR REPLACE VIEW os_follow_up_no_contact AS SELECT
     c.*,
     f.date_time,
     f.promise_to_pay_at,
@@ -88,67 +181,30 @@ class FollowUpReportController extends Controller
             os_contracts c
         LEFT JOIN os_follow_up f ON
             f.contract_id = c.id AND f.id =(
-            SELECT
-                MAX(id)
-            FROM
-                os_follow_up
-            WHERE
-                contract_id = c.id
+            SELECT MAX(id) FROM os_follow_up WHERE contract_id = c.id
         )
     LEFT JOIN(
-        SELECT contract_id,
-            SUM(amount) AS total_paid
-        FROM
-            os_income
-        GROUP BY
-            contract_id
-    ) payments
-ON
-    c.id = payments.contract_id
+        SELECT contract_id, SUM(amount) AS total_paid
+        FROM os_income GROUP BY contract_id
+    ) payments ON c.id = payments.contract_id
 WHERE
-    c.is_can_not_contact = 0 AND(
-        -- عليه مبلغ مستحق حتى اليوم
-        (
-            (
-                (
-                    PERIOD_DIFF(
-                        DATE_FORMAT(CURDATE(), '%Y%m'),
-                        DATE_FORMAT(c.first_installment_date, '%Y%m')) + CASE WHEN DAY(CURDATE()) >= DAY(c.first_installment_date) THEN 1 ELSE 0
-                        END) * c.monthly_installment_value
-                ) - IFNULL(payments.total_paid, 0)
-            ) > 0
-            -- أو عليه reminder <= اليوم
-            OR(
-                f.reminder IS NOT NULL AND f.reminder <= CURDATE())
-                -- أو عليه promise_to_pay_at <= اليوم
-                OR(
-                    f.promise_to_pay_at IS NOT NULL AND f.promise_to_pay_at <= CURDATE())
-                )
-            ORDER BY
-                c.id
-            DESC
-                ";
+    c.is_can_not_contact = 1
+ORDER BY c.id DESC";
+
         $connection = Yii::$app->getDb();
-        $command = $connection->createCommand($sql);
-        $command->execute();
+        $connection->createCommand($sql)->execute();
+        $connection->getSchema()->refreshTableSchema('os_follow_up_no_contact');
 
-        // تحديث schema cache بعد إعادة إنشاء الـ VIEW
-        $connection->getSchema()->refreshTableSchema('os_follow_up_report');
-
-        // الآن يمكن استخدام الموديل بأمان
         $searchModel = new FollowUpReportSearch();
-        $searchModel->reminder = date("Y-m-d");
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
-        $counter = $searchModel->searchCounter(Yii::$app->request->queryParams);
-        $custamerCounter = $searchModel->searchCustamerCounter(Yii::$app->request->queryParams);
-        return $this->render('index', [
+        $dataProvider = $searchModel->searchNoContact(Yii::$app->request->queryParams);
+        $dataCount = $searchModel->searchNoContactCount(Yii::$app->request->queryParams);
+
+        return $this->render('no-contact', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
-            'counter'=>$counter,
-            'custamerCounter'=>$custamerCounter
+            'dataCount' => $dataCount,
         ]);
     }
-
 
     /**
      * Displays a single FollowUpReport model.

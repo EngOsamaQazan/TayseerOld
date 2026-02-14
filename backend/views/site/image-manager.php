@@ -124,30 +124,36 @@ $this->registerCssFile('@web/css/image-manager-admin.css');
 <div class="modal-overlay" id="reassignModal" style="display:none;">
     <div class="modal-box">
         <div class="modal-header">
-            <h3><i class="fa fa-exchange"></i> إعادة ربط الصورة</h3>
+            <div class="modal-header-content">
+                <h3><i class="fa fa-exchange"></i> <span id="modalTitle">إعادة ربط الصورة</span></h3>
+                <span class="modal-subtitle" id="modalSubtitle"></span>
+            </div>
             <button class="modal-close" onclick="closeModal()">&times;</button>
         </div>
         <div class="modal-body">
-            <div class="modal-image-preview">
-                <img id="modalImage" src="" alt="معاينة" />
+            <!-- معاينة صورة فردية -->
+            <div id="singlePreview">
+                <div class="modal-image-preview">
+                    <img id="modalImage" src="" alt="معاينة" />
+                </div>
+                <div class="modal-info">
+                    <div class="info-row">
+                        <span class="info-label">رقم الصورة:</span>
+                        <span id="modalImageId" class="info-value"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">الربط الحالي:</span>
+                        <span id="modalCurrentLink" class="info-value"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">تاريخ الرفع:</span>
+                        <span id="modalUploadDate" class="info-value"></span>
+                    </div>
+                </div>
             </div>
-            <div class="modal-info">
-                <div class="info-row">
-                    <span class="info-label">رقم الصورة:</span>
-                    <span id="modalImageId" class="info-value"></span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">اسم الملف:</span>
-                    <span id="modalFileName" class="info-value"></span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">الربط الحالي:</span>
-                    <span id="modalCurrentLink" class="info-value"></span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">تاريخ الرفع:</span>
-                    <span id="modalUploadDate" class="info-value"></span>
-                </div>
+            <!-- معاينة دفعة كاملة -->
+            <div id="batchPreview" style="display:none;">
+                <div class="batch-gallery" id="batchGallery"></div>
             </div>
             <hr />
             <div class="reassign-form">
@@ -337,13 +343,28 @@ function renderGrid(images) {
         }
         
         batch.forEach(img => {
-            const statusClass = img.isOrphan ? 'orphan' : (img.fileExists ? 'linked' : 'missing-file');
-            const statusLabel = img.isOrphan ? 'يتيمة' : (img.fileExists ? '' : 'ملف مفقود');
+            // ── حالة الصورة ──
+            const hasType = img.docType !== '' && img.docType !== undefined && img.docType !== null;
+            const hasCustomer = !img.isOrphan && img.customerName;
+            let statusClass, statusIcon, statusLabel;
+            
+            if (!img.fileExists) {
+                statusClass = 'missing-file'; statusIcon = 'fa-ban'; statusLabel = 'ملف مفقود';
+            } else if (img.isOrphan) {
+                statusClass = 'orphan'; statusIcon = 'fa-chain-broken'; statusLabel = 'يتيمة';
+            } else if (hasCustomer && !hasType) {
+                statusClass = 'needs-type'; statusIcon = 'fa-tag'; statusLabel = 'بحاجة تصنيف';
+            } else if (hasCustomer && hasType) {
+                statusClass = 'classified'; statusIcon = 'fa-check-circle'; statusLabel = '';
+            } else {
+                statusClass = 'linked'; statusIcon = ''; statusLabel = '';
+            }
+            
+            const DOC_TYPES = {'0':'هوية وطنية','1':'جواز سفر','2':'رخصة قيادة','3':'شهادة ميلاد','4':'شهادة تعيين','5':'كتاب ضمان اجتماعي','6':'كشف راتب','7':'شهادة تعيين عسكري','8':'صورة شخصية','9':'أخرى'};
+            const typeName = hasType ? (DOC_TYPES[img.docType] || img.docType) : '';
+            
             const selectedBadge = img.isSelected ? '<span class="selected-badge" title="الصورة المختارة للعميل"><i class="fa fa-star"></i></span>' : '';
             const batchDot = isMulti ? `<span class="card-batch-dot" style="background:${color}" title="دفعة واحدة"></span>` : '';
-            const sourceIcon = img.source === 'smart_media' ? '<span class="source-badge smart" title="النظام الذكي"><i class="fa fa-magic"></i></span>' 
-                             : img.source === 'photos' ? '<span class="source-badge photos" title="صور"><i class="fa fa-camera"></i></span>'
-                             : '';
             
             html += `
             <div class="img-card ${statusClass}${isMulti ? ' in-batch' : ''}" data-id="${img.id}" data-batch="${img.batchId || ''}">
@@ -354,8 +375,8 @@ function renderGrid(images) {
                     }
                     ${selectedBadge}
                     ${batchDot}
-                    ${sourceIcon}
-                    ${statusLabel ? `<span class="status-tag ${statusClass}">${statusLabel}</span>` : ''}
+                    ${statusLabel ? `<span class="status-tag ${statusClass}"><i class="fa ${statusIcon}"></i> ${statusLabel}</span>` : ''}
+                    ${hasType ? `<span class="type-badge"><i class="fa fa-tag"></i> ${typeName}</span>` : ''}
                 </div>
                 <div class="img-card-info">
                     <div class="img-id">#${img.id}</div>
@@ -479,21 +500,25 @@ let isBatchMode = false;
 function openReassign(img) {
     isBatchMode = false;
     currentImageId = img.id;
+    
+    // إظهار وضع فردي
+    document.getElementById('singlePreview').style.display = '';
+    document.getElementById('batchPreview').style.display = 'none';
+    document.getElementById('singleDocTypeSection').style.display = '';
+    document.getElementById('modalTitle').textContent = 'إعادة ربط الصورة';
+    document.getElementById('modalSubtitle').textContent = '';
+    
     document.getElementById('modalImage').src = img.imageUrl;
     document.getElementById('modalImageId').textContent = '#' + img.id;
-    document.getElementById('modalFileName').textContent = img.fileName;
     document.getElementById('modalUploadDate').textContent = img.created || '—';
     document.getElementById('modalCurrentLink').innerHTML = img.customerName 
         ? `<span style="color:#27ae60">${img.customerName} (#${img.customerId})</span>`
         : `<span style="color:#e74c3c">يتيمة — contractId: ${img.contractId}</span>`;
     
-    // فردي: إظهار اختيار النوع
-    document.getElementById('singleDocTypeSection').style.display = '';
     document.getElementById('docTypeSelect').value = img.docType || '';
     document.getElementById('docTypeError').style.display = 'none';
     document.getElementById('customerError').style.display = 'none';
     
-    // Reset customer select2
     resetCustomerSelect2();
     if (img.customerName && img.customerId) {
         setCustomerSelect2(img.customerId, img.customerName + ' (#' + img.customerId + ')');
@@ -661,7 +686,9 @@ function submitReassign() {
 let batchImageIds = [];
 
 function openBatchReassign(batchId, imageIds) {
-    // تحقق أن كل صورة محدد نوعها من البطاقات
+    const DOC_TYPES = {'0':'هوية وطنية','1':'جواز سفر','2':'رخصة قيادة','3':'شهادة ميلاد','4':'شهادة تعيين','5':'كتاب ضمان اجتماعي','6':'كشف راتب','7':'شهادة تعيين عسكري','8':'صورة شخصية','9':'أخرى'};
+    
+    // تحقق أن كل صورة محدد نوعها
     let missingTypes = [];
     imageIds.forEach(imgId => {
         const card = document.querySelector(`.img-card[data-id="${imgId}"]`);
@@ -673,7 +700,6 @@ function openBatchReassign(batchId, imageIds) {
     
     if (missingTypes.length > 0) {
         showNotification(`يرجى تحديد نوع كل صورة من البطاقات أولاً (${missingTypes.length} صورة بدون نوع)`, 'error');
-        // تمييز البطاقات الناقصة
         missingTypes.forEach(imgId => {
             const card = document.querySelector(`.img-card[data-id="${imgId}"]`);
             if (card) {
@@ -687,20 +713,38 @@ function openBatchReassign(batchId, imageIds) {
     isBatchMode = true;
     batchImageIds = imageIds;
     currentImageId = imageIds[0];
-    const firstCard = document.querySelector(`.img-card[data-id="${imageIds[0]}"]`);
-    const imgEl = firstCard ? firstCard.querySelector('img') : null;
     
-    document.getElementById('modalImage').src = imgEl ? imgEl.src : '';
-    document.getElementById('modalImageId').innerHTML = `دفعة: ${imageIds.length} صورة <small>(${imageIds.join(', ')})</small>`;
-    document.getElementById('modalFileName').textContent = `سيتم ربط ${imageIds.length} صور بأنواعها المحددة`;
-    document.getElementById('modalUploadDate').textContent = '—';
-    document.getElementById('modalCurrentLink').innerHTML = '<span style="color:#e67e22">ربط جماعي لدفعة كاملة</span>';
-    
-    // إخفاء اختيار النوع — الأنواع محددة مسبقاً من البطاقات
+    // إظهار وضع الدفعة — إخفاء الفردي
+    document.getElementById('singlePreview').style.display = 'none';
+    document.getElementById('batchPreview').style.display = '';
     document.getElementById('singleDocTypeSection').style.display = 'none';
+    document.getElementById('modalTitle').textContent = `ربط دفعة: ${imageIds.length} صور`;
+    document.getElementById('modalSubtitle').textContent = 'تأكد من أنواع الصور ثم اختر العميل';
+    
+    // بناء معرض الصور
+    let galleryHtml = '';
+    imageIds.forEach(imgId => {
+        const card = document.querySelector(`.img-card[data-id="${imgId}"]`);
+        const imgEl = card ? card.querySelector('img') : null;
+        const sel = card ? card.querySelector('.doc-type-select') : null;
+        const typeVal = sel ? sel.value : '';
+        const typeName = DOC_TYPES[typeVal] || '—';
+        const src = imgEl ? imgEl.src : '';
+        
+        galleryHtml += `<div class="batch-thumb-card">
+            <div class="batch-thumb-img">
+                ${src ? `<img src="${src}" alt="#${imgId}" />` : `<div class="no-img-sm"><i class="fa fa-image"></i></div>`}
+            </div>
+            <div class="batch-thumb-info">
+                <span class="batch-thumb-id">#${imgId}</span>
+                <span class="batch-thumb-type"><i class="fa fa-tag"></i> ${typeName}</span>
+            </div>
+        </div>`;
+    });
+    document.getElementById('batchGallery').innerHTML = galleryHtml;
+    
     document.getElementById('docTypeError').style.display = 'none';
     document.getElementById('customerError').style.display = 'none';
-    
     resetCustomerSelect2();
     validateReassignForm();
     

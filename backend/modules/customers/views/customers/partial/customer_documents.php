@@ -38,7 +38,10 @@ DynamicFormWidget::begin([
                     <div class="col-md-5">
                         <div class="sm-doc-zone" data-index="<?= $i ?>">
                             <input type="file" accept="image/*,.pdf" style="display:none">
-                            <?php $docPath = $doc->document_image ?? $doc->images ?? ''; ?>
+                            <?php
+                            $docPath = $doc->document_image ?? $doc->images ?? '';
+                            if ($docPath === 'null' || $docPath === null) $docPath = '';
+                            ?>
                             <input type="hidden" name="CustomersDocument[<?= $i ?>][document_image]" value="<?= Html::encode($docPath) ?>" class="sm-doc-path-input">
                             <div class="sm-doc-placeholder">
                                 <i class="fa fa-cloud-upload"></i>
@@ -49,7 +52,7 @@ DynamicFormWidget::begin([
                                 <?php if ($isPdf): ?>
                                 <div class="sm-doc-pdf-label"><i class="fa fa-file-pdf-o"></i> PDF</div>
                                 <?php endif ?>
-                                <img src="<?= !$isPdf && !empty($docPath) ? Url::to('@web' . $docPath) : '' ?>" alt="" style="<?= $isPdf ? 'display:none' : '' ?>">
+                                <img src="<?= !$isPdf && !empty($docPath) ? Url::to('@web/' . ltrim($docPath, '/')) : '' ?>" alt="" style="<?= $isPdf ? 'display:none' : '' ?>">
                                 <button type="button" class="sm-doc-remove" title="إزالة"><i class="fa fa-times"></i></button>
                             </div>
                         </div>

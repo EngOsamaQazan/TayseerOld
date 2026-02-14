@@ -17,25 +17,25 @@ $calc = new ContractCalculations($contract_id);
     <div class="row" style="margin-bottom:15px">
         <div class="col-md-3">
             <div class="small-box bg-aqua">
-                <div class="inner"><h4><?= number_format($calc->getContractTotal(), 0) ?></h4><p>إجمالي العقد</p></div>
+                <div class="inner"><h4><?= number_format($calc->getContractTotal() ?? 0, 0) ?></h4><p>إجمالي العقد</p></div>
                 <div class="icon"><i class="fa fa-money"></i></div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="small-box bg-green">
-                <div class="inner"><h4><?= number_format($calc->paidAmount(), 0) ?></h4><p>المدفوع</p></div>
+                <div class="inner"><h4><?= number_format($calc->paidAmount() ?? 0, 0) ?></h4><p>المدفوع</p></div>
                 <div class="icon"><i class="fa fa-check"></i></div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="small-box bg-yellow">
-                <div class="inner"><h4><?= number_format($calc->deservedAmount(), 0) ?></h4><p>المستحق</p></div>
+                <div class="inner"><h4><?= number_format($calc->deservedAmount() ?? 0, 0) ?></h4><p>المستحق</p></div>
                 <div class="icon"><i class="fa fa-clock-o"></i></div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="small-box bg-red">
-                <div class="inner"><h4><?= number_format($calc->remainingAmount(), 0) ?></h4><p>المتبقي</p></div>
+                <div class="inner"><h4><?= number_format($calc->remainingAmount() ?? 0, 0) ?></h4><p>المتبقي</p></div>
                 <div class="icon"><i class="fa fa-exclamation"></i></div>
             </div>
         </div>
