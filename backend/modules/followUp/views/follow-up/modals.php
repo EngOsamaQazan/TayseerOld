@@ -209,6 +209,11 @@ $contractModel = $contractCalculations->contract_model;
                             try {
                                 $path = Yii::$app->imagemanager->getImagePath($ei->id);
                             } catch (\Exception $e) {}
+                            // بديل: الرابط المباشر للملف (id_fileHash.ext) — يعمل عندما getImagePath يرجع null بسبب mediaPath النسبي
+                            if (empty($path) && !empty($ei->fileHash)) {
+                                $ext = pathinfo((string)$ei->fileName, PATHINFO_EXTENSION) ?: 'jpg';
+                                $path = Yii::$app->request->baseUrl . '/images/imagemanager/' . (int)$ei->id . '_' . $ei->fileHash . '.' . $ext;
+                            }
                             if (empty($path)) continue;
                             ?>
                             <div class="col-md-3 text-center" style="margin-bottom:12px">
