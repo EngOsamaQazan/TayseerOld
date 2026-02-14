@@ -21,8 +21,9 @@ $this->params['breadcrumbs'][] = $this->title;
     <!-- Logo -->
     <div class="jadal-login-logo">
         <div class="jadal-login-logo-inner">
-            <span class="jadal-login-brand">جدل</span>
-            <span class="jadal-login-subtitle">نظام إدارة الأعمال</span>
+            <img src="<?= Yii::$app->request->baseUrl ?>/images/favicon.png" alt="تيسير" class="jadal-login-logo-img" />
+            <span class="jadal-login-brand">تيسير</span>
+            <span class="jadal-login-subtitle">المنصة السحابية المتكاملة لإدارة شركات التقسيط</span>
         </div>
     </div>
 

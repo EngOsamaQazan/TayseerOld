@@ -35,6 +35,8 @@ if (Yii::$app->controller->action->id === 'login') {
         <meta charset="<?= Yii::$app->charset ?>"/>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <?= Html::csrfMetaTags() ?>
+        <link rel="shortcut icon" href="<?= Yii::$app->request->baseUrl ?>/images/favicon.png" type="image/png">
+        <link rel="icon" href="<?= Yii::$app->request->baseUrl ?>/images/favicon.png" type="image/png" sizes="192x192">
         <title><?= Html::encode($this->title) ?></title>
         <?php $this->head() ?>
         <link rel="preconnect" href="https://fonts.googleapis.com">

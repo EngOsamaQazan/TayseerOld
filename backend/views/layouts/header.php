@@ -52,7 +52,7 @@ Yii::$app->view->registerJsVar('base_url', Yii::$app->request->hostInfo . Yii::$
         <!-- === شعار التطبيق === -->
         <?= Html::a(
             '<span class="logo-mini"><i class="fa fa-building-o"></i></span>' .
-            '<span class="logo-lg">' . (!empty($companyName) ? Html::encode($companyName) : 'جدل') . '</span>',
+            '<span class="logo-lg">' . (!empty($companyName) ? Html::encode($companyName) : 'تيسير') . '</span>',
             Yii::$app->homeUrl,
             ['class' => 'logo']
         ) ?>
