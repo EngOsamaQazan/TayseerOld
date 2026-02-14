@@ -52,6 +52,13 @@ $this->registerCssFile('@web/css/image-manager-admin.css');
                 <span class="stat-label">صور يتيمة</span>
             </div>
         </div>
+        <div class="img-stat-card stat-unlinked">
+            <div class="stat-icon"><i class="fa fa-unlink"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="statUnlinked">—</span>
+                <span class="stat-label">بدون ربط</span>
+            </div>
+        </div>
         <div class="img-stat-card stat-contracts">
             <div class="stat-icon"><i class="fa fa-file-text"></i></div>
             <div class="stat-info">
@@ -83,6 +90,8 @@ $this->registerCssFile('@web/css/image-manager-admin.css');
                 <button class="filter-tab active" data-filter="all">الكل</button>
                 <button class="filter-tab" data-filter="customers">مرتبطة بعملاء</button>
                 <button class="filter-tab" data-filter="orphans">يتيمة <span class="orphan-badge" id="orphanBadge"></span></button>
+                <button class="filter-tab" data-filter="unlinked">بدون ربط <span class="unlinked-badge" id="unlinkedBadge"></span></button>
+                <button class="filter-tab" data-filter="missing">ملفات مفقودة <span class="missing-badge" id="missingBadge"></span></button>
                 <button class="filter-tab" data-filter="contracts">عقود</button>
                 <button class="filter-tab" data-filter="smart_media">النظام الذكي <span class="smart-badge" id="smartBadge"></span></button>
             </div>
@@ -257,10 +266,13 @@ function loadStats() {
             document.getElementById('statTotal').textContent = grandTotal.toLocaleString('ar');
             document.getElementById('statLinked').textContent = data.linked.toLocaleString('ar');
             document.getElementById('statOrphans').textContent = data.orphans.toLocaleString('ar');
+            document.getElementById('statUnlinked').textContent = (data.unlinked || 0).toLocaleString('ar');
             document.getElementById('statContracts').textContent = data.contract_images.toLocaleString('ar');
             document.getElementById('statSmart').textContent = (data.smart_media_count || 0).toLocaleString('ar');
             document.getElementById('statMissing').textContent = '~' + data.estimated_missing.toLocaleString('ar');
             document.getElementById('orphanBadge').textContent = data.orphans;
+            document.getElementById('unlinkedBadge').textContent = data.unlinked || 0;
+            document.getElementById('missingBadge').textContent = '~' + data.estimated_missing;
             document.getElementById('smartBadge').textContent = data.smart_media_count || 0;
             document.getElementById('totalCount').textContent = grandTotal.toLocaleString('ar');
         })
@@ -414,6 +426,9 @@ function renderGrid(images) {
                         </button>
                         <button class="btn-mini btn-view" onclick="openLightbox('${img.imageUrl}')" title="عرض">
                             <i class="fa fa-expand"></i>
+                        </button>
+                        <button class="btn-mini btn-delete" onclick="deleteImage('${img.id}', this)" title="حذف">
+                            <i class="fa fa-trash"></i>
                         </button>
                     </div>
                 </div>
@@ -841,6 +856,43 @@ function exportImages() {
     } else {
         window.location.href = url;
     }
+}
+
+// ─── حذف صورة ───
+function deleteImage(imageId, btnEl) {
+    if (!confirm('هل أنت متأكد من حذف هذه الصورة؟\nسيتم حذف الملف وسجله من قاعدة البيانات نهائياً.')) return;
+    
+    const card = btnEl.closest('.img-card');
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+    
+    const formData = new FormData();
+    formData.append('image_id', imageId);
+    formData.append('<?= Yii::$app->request->csrfParam ?>', '<?= Yii::$app->request->csrfToken ?>');
+    
+    fetch('<?= Url::to(['/site/image-delete']) ?>', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                if (card) {
+                    card.style.transition = 'opacity .3s, transform .3s';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.8)';
+                    setTimeout(() => card.remove(), 300);
+                }
+                loadStats();
+                showNotification(data.message, 'success');
+            } else {
+                btnEl.disabled = false;
+                btnEl.innerHTML = '<i class="fa fa-trash"></i>';
+                showNotification(data.error || 'فشل الحذف', 'error');
+            }
+        })
+        .catch(() => {
+            btnEl.disabled = false;
+            btnEl.innerHTML = '<i class="fa fa-trash"></i>';
+            showNotification('خطأ في الاتصال', 'error');
+        });
 }
 
 // ─── إشعار ───

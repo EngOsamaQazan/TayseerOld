@@ -33,7 +33,7 @@ class SiteController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'system-settings', 'test-google-connection', 'image-manager', 'image-manager-data', 'image-reassign', 'image-manager-stats', 'image-search-customers', 'image-update-doc-type'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'system-settings', 'test-google-connection', 'image-manager', 'image-manager-data', 'image-reassign', 'image-manager-stats', 'image-search-customers', 'image-update-doc-type', 'image-delete'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -402,7 +402,7 @@ class SiteController extends Controller
 
         $page     = (int) Yii::$app->request->get('page', 1);
         $perPage  = (int) Yii::$app->request->get('per_page', 50);
-        $filter   = Yii::$app->request->get('filter', 'all'); // all, orphans, customers, contracts, smart_media
+        $filter   = Yii::$app->request->get('filter', 'all'); // all, orphans, customers, contracts, smart_media, unlinked, missing
         $search   = trim(Yii::$app->request->get('search', ''));
         $dateFrom = Yii::$app->request->get('date_from', '');
         $dateTo   = Yii::$app->request->get('date_to', '');
@@ -431,8 +431,12 @@ class SiteController extends Controller
         } elseif ($filter === 'contracts') {
             $imWhere .= " AND im.groupName = 'contracts'";
         } elseif ($filter === 'smart_media') {
-            // فقط Smart Media — سيتم تعبئتها لاحقاً
             $imWhere .= " AND 1=0"; // skip ImageManager
+        } elseif ($filter === 'unlinked') {
+            // صور لا ترتبط بأي عميل ولا عقد
+            $imWhere .= " AND c.id IS NULL AND (im.contractId IS NULL OR im.contractId = '' OR im.contractId = '0')";
+        } elseif ($filter === 'missing') {
+            // يتم الفلترة لاحقاً بعد التحقق من الملفات — جلب الكل
         }
 
         if ($search !== '') {
@@ -455,7 +459,7 @@ class SiteController extends Controller
         $cdParams = [];
         $includeSmartMedia = true;
 
-        if ($filter === 'orphans' || $filter === 'contracts') {
+        if ($filter === 'orphans' || $filter === 'contracts' || $filter === 'unlinked') {
             $includeSmartMedia = false; // Smart Media دائماً مرتبطة بعميل
         }
 
@@ -543,8 +547,8 @@ class SiteController extends Controller
             return strcmp($b['created'], $a['created']);
         });
 
-        // Paginate
-        $pagedItems = array_slice($merged, $offset, $perPage);
+        // Paginate (للفلتر missing نعالج الكل ثم نفلتر لاحقاً)
+        $pagedItems = ($filter === 'missing') ? $merged : array_slice($merged, $offset, $perPage);
         $results = [];
 
         foreach ($pagedItems as $item) {
@@ -643,6 +647,13 @@ class SiteController extends Controller
                     'documentType'  => $row['document_type'] ?? 'unknown',
                 ];
             }
+        }
+
+        // ── فلتر الملفات المفقودة (بعد التحقق من وجود الملفات) ──
+        if ($filter === 'missing') {
+            $results = array_values(array_filter($results, function ($r) { return !$r['fileExists']; }));
+            $total = count($results);
+            $results = array_slice($results, $offset, $perPage);
         }
 
         // ── تجميع الصور في دفعات (صور رُفعت معاً خلال 2 دقيقة بنفس الـ contractId) ──
@@ -843,13 +854,19 @@ class SiteController extends Controller
         $orphans = $db->createCommand(
             "SELECT COUNT(*) FROM os_ImageManager im 
              LEFT JOIN os_customers c ON CAST(im.contractId AS UNSIGNED) = c.id 
-             WHERE im.groupName = 'coustmers' AND c.id IS NULL"
+             WHERE im.groupName IN ('coustmers','customers','0','1','2','3','4','5','6','7','8','9') AND c.id IS NULL"
         )->queryScalar();
 
         $linked = $db->createCommand(
             "SELECT COUNT(*) FROM os_ImageManager im 
              INNER JOIN os_customers c ON CAST(im.contractId AS UNSIGNED) = c.id 
              WHERE im.groupName = 'coustmers'"
+        )->queryScalar();
+
+        $unlinked = $db->createCommand(
+            "SELECT COUNT(*) FROM os_ImageManager im 
+             LEFT JOIN os_customers c ON CAST(im.contractId AS UNSIGNED) = c.id 
+             WHERE c.id IS NULL AND (im.contractId IS NULL OR im.contractId = '' OR im.contractId = '0')"
         )->queryScalar();
 
         // Check missing files across ALL storage locations (sample of 100)
@@ -886,10 +903,103 @@ class SiteController extends Controller
             'contract_images'   => (int) $contractImages,
             'orphans'           => (int) $orphans,
             'linked'            => (int) $linked,
+            'unlinked'          => (int) $unlinked,
             'estimated_missing' => $estimatedMissing,
             'sample_size'       => count($sampleImages),
             'sample_missing'    => $sampleMissing,
             'smart_media_count' => $smartMediaCount,
         ];
+    }
+
+    /**
+     * حذف صورة من قاعدة البيانات والملف الفعلي (AJAX)
+     */
+    public function actionImageDelete()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (!Yii::$app->request->isPost) {
+            return ['success' => false, 'error' => 'طلب غير صالح'];
+        }
+
+        $rawId = trim(Yii::$app->request->post('image_id', ''));
+        $db = Yii::$app->db;
+
+        // ── Smart Media (os_customer_documents) ──
+        if (strpos($rawId, 'cd_') === 0) {
+            $cdId = (int) str_replace('cd_', '', $rawId);
+            if ($cdId <= 0) return ['success' => false, 'error' => 'رقم غير صالح'];
+
+            $row = $db->createCommand("SELECT * FROM os_customer_documents WHERE id = :id", [':id' => $cdId])->queryOne();
+            if (!$row) return ['success' => false, 'error' => 'السجل غير موجود'];
+
+            // حذف الملف الفعلي
+            $webRoot = Yii::getAlias('@backend/web');
+            $filePath = $row['file_path'] ?? '';
+            if (!empty($filePath) && file_exists($webRoot . $filePath)) {
+                @unlink($webRoot . $filePath);
+            }
+            // حذف الصورة المصغرة
+            $thumbPath = str_replace('/documents/', '/documents/thumbs/thumb_', $filePath);
+            if (!empty($thumbPath) && file_exists($webRoot . $thumbPath)) {
+                @unlink($webRoot . $thumbPath);
+            }
+
+            $db->createCommand("DELETE FROM os_customer_documents WHERE id = :id", [':id' => $cdId])->execute();
+            return ['success' => true, 'message' => "تم حذف صورة Smart Media #{$cdId}"];
+        }
+
+        // ── ImageManager (os_ImageManager) ──
+        $imageId = (int) $rawId;
+        if ($imageId <= 0) return ['success' => false, 'error' => 'رقم الصورة غير صالح'];
+
+        $image = $db->createCommand("SELECT * FROM os_ImageManager WHERE id = :id", [':id' => $imageId])->queryOne();
+        if (!$image) return ['success' => false, 'error' => 'الصورة غير موجودة'];
+
+        // التحقق أنها ليست selected_image لأي عميل
+        $usedByCustomer = $db->createCommand(
+            "SELECT id, name FROM os_customers WHERE selected_image = :imgId LIMIT 1",
+            [':imgId' => $imageId]
+        )->queryOne();
+
+        if ($usedByCustomer) {
+            // إزالة الربط أولاً
+            $db->createCommand("UPDATE os_customers SET selected_image = NULL WHERE selected_image = :imgId", [
+                ':imgId' => $imageId,
+            ])->execute();
+        }
+
+        // حذف الملف الفعلي — بحث في عدة مواقع
+        $ext = strtolower(pathinfo($image['fileName'], PATHINFO_EXTENSION));
+        if (empty($ext)) $ext = 'jpg';
+        $physicalFile = $image['id'] . '_' . $image['fileHash'] . '.' . $ext;
+
+        $imagesDir  = Yii::getAlias('@backend/web/images/imagemanager');
+        $uploadsDir = Yii::getAlias('@backend/web/uploads/customers/documents');
+        $photosDir  = Yii::getAlias('@backend/web/uploads/customers/photos');
+
+        $paths = [
+            $imagesDir . '/' . $physicalFile,
+            $uploadsDir . '/' . $image['fileName'],
+            $uploadsDir . '/' . $physicalFile,
+            $photosDir . '/' . $image['fileName'],
+        ];
+
+        $deletedFile = false;
+        foreach ($paths as $p) {
+            if (file_exists($p)) {
+                @unlink($p);
+                $deletedFile = true;
+            }
+        }
+
+        // حذف السجل من قاعدة البيانات
+        $db->createCommand("DELETE FROM os_ImageManager WHERE id = :id", [':id' => $imageId])->execute();
+
+        $msg = "تم حذف الصورة #{$imageId}";
+        if ($usedByCustomer) $msg .= " (تم إلغاء ربطها بالعميل {$usedByCustomer['name']})";
+        if (!$deletedFile) $msg .= " (الملف كان مفقوداً أصلاً)";
+
+        return ['success' => true, 'message' => $msg];
     }
 }
