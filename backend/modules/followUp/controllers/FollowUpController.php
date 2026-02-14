@@ -46,7 +46,7 @@ class FollowUpController extends Controller
                     ],
                     [
                         'actions' => ['logout', 'index', 'create', 'delete', 'send-sms', 'view', 'update', 'find-next-contract', 'add-new-loan', 'printer', 'clearance', 'change-status', 'custamer-info',
-                        'panel', 'save-follow-up', 'create-task', 'move-task', 'ai-feedback', 'get-timeline', 'update-judiciary-check'],
+                        'panel', 'save-follow-up', 'create-task', 'move-task', 'ai-feedback', 'get-timeline', 'update-judiciary-check', 'customer-image'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -375,6 +375,30 @@ class FollowUpController extends Controller
         return $this->render('clearance', [
             'contract_id' => $contract_id
         ]);
+    }
+
+    /**
+     * Serve ImageManager image by id (for customer images modal).
+     * Uses backend web path so it works regardless of baseUrl/static config.
+     */
+    public function actionCustomerImage($id)
+    {
+        $id = (int) $id;
+        $model = \backend\modules\imagemanager\models\Imagemanager::findOne($id);
+        if (!$model || empty($model->fileHash)) {
+            throw new NotFoundHttpException(Yii::t('app', 'الصورة غير موجودة.'));
+        }
+        $ext = pathinfo((string) $model->fileName, PATHINFO_EXTENSION) ?: 'jpg';
+        $basePath = Yii::getAlias('@backend/web/images/imagemanager');
+        $filePath = $basePath . '/' . $id . '_' . $model->fileHash . '.' . $ext;
+        if (!is_file($filePath)) {
+            throw new NotFoundHttpException(Yii::t('app', 'ملف الصورة غير موجود.'));
+        }
+        Yii::$app->response->sendFile($filePath, $id . '.' . $ext, [
+            'inline' => true,
+            'mimeType' => 'image/' . ($ext === 'jpg' || $ext === 'jpeg' ? 'jpeg' : ($ext === 'png' ? 'png' : 'gif')),
+        ]);
+        Yii::$app->end();
     }
 
     /**
