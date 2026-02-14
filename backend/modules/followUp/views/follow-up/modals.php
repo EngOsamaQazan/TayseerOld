@@ -206,7 +206,7 @@ $contractModel = $contractCalculations->contract_model;
                         <?php foreach ($allImages as $ei): ?>
                             <?php
                             // استخدام action يخدم الملف من مسار backend/web — يعمل على أي سيرفر بغض النظر عن baseUrl
-                            $path = \yii\helpers\Url::to(['/follow-up/follow-up/customer-image', 'id' => $ei->id]);
+                            $path = \yii\helpers\Url::to(['/followUp/follow-up/customer-image', 'id' => $ei->id]);
                             if (empty($ei->fileHash)) continue;
                             ?>
                             <div class="col-md-3 text-center" style="margin-bottom:12px">

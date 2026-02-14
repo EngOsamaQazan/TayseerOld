@@ -390,15 +390,18 @@ class FollowUpController extends Controller
         }
         $ext = pathinfo((string) $model->fileName, PATHINFO_EXTENSION) ?: 'jpg';
         $basePath = Yii::getAlias('@backend/web/images/imagemanager');
+        if (!is_dir($basePath)) {
+            $basePath = dirname(dirname(dirname(dirname(__DIR__)))) . '/web/images/imagemanager';
+        }
         $filePath = $basePath . '/' . $id . '_' . $model->fileHash . '.' . $ext;
         if (!is_file($filePath)) {
             throw new NotFoundHttpException(Yii::t('app', 'ملف الصورة غير موجود.'));
         }
-        Yii::$app->response->sendFile($filePath, $id . '.' . $ext, [
+        $mime = $ext === 'png' ? 'image/png' : ($ext === 'gif' ? 'image/gif' : ($ext === 'webp' ? 'image/webp' : 'image/jpeg'));
+        return Yii::$app->response->sendFile($filePath, $id . '.' . $ext, [
             'inline' => true,
-            'mimeType' => 'image/' . ($ext === 'jpg' || $ext === 'jpeg' ? 'jpeg' : ($ext === 'png' ? 'png' : 'gif')),
+            'mimeType' => $mime,
         ]);
-        Yii::$app->end();
     }
 
     /**
