@@ -84,40 +84,8 @@ $mainMenuItems = [
     // ─── 12. إدارة الصلاحيات ───
     ['label' => 'إدارة الصلاحيات', 'icon' => 'shield', 'url' => ['/permissions-management'], 'privilege' => [Permissions::PERMISSION, Permissions::ROLE, Permissions::ASSIGNMENT]],
 
-    // ─── 13. الإعدادات العامة (المتغيرات) ───
-    [
-        'label' => 'الإعدادات العامة',
-        'icon'  => 'cogs',
-        'items' => [
-            // ── عام ──
-            ['label' => 'الحالات',            'icon' => 'toggle-on',     'url' => ['/status/status/index'],                                      'privilege' => Permissions::STATUS],
-            ['label' => 'حالات المستندات',    'icon' => 'file-o',        'url' => ['/documentStatus/document-status/index'],                     'privilege' => Permissions::Document_STATUS],
-            ['label' => 'أنواع المستندات',    'icon' => 'files-o',       'url' => ['/documentType/document-type/index'],                         'privilege' => Permissions::DOCYUMENT_TYPE],
-            ['label' => 'طرق الدفع',          'icon' => 'credit-card',   'url' => ['/paymentType/payment-type/index'],                           'privilege' => Permissions::PAYMENT_TYPE],
-            ['label' => 'فئات المصروفات',     'icon' => 'tags',          'url' => ['/expenseCategories/expense-categories/index'],               'privilege' => Permissions::EXPENSE_CATEGORIES],
-            ['label' => 'البنوك',             'icon' => 'university',    'url' => ['/bancks/bancks/index'],                                      'privilege' => Permissions::BANCKS],
-            // ── جغرافي ──
-            ['label' => 'المدن',              'icon' => 'map-marker',    'url' => ['/city/city/index'],                                          'privilege' => Permissions::CITY],
-            ['label' => 'الجنسيات',           'icon' => 'flag',          'url' => ['/citizen/citizen/index'],                                    'privilege' => Permissions::CITIZEN],
-            // ── عملاء ──
-            ['label' => 'صلة القرابة',        'icon' => 'sitemap',       'url' => ['/cousins/cousins/index'],                                   'privilege' => Permissions::COUSINS],
-            ['label' => 'مصدر التعرف علينا',  'icon' => 'bullhorn',      'url' => ['/hearAboutUs/hear-about-us/index'],                         'privilege' => Permissions::HEAR_ABOUT_US],
-            ['label' => 'المشاعر',            'icon' => 'smile-o',       'url' => ['/feelings/feelings/index'],                                 'privilege' => Permissions::FEELINGS],
-            ['label' => 'أنواع الاتصال',      'icon' => 'phone-square',  'url' => ['/contactType/contact-type/index'],                          'privilege' => Permissions::CONTACT_TYPE],
-            ['label' => 'ردود الاتصال',       'icon' => 'reply',         'url' => ['/connectionResponse/connection-response/index'],             'privilege' => Permissions::CONNECTION_RESPONSE],
-            // ── قضائي ──
-            ['label' => 'الإجراءات القضائية', 'icon' => 'legal',         'url' => ['/judiciaryActions/judiciary-actions/index'],                 'privilege' => Permissions::JUDICIARY_ACTION],
-            ['label' => 'أنواع القضايا',      'icon' => 'folder-open',   'url' => ['/judiciaryType/judiciary-type/index'],                      'privilege' => Permissions::JUDICIARY_TYPE],
-            ['label' => 'المحامون',           'icon' => 'briefcase',     'url' => ['/lawyers/lawyers/index'],                                   'privilege' => Permissions::LAWYERS],
-            ['label' => 'المحاكم',            'icon' => 'institution',   'url' => ['/court/court/index'],                                       'privilege' => Permissions::COURT],
-            ['label' => 'عناوين التبليغ',     'icon' => 'map-signs',     'url' => ['/JudiciaryInformAddress/judiciary-inform-address/index'],    'privilege' => Permissions::JUDICIARY_INFORM_ADDRESS],
-            // ── وظائف ──
-            ['label' => 'جهات العمل',         'icon' => 'building-o',    'url' => ['/jobs/jobs/index'],                                         'privilege' => Permissions::JOBS],
-            ['label' => 'المسميات الوظيفية',  'icon' => 'id-badge',      'url' => ['/designation/designation/index'],                           'privilege' => Permissions::EXPENSE_CATEGORIES],
-            // ── رسائل ──
-            ['label' => 'الرسائل النصية',     'icon' => 'envelope',      'url' => ['/sms/sms/index'],                                          'privilege' => Permissions::COURT],
-        ],
-    ],
+    // ─── 13. إعدادات النظام (تبويب واحد → صفحة موحّدة) ───
+    ['label' => 'إعدادات النظام', 'icon' => 'cogs', 'url' => ['/site/system-settings']],
 
     // ─── تسجيل الدخول (للزوار) ───
     ['label' => 'تسجيل الدخول', 'url' => ['site/login'], 'visible' => Yii::$app->user->isGuest],

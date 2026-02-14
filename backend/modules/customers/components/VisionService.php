@@ -15,6 +15,7 @@
 namespace backend\modules\customers\components;
 
 use Yii;
+use common\models\SystemSettings;
 
 class VisionService
 {
@@ -27,10 +28,10 @@ class VisionService
     /** @var string Vision API scope */
     const SCOPE = 'https://www.googleapis.com/auth/cloud-vision';
     
-    /** @var float Cost per API call (after free tier) */
+    /** @var float Cost per API call (after free tier) — default, overridden by DB settings */
     const COST_PER_CALL = 0.0015; // $1.50 / 1000
     
-    /** @var int Free calls per month */
+    /** @var int Free calls per month — default, overridden by DB settings */
     const FREE_TIER_LIMIT = 1000;
     
     /** @var string Cached access token */
@@ -492,25 +493,51 @@ class VisionService
     }
 
     /**
-     * Load service account credentials
+     * Check if Google Cloud Vision is enabled
+     */
+    public static function isEnabled(): bool
+    {
+        return SystemSettings::get('google_cloud', 'enabled', '0') === '1';
+    }
+
+    /**
+     * Load service account credentials from DB (with JSON file fallback)
      */
     private static function getCredentials(): array
     {
         if (self::$credentials) return self::$credentials;
-        
+
+        // Primary: read from database (system_settings)
+        $dbCreds = SystemSettings::getGroup('google_cloud');
+
+        if (!empty($dbCreds['client_email']) && !empty($dbCreds['private_key'])) {
+            // Check if enabled
+            if (isset($dbCreds['enabled']) && $dbCreds['enabled'] !== '1') {
+                throw new \Exception('Google Cloud Vision API معطّل — فعّله من الإعدادات العامة');
+            }
+
+            self::$credentials = [
+                'project_id'   => $dbCreds['project_id'] ?? '',
+                'client_email' => $dbCreds['client_email'],
+                'private_key'  => $dbCreds['private_key'],
+            ];
+
+            return self::$credentials;
+        }
+
+        // Fallback: read from JSON file (legacy support)
         $path = Yii::getAlias('@backend/config/credentials/google-vision.json');
-        
-        if (!file_exists($path)) {
-            throw new \Exception("Service account file not found: {$path}");
+
+        if (file_exists($path)) {
+            $fileCreds = json_decode(file_get_contents($path), true);
+            if ($fileCreds && isset($fileCreds['private_key'])) {
+                Yii::warning('VisionService: Using legacy JSON file credentials. Migrate to System Settings.', 'vision');
+                self::$credentials = $fileCreds;
+                return self::$credentials;
+            }
         }
-        
-        self::$credentials = json_decode(file_get_contents($path), true);
-        
-        if (!self::$credentials || !isset(self::$credentials['private_key'])) {
-            throw new \Exception('Invalid service account credentials file');
-        }
-        
-        return self::$credentials;
+
+        throw new \Exception('لم يتم تكوين بيانات اعتماد Google Cloud — اذهب إلى الإعدادات العامة → Google Cloud');
     }
 
     /**
@@ -526,9 +553,11 @@ class VisionService
         ?string $errorMessage = null
     ): void {
         try {
-            // Calculate cost
+            // Calculate cost (use DB settings if available)
             $monthlyUsage = self::getMonthlyUsageCount();
-            $cost = ($monthlyUsage >= self::FREE_TIER_LIMIT) ? self::COST_PER_CALL : 0;
+            $monthlyLimit = (int) SystemSettings::get('google_cloud', 'monthly_limit', self::FREE_TIER_LIMIT);
+            $costPerReq = (float) SystemSettings::get('google_cloud', 'cost_per_request', self::COST_PER_CALL);
+            $cost = ($monthlyUsage >= $monthlyLimit) ? $costPerReq : 0;
             
             Yii::$app->db->createCommand()->insert('os_vision_api_usage', [
                 'api_feature' => $feature,

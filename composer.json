@@ -42,7 +42,8 @@
         "yiisoft/yii2-queue": "^2.3",
         "php-amqplib/php-amqplib": "^2.7",
         "yiisoft/yii2-redis": "~2.0.0",
-        "chillerlan/php-qrcode": "^5.0"
+        "chillerlan/php-qrcode": "^5.0",
+        "borales/yii2-phone-input": "*"
     },
     "require-dev": {
         "yiisoft/yii2-debug": "~2.1.0",
@@ -53,8 +54,7 @@
         "codeception/module-yii2": "^1.0",
         "codeception/module-filesystem": "^1.0",
         "codeception/verify": "~0.5.0 || ~1.1.0",
-        "symfony/browser-kit": ">=2.7 <=4.2.4",
-        "borales/yii2-phone-input": "*"
+        "symfony/browser-kit": ">=2.7 <=4.2.4"
     },
     "config": {
         "process-timeout": 1800,

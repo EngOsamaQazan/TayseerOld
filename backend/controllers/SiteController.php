@@ -3,10 +3,12 @@
 namespace backend\controllers;
 
 use common\models\Expenses;
+use common\models\SystemSettings;
 use Yii;
 use yii\web\Controller;
 use yii\filters\VerbFilter;
 use yii\filters\AccessControl;
+use yii\web\Response;
 use common\models\LoginForm;
 use backend\modules\contracts\models\Contracts;
 use yii\data\ActiveDataProvider;
@@ -31,7 +33,7 @@ class SiteController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'system-settings', 'test-google-connection', 'image-manager', 'image-manager-data', 'image-reassign', 'image-manager-stats', 'image-search-customers', 'image-update-doc-type'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -252,5 +254,642 @@ class SiteController extends Controller
                 array_push($notImportedData, $model->attributes);
             }
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  إعدادات النظام — System Settings
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * عرض وتعديل إعدادات النظام
+     */
+    public function actionSystemSettings()
+    {
+        // Load all groups
+        $googleCloud = SystemSettings::getGroup('google_cloud');
+        $flash = null;
+
+        if (Yii::$app->request->isPost) {
+            $post = Yii::$app->request->post();
+            $tab = $post['settings_tab'] ?? 'google_cloud';
+
+            if ($tab === 'google_cloud') {
+                $data = [
+                    'enabled'        => $post['gc_enabled'] ?? '0',
+                    'project_id'     => trim($post['gc_project_id'] ?? ''),
+                    'client_email'   => trim($post['gc_client_email'] ?? ''),
+                    'private_key'    => trim($post['gc_private_key'] ?? ''),
+                    'monthly_limit'  => trim($post['gc_monthly_limit'] ?? '1000'),
+                    'cost_per_request'=> trim($post['gc_cost_per_request'] ?? '0.0015'),
+                ];
+
+                // Don't overwrite private_key if user left it as masked
+                if ($data['private_key'] === '' || $data['private_key'] === '••••••••••') {
+                    $data['private_key'] = SystemSettings::get('google_cloud', 'private_key', '');
+                }
+
+                $encryptedKeys = ['private_key'];
+                $saved = SystemSettings::setGroup('google_cloud', $data, $encryptedKeys);
+
+                if ($saved) {
+                    Yii::$app->session->setFlash('success', 'تم حفظ إعدادات Google Cloud بنجاح');
+                } else {
+                    Yii::$app->session->setFlash('error', 'حدث خطأ أثناء حفظ الإعدادات');
+                }
+
+                return $this->redirect(['system-settings', 'tab' => 'google_cloud']);
+            }
+        }
+
+        // Mask the private key for display
+        $displaySettings = $googleCloud;
+        if (!empty($displaySettings['private_key'])) {
+            $displaySettings['private_key_masked'] = '••••••••••';
+            $displaySettings['has_private_key'] = true;
+        } else {
+            $displaySettings['private_key_masked'] = '';
+            $displaySettings['has_private_key'] = false;
+        }
+
+        // Get API usage stats
+        $usageStats = $this->getApiUsageStats();
+
+        return $this->render('system-settings', [
+            'googleCloud' => $displaySettings,
+            'usageStats'  => $usageStats,
+            'activeTab'   => Yii::$app->request->get('tab', 'general'),
+        ]);
+    }
+
+    /**
+     * اختبار اتصال Google Cloud (AJAX)
+     */
+    public function actionTestGoogleConnection()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (!Yii::$app->request->isAjax) {
+            return ['success' => false, 'error' => 'طلب غير صالح'];
+        }
+
+        $creds = [
+            'project_id'   => SystemSettings::get('google_cloud', 'project_id', ''),
+            'client_email' => SystemSettings::get('google_cloud', 'client_email', ''),
+            'private_key'  => SystemSettings::get('google_cloud', 'private_key', ''),
+        ];
+
+        return SystemSettings::testGoogleConnection($creds);
+    }
+
+    /**
+     * Get API usage statistics for current month
+     */
+    private function getApiUsageStats(): array
+    {
+        $month = date('Y-m');
+        $monthlyLimit = (int) SystemSettings::get('google_cloud', 'monthly_limit', 1000);
+        $costPerReq = (float) SystemSettings::get('google_cloud', 'cost_per_request', 0.0015);
+
+        // Check if table exists, handle gracefully
+        try {
+            $stats = (new Query())
+                ->select([
+                    'total_requests' => 'COUNT(*)',
+                    'success_count'  => 'SUM(CASE WHEN status = "success" THEN 1 ELSE 0 END)',
+                    'fail_count'     => 'SUM(CASE WHEN status = "error" THEN 1 ELSE 0 END)',
+                    'total_cost'     => 'COALESCE(SUM(cost), 0)',
+                ])
+                ->from('{{%vision_api_usage}}')
+                ->where(['>=', 'created_at', $month . '-01 00:00:00'])
+                ->one();
+        } catch (\Exception $e) {
+            $stats = [
+                'total_requests' => 0,
+                'success_count'  => 0,
+                'fail_count'     => 0,
+                'total_cost'     => 0,
+            ];
+        }
+
+        $stats['monthly_limit'] = $monthlyLimit;
+        $stats['cost_per_request'] = $costPerReq;
+        $stats['remaining'] = max(0, $monthlyLimit - (int)$stats['total_requests']);
+        $stats['usage_percent'] = $monthlyLimit > 0
+            ? round(((int)$stats['total_requests'] / $monthlyLimit) * 100, 1)
+            : 0;
+
+        return $stats;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  إدارة الصور — مراجعة وتصحيح ربط الصور بالعملاء
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * صفحة إدارة الصور الرئيسية
+     */
+    public function actionImageManager()
+    {
+        return $this->render('image-manager');
+    }
+
+    /**
+     * جلب بيانات الصور (AJAX مع pagination)
+     */
+    public function actionImageManagerData()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $page     = (int) Yii::$app->request->get('page', 1);
+        $perPage  = (int) Yii::$app->request->get('per_page', 50);
+        $filter   = Yii::$app->request->get('filter', 'all'); // all, orphans, customers, contracts, smart_media
+        $search   = trim(Yii::$app->request->get('search', ''));
+        $dateFrom = Yii::$app->request->get('date_from', '');
+        $dateTo   = Yii::$app->request->get('date_to', '');
+        $offset   = ($page - 1) * $perPage;
+
+        $db = Yii::$app->db;
+
+        // ── مجلدات التخزين ──
+        $imagesDir       = Yii::getAlias('@backend/web/images/imagemanager');
+        $uploadsDir      = Yii::getAlias('@backend/web/uploads/customers/documents');
+        $uploadsPhotosDir = Yii::getAlias('@backend/web/uploads/customers/photos');
+
+        // ──────────────────────────────────────────────────────────
+        //  استعلام موحّد: UNION بين os_ImageManager و os_customer_documents
+        //  يُجمع كل الصور من النظامين في استعلام واحد مرتب بالتاريخ
+        // ──────────────────────────────────────────────────────────
+
+        // ── فلتر os_ImageManager ──
+        $imWhere = "WHERE 1=1";
+        $imParams = [];
+
+        if ($filter === 'orphans') {
+            $imWhere .= " AND im.groupName IN ('coustmers','customers','0','1','2','3','4','5','6','7','8','9') AND c.id IS NULL";
+        } elseif ($filter === 'customers') {
+            $imWhere .= " AND im.groupName != 'contracts' AND c.id IS NOT NULL";
+        } elseif ($filter === 'contracts') {
+            $imWhere .= " AND im.groupName = 'contracts'";
+        } elseif ($filter === 'smart_media') {
+            // فقط Smart Media — سيتم تعبئتها لاحقاً
+            $imWhere .= " AND 1=0"; // skip ImageManager
+        }
+
+        if ($search !== '') {
+            $imWhere .= " AND (c.name LIKE :search OR im.contractId LIKE :searchId OR im.id = :exactId)";
+            $imParams[':search'] = "%$search%";
+            $imParams[':searchId'] = "%$search%";
+            $imParams[':exactId'] = $search;
+        }
+        if ($dateFrom !== '') {
+            $imWhere .= " AND DATE(im.created) >= :dateFrom";
+            $imParams[':dateFrom'] = $dateFrom;
+        }
+        if ($dateTo !== '') {
+            $imWhere .= " AND DATE(im.created) <= :dateTo";
+            $imParams[':dateTo'] = $dateTo;
+        }
+
+        // ── فلتر os_customer_documents ──
+        $cdWhere = "WHERE 1=1";
+        $cdParams = [];
+        $includeSmartMedia = true;
+
+        if ($filter === 'orphans' || $filter === 'contracts') {
+            $includeSmartMedia = false; // Smart Media دائماً مرتبطة بعميل
+        }
+
+        if ($search !== '' && $includeSmartMedia) {
+            $cdWhere .= " AND (c2.name LIKE :cd_search OR cd.customer_id = :cd_exactId)";
+            $cdParams[':cd_search'] = "%$search%";
+            $cdParams[':cd_exactId'] = $search;
+        }
+        if ($dateFrom !== '' && $includeSmartMedia) {
+            $cdWhere .= " AND DATE(cd.created_at) >= :cd_dateFrom";
+            $cdParams[':cd_dateFrom'] = $dateFrom;
+        }
+        if ($dateTo !== '' && $includeSmartMedia) {
+            $cdWhere .= " AND DATE(cd.created_at) <= :cd_dateTo";
+            $cdParams[':cd_dateTo'] = $dateTo;
+        }
+
+        // ── Count total ──
+        $countSql = "SELECT COUNT(*) FROM os_ImageManager im
+                     LEFT JOIN os_customers c ON CAST(im.contractId AS UNSIGNED) = c.id AND im.groupName = 'coustmers'
+                     $imWhere";
+        $total = (int) $db->createCommand($countSql, $imParams)->queryScalar();
+
+        if ($includeSmartMedia) {
+            try {
+                $cdCountSql = "SELECT COUNT(*) FROM os_customer_documents cd
+                               LEFT JOIN os_customers c2 ON cd.customer_id = c2.id
+                               $cdWhere";
+                $total += (int) $db->createCommand($cdCountSql, $cdParams)->queryScalar();
+            } catch (\Exception $e) { /* table may not exist */ }
+        }
+
+        // ── Get ImageManager images ──
+        $sql = "SELECT 
+                    im.id, im.fileName, im.fileHash, im.contractId, im.groupName,
+                    im.created, im.modified,
+                    c.name AS customer_name, c.id AS real_customer_id,
+                    c.selected_image,
+                    'imagemanager' AS _source
+                FROM os_ImageManager im
+                LEFT JOIN os_customers c ON CAST(im.contractId AS UNSIGNED) = c.id AND im.groupName = 'coustmers'
+                $imWhere
+                ORDER BY im.created DESC";
+
+        $imRows = $db->createCommand($sql, $imParams)->queryAll();
+
+        // ── Get Smart Media images ──
+        $cdRows = [];
+        if ($includeSmartMedia) {
+            try {
+                $cdSql = "SELECT 
+                            cd.id, cd.file_path, cd.customer_id, cd.document_type,
+                            cd.created_at AS created,
+                            c2.name AS customer_name, c2.id AS real_customer_id,
+                            c2.selected_image,
+                            'smart_media' AS _source
+                          FROM os_customer_documents cd
+                          LEFT JOIN os_customers c2 ON cd.customer_id = c2.id
+                          $cdWhere
+                          ORDER BY cd.created_at DESC";
+                $cdRows = $db->createCommand($cdSql, $cdParams)->queryAll();
+            } catch (\Exception $e) { /* table may not exist */ }
+        }
+
+        // ── دمج النتائج وترتيبها بالتاريخ ──
+        $merged = [];
+
+        foreach ($imRows as $row) {
+            $merged[] = [
+                'created'  => $row['created'],
+                'type'     => 'im',
+                'data'     => $row,
+            ];
+        }
+        foreach ($cdRows as $row) {
+            $merged[] = [
+                'created'  => $row['created'],
+                'type'     => 'cd',
+                'data'     => $row,
+            ];
+        }
+
+        // Sort by created DESC
+        usort($merged, function ($a, $b) {
+            return strcmp($b['created'], $a['created']);
+        });
+
+        // Paginate
+        $pagedItems = array_slice($merged, $offset, $perPage);
+        $results = [];
+
+        foreach ($pagedItems as $item) {
+            if ($item['type'] === 'im') {
+                $row = $item['data'];
+                $ext = strtolower(pathinfo($row['fileName'], PATHINFO_EXTENSION));
+                if (empty($ext)) $ext = 'jpg';
+
+                // ── بحث في عدة مواقع عن الصورة ──
+                $physicalFile = $row['id'] . '_' . $row['fileHash'] . '.' . $ext;
+                $fileExists = false;
+                $imageUrl = '/images/imagemanager/' . $physicalFile;
+                $source = 'imagemanager';
+
+                // 1) المسار الأصلي: images/imagemanager/{id}_{hash}.{ext}
+                if (file_exists($imagesDir . '/' . $physicalFile)) {
+                    $fileExists = true;
+                    $imageUrl = '/images/imagemanager/' . $physicalFile;
+                    $source = 'imagemanager';
+                }
+                // 2) بالاسم الأصلي في uploads/customers/documents/{fileName}
+                elseif (file_exists($uploadsDir . '/' . $row['fileName'])) {
+                    $fileExists = true;
+                    $imageUrl = '/uploads/customers/documents/' . $row['fileName'];
+                    $source = 'smart_media';
+                }
+                // 3) بصيغة {id}_{hash} في uploads/customers/documents/
+                elseif (file_exists($uploadsDir . '/' . $physicalFile)) {
+                    $fileExists = true;
+                    $imageUrl = '/uploads/customers/documents/' . $physicalFile;
+                    $source = 'smart_media';
+                }
+                // 4) في uploads/customers/photos/
+                elseif (file_exists($uploadsPhotosDir . '/' . $row['fileName'])) {
+                    $fileExists = true;
+                    $imageUrl = '/uploads/customers/photos/' . $row['fileName'];
+                    $source = 'photos';
+                }
+
+                $gn = $row['groupName'];
+                $isOrphan = ($gn !== 'contracts' && empty($row['real_customer_id']));
+                $isSelected = ($row['selected_image'] == $row['id']);
+
+                // نوع الصورة: القيم 0-9 هي أنواع مستندات، coustmers/customers/contracts قيم قديمة
+                $knownLegacy = ['coustmers', 'customers', 'contracts'];
+                $docType = in_array($gn, $knownLegacy) ? '' : $gn;
+
+                $results[] = [
+                    'id'            => (int) $row['id'],
+                    'fileName'      => $row['fileName'],
+                    'fileHash'      => $row['fileHash'],
+                    'contractId'    => $row['contractId'],
+                    'groupName'     => $row['groupName'],
+                    'created'       => $row['created'],
+                    'imageUrl'      => $imageUrl,
+                    'fileExists'    => $fileExists,
+                    'customerName'  => $row['customer_name'],
+                    'customerId'    => $row['real_customer_id'],
+                    'isOrphan'      => $isOrphan,
+                    'isSelected'    => $isSelected,
+                    'source'        => $source,
+                    'docType'       => $docType,
+                ];
+            } else {
+                // os_customer_documents row
+                $row = $item['data'];
+                $filePath = $row['file_path']; // e.g. /uploads/customers/documents/uuid.jpg
+                $fileName = basename($filePath);
+                $fileExists = false;
+                $imageUrl = $filePath;
+
+                // بحث في مسارات متعددة
+                $webRoot = Yii::getAlias('@backend/web');
+                if (file_exists($webRoot . $filePath)) {
+                    $fileExists = true;
+                    $imageUrl = $filePath;
+                } elseif (file_exists($uploadsDir . '/' . $fileName)) {
+                    $fileExists = true;
+                    $imageUrl = '/uploads/customers/documents/' . $fileName;
+                }
+
+                $results[] = [
+                    'id'            => 'cd_' . (int) $row['id'],
+                    'fileName'      => $fileName,
+                    'fileHash'      => '',
+                    'contractId'    => $row['customer_id'],
+                    'groupName'     => 'smart_media',
+                    'created'       => $row['created'],
+                    'imageUrl'      => $imageUrl,
+                    'fileExists'    => $fileExists,
+                    'customerName'  => $row['customer_name'],
+                    'customerId'    => $row['real_customer_id'],
+                    'isOrphan'      => empty($row['real_customer_id']),
+                    'isSelected'    => false,
+                    'source'        => 'smart_media',
+                    'documentType'  => $row['document_type'] ?? 'unknown',
+                ];
+            }
+        }
+
+        // ── تجميع الصور في دفعات (صور رُفعت معاً خلال 2 دقيقة بنفس الـ contractId) ──
+        $batches = [];
+        $batchIndex = 0;
+        $usedIndices = [];
+
+        for ($i = 0; $i < count($results); $i++) {
+            if (in_array($i, $usedIndices)) continue;
+
+            $batch = [$i];
+            $usedIndices[] = $i;
+            $baseTime = strtotime($results[$i]['created']);
+            $baseContract = $results[$i]['contractId'];
+
+            for ($j = $i + 1; $j < count($results); $j++) {
+                if (in_array($j, $usedIndices)) continue;
+                $diff = abs(strtotime($results[$j]['created']) - $baseTime);
+                if ($diff <= 120 && $results[$j]['contractId'] === $baseContract) {
+                    $batch[] = $j;
+                    $usedIndices[] = $j;
+                }
+            }
+
+            $batchId = 'batch_' . $batchIndex;
+            foreach ($batch as $idx) {
+                $results[$idx]['batchId'] = $batchId;
+                $results[$idx]['batchSize'] = count($batch);
+            }
+            $batchIndex++;
+        }
+
+        return [
+            'images'  => $results,
+            'total'   => (int) $total,
+            'page'    => $page,
+            'perPage' => $perPage,
+            'pages'   => (int) ceil($total / max(1, $perPage)),
+        ];
+    }
+
+    /**
+     * إعادة ربط صورة بعميل آخر (AJAX)
+     */
+    public function actionImageReassign()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (!Yii::$app->request->isPost) {
+            return ['success' => false, 'error' => 'طلب غير صالح'];
+        }
+
+        $imageId       = (int) Yii::$app->request->post('image_id');
+        $newCustomerId = (int) Yii::$app->request->post('customer_id');
+        $docType       = trim(Yii::$app->request->post('doc_type', ''));
+        $setAsSelected = (bool) Yii::$app->request->post('set_selected', false);
+
+        if ($imageId <= 0) {
+            return ['success' => false, 'error' => 'رقم الصورة غير صالح'];
+        }
+        if ($docType === '') {
+            return ['success' => false, 'error' => 'يرجى تحديد نوع الصورة'];
+        }
+
+        $db = Yii::$app->db;
+
+        $image = $db->createCommand("SELECT * FROM os_ImageManager WHERE id = :id", [':id' => $imageId])->queryOne();
+        if (!$image) {
+            return ['success' => false, 'error' => 'الصورة غير موجودة'];
+        }
+
+        if ($newCustomerId > 0) {
+            $customer = $db->createCommand("SELECT id, name AS customer_name FROM os_customers WHERE id = :id", [':id' => $newCustomerId])->queryOne();
+            if (!$customer) {
+                return ['success' => false, 'error' => 'العميل غير موجود'];
+            }
+
+            // تحديث contractId + groupName + نوع الصورة
+            $db->createCommand("UPDATE os_ImageManager SET contractId = :cid, groupName = :docType, modified = NOW() WHERE id = :id", [
+                ':cid'     => $newCustomerId,
+                ':docType' => $docType,
+                ':id'      => $imageId,
+            ])->execute();
+
+            // الصورة الشخصية (8) → تلقائياً selected_image
+            if ($docType === '8' || $setAsSelected) {
+                $db->createCommand("UPDATE os_customers SET selected_image = :imgId WHERE id = :cid", [
+                    ':imgId' => $imageId,
+                    ':cid'   => $newCustomerId,
+                ])->execute();
+            }
+
+            return [
+                'success'      => true,
+                'message'      => "تم ربط الصورة #{$imageId} بالعميل: {$customer['customer_name']} (#{$newCustomerId})",
+                'customerName' => $customer['customer_name'],
+            ];
+        } else {
+            return ['success' => false, 'error' => 'يرجى تحديد العميل'];
+        }
+    }
+
+    /**
+     * بحث عن العملاء بالاسم أو الرقم (AJAX)
+     */
+    public function actionImageSearchCustomers()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $q = trim(Yii::$app->request->get('q', ''));
+        if (mb_strlen($q) < 2) return [];
+
+        $db = Yii::$app->db;
+
+        if (is_numeric($q)) {
+            $rows = $db->createCommand(
+                "SELECT id, name FROM os_customers WHERE id = :id OR CAST(id AS CHAR) LIKE :q ORDER BY name LIMIT 15",
+                [':id' => (int)$q, ':q' => "%$q%"]
+            )->queryAll();
+        } else {
+            $rows = $db->createCommand(
+                "SELECT id, name FROM os_customers WHERE name LIKE :q ORDER BY name LIMIT 15",
+                [':q' => "%$q%"]
+            )->queryAll();
+        }
+
+        return $rows;
+    }
+
+    /**
+     * تحديث نوع الصورة (AJAX)
+     */
+    public function actionImageUpdateDocType()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (!Yii::$app->request->isPost) {
+            return ['success' => false, 'error' => 'طلب غير صالح'];
+        }
+
+        $imageId = (int) Yii::$app->request->post('image_id');
+        $docType = trim(Yii::$app->request->post('doc_type', ''));
+
+        if ($imageId <= 0 || $docType === '') {
+            return ['success' => false, 'error' => 'بيانات غير مكتملة'];
+        }
+
+        $db = Yii::$app->db;
+        $image = $db->createCommand("SELECT id, contractId, groupName FROM os_ImageManager WHERE id = :id", [':id' => $imageId])->queryOne();
+        if (!$image) {
+            return ['success' => false, 'error' => 'الصورة غير موجودة'];
+        }
+
+        // حفظ النوع في groupName
+        $db->createCommand("UPDATE os_ImageManager SET groupName = :docType, modified = NOW() WHERE id = :id", [
+            ':docType' => $docType,
+            ':id'      => $imageId,
+        ])->execute();
+
+        // إذا صورة شخصية (8) + مرتبطة بعميل → تعيين تلقائي كـ selected_image
+        $autoSelected = false;
+        if ($docType === '8') {
+            $customerId = (int) $image['contractId'];
+            if ($customerId > 0) {
+                $exists = $db->createCommand("SELECT id FROM os_customers WHERE id = :id", [':id' => $customerId])->queryScalar();
+                if ($exists) {
+                    $db->createCommand("UPDATE os_customers SET selected_image = :imgId WHERE id = :cid", [
+                        ':imgId' => $imageId,
+                        ':cid'   => $customerId,
+                    ])->execute();
+                    $autoSelected = true;
+                }
+            }
+        }
+
+        return ['success' => true, 'autoSelected' => $autoSelected];
+    }
+
+    /**
+     * إحصائيات الصور (AJAX)
+     */
+    public function actionImageManagerStats()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $db = Yii::$app->db;
+
+        $total = $db->createCommand("SELECT COUNT(*) FROM os_ImageManager")->queryScalar();
+
+        $customerImages = $db->createCommand(
+            "SELECT COUNT(*) FROM os_ImageManager WHERE groupName = 'coustmers'"
+        )->queryScalar();
+
+        $contractImages = $db->createCommand(
+            "SELECT COUNT(*) FROM os_ImageManager WHERE groupName = 'contracts'"
+        )->queryScalar();
+
+        $orphans = $db->createCommand(
+            "SELECT COUNT(*) FROM os_ImageManager im 
+             LEFT JOIN os_customers c ON CAST(im.contractId AS UNSIGNED) = c.id 
+             WHERE im.groupName = 'coustmers' AND c.id IS NULL"
+        )->queryScalar();
+
+        $linked = $db->createCommand(
+            "SELECT COUNT(*) FROM os_ImageManager im 
+             INNER JOIN os_customers c ON CAST(im.contractId AS UNSIGNED) = c.id 
+             WHERE im.groupName = 'coustmers'"
+        )->queryScalar();
+
+        // Check missing files across ALL storage locations (sample of 100)
+        $sampleImages = $db->createCommand(
+            "SELECT id, fileName, fileHash FROM os_ImageManager ORDER BY RAND() LIMIT 100"
+        )->queryAll();
+
+        $imagesDir = Yii::getAlias('@backend/web/images/imagemanager');
+        $uploadsDir = Yii::getAlias('@backend/web/uploads/customers/documents');
+        $uploadsPhotosDir = Yii::getAlias('@backend/web/uploads/customers/photos');
+        $sampleMissing = 0;
+        foreach ($sampleImages as $img) {
+            $ext = strtolower(pathinfo($img['fileName'], PATHINFO_EXTENSION));
+            if (empty($ext)) $ext = 'jpg';
+            $physFile = $img['id'] . '_' . $img['fileHash'] . '.' . $ext;
+            $found = file_exists($imagesDir . '/' . $physFile)
+                  || file_exists($uploadsDir . '/' . $img['fileName'])
+                  || file_exists($uploadsDir . '/' . $physFile)
+                  || file_exists($uploadsPhotosDir . '/' . $img['fileName']);
+            if (!$found) $sampleMissing++;
+        }
+
+        $estimatedMissing = $total > 0 ? round(($sampleMissing / max(1, count($sampleImages))) * $total) : 0;
+
+        // Count Smart Media images
+        $smartMediaCount = 0;
+        try {
+            $smartMediaCount = (int) $db->createCommand("SELECT COUNT(*) FROM os_customer_documents")->queryScalar();
+        } catch (\Exception $e) {}
+
+        return [
+            'total'             => (int) $total,
+            'customer_images'   => (int) $customerImages,
+            'contract_images'   => (int) $contractImages,
+            'orphans'           => (int) $orphans,
+            'linked'            => (int) $linked,
+            'estimated_missing' => $estimatedMissing,
+            'sample_size'       => count($sampleImages),
+            'sample_missing'    => $sampleMissing,
+            'smart_media_count' => $smartMediaCount,
+        ];
     }
 }

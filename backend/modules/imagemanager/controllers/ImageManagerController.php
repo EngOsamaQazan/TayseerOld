@@ -107,10 +107,19 @@ class ImageManagerController extends BaseManagerController {
         Yii::$app->controller->enableCsrfValidation = false;
         //return default
         $return = $_FILES;
-        //set media path
+
+        // ── استخدم مسار مطلق لمنع مشاكل المسارات النسبية ──
         $sMediaPath = \Yii::$app->imagemanager->mediaPath;
-        //create the folder
-        BaseFileHelper::createDirectory($sMediaPath);
+        // تحويل المسار النسبي إلى مطلق
+        $absoluteMediaPath = Yii::getAlias('@backend/web/images/imagemanager');
+        if (!is_dir($absoluteMediaPath)) {
+            BaseFileHelper::createDirectory($absoluteMediaPath, 0775, true);
+        }
+        // Fallback: use relative if absolute doesn't exist (shouldn't happen)
+        if (!is_dir($absoluteMediaPath)) {
+            $absoluteMediaPath = $sMediaPath;
+            BaseFileHelper::createDirectory($absoluteMediaPath);
+        }
 
         //check file isset
         if (isset($_FILES['imagemanagerFiles']['tmp_name'])) {
@@ -132,10 +141,30 @@ class ImageManagerController extends BaseManagerController {
                     if ($model->save()) {
                         //move file to dir
                         $sSaveFileName = $model->id . "_" . $model->fileHash . "." . $sFileExtension;
-                        //move_uploaded_file($sTempFile, $sMediaPath."/".$sFileName);
-                        //save with Imagine class
-                        Image::getImagine()->open($sTempFile)->save($sMediaPath . "/" . $sSaveFileName);
-                        $bSuccess = true;
+                        $targetPath = $absoluteMediaPath . "/" . $sSaveFileName;
+
+                        try {
+                            // محاولة 1: حفظ عبر Imagine (يضمن أنها صورة صالحة)
+                            Image::getImagine()->open($sTempFile)->save($targetPath);
+                            $bSuccess = true;
+                        } catch (\Exception $e) {
+                            // محاولة 2: نسخ مباشر إذا فشل Imagine
+                            Yii::warning("Imagine save failed for {$model->id}: " . $e->getMessage(), 'imagemanager');
+                            try {
+                                if (move_uploaded_file($sTempFile, $targetPath)) {
+                                    $bSuccess = true;
+                                } elseif (copy($sTempFile, $targetPath)) {
+                                    $bSuccess = true;
+                                } else {
+                                    // فشل كامل — حذف السجل
+                                    Yii::error("Failed to save file for ImageManager #{$model->id}: all methods failed. Path: {$targetPath}", 'imagemanager');
+                                    $model->delete();
+                                }
+                            } catch (\Exception $e2) {
+                                Yii::error("Fallback save also failed for #{$model->id}: " . $e2->getMessage(), 'imagemanager');
+                                $model->delete();
+                            }
+                        }
                     }
                 }
             }
