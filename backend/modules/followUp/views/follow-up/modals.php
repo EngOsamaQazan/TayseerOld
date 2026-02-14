@@ -173,15 +173,18 @@ $contractModel = $contractCalculations->contract_model;
                             ->column();
 
                         if (!empty($selectedImageIds)) {
-                            // من كل selected_image، نجلب contractId (الرقم العشوائي)
+                            // من كل selected_image، نجلب contractId (الرقم العشوائي أو customer_id)
                             $orphanContractIds = \backend\modules\imagemanager\models\Imagemanager::find()
                                 ->select('contractId')
                                 ->where(['id' => $selectedImageIds])
                                 ->andWhere(['groupName' => 'coustmers'])
                                 ->column();
 
-                            // إزالة الأرقام التي هي فعلاً customer_id (تم جلبها بالاستعلام 1)
-                            $orphanContractIds = array_diff($orphanContractIds, $contractCustomerIds);
+                            // إزالة الأرقام التي هي فعلاً customer_id (تم جلبها بالاستعلام 1) — تطبيع أنواع للمقارنة
+                            $customerIdsNormalized = array_map('strval', $contractCustomerIds);
+                            $orphanContractIds = array_values(array_filter($orphanContractIds, function ($cid) use ($customerIdsNormalized) {
+                                return !in_array((string) $cid, $customerIdsNormalized, true);
+                            }));
 
                             if (!empty($orphanContractIds)) {
                                 $orphanImages = \backend\modules\imagemanager\models\Imagemanager::find()

@@ -403,14 +403,35 @@ class FollowUpController extends Controller
             ]);
         }
 
-        // الملف غير موجود محلياً (مثلاً على نماء) → جلب من جادل وعرضه
+        // الملف غير موجود محلياً (نماء) → جلب من جادل. استعمال cURL لأن allow_url_fopen غالباً معطّل على السيرفرات.
         $jadalBase = isset(Yii::$app->params['customerImagesBaseUrl']) && Yii::$app->params['customerImagesBaseUrl'] !== ''
             ? rtrim((string) Yii::$app->params['customerImagesBaseUrl'], '/')
             : 'https://jadal.aqssat.co';
         $remoteUrl = $jadalBase . '/images/imagemanager/' . $id . '_' . $model->fileHash . '.' . $ext;
-        $context = stream_context_create(['http' => ['timeout' => 10]]);
-        $content = @file_get_contents($remoteUrl, false, $context);
-        if ($content === false || $content === '') {
+
+        $content = null;
+        if (function_exists('curl_init')) {
+            $ch = curl_init($remoteUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT => 15,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_USERAGENT => 'JadalImageProxy/1.0',
+                CURLOPT_HTTPHEADER => ['Accept: image/*'],
+            ]);
+            $content = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($code !== 200 || $content === false || $content === '') {
+                $content = null;
+            }
+        }
+        if ($content === null && ini_get('allow_url_fopen')) {
+            $ctx = stream_context_create(['http' => ['timeout' => 10, 'header' => "Accept: image/*\r\n"]]);
+            $content = @file_get_contents($remoteUrl, false, $ctx);
+        }
+        if ($content === false || $content === null || $content === '') {
             throw new NotFoundHttpException(Yii::t('app', 'تعذّر جلب الصورة.'));
         }
         Yii::$app->response->format = Response::FORMAT_RAW;
