@@ -379,7 +379,7 @@ class FollowUpController extends Controller
 
     /**
      * Serve ImageManager image by id (for customer images modal).
-     * Uses backend web path so it works regardless of baseUrl/static config.
+     * إذا الملف موجود محلياً يُرسل منه، وإلا يُجلب من جادل (لنماء وغيرها).
      */
     public function actionCustomerImage($id)
     {
@@ -389,19 +389,35 @@ class FollowUpController extends Controller
             throw new NotFoundHttpException(Yii::t('app', 'الصورة غير موجودة.'));
         }
         $ext = pathinfo((string) $model->fileName, PATHINFO_EXTENSION) ?: 'jpg';
+        $mime = $ext === 'png' ? 'image/png' : ($ext === 'gif' ? 'image/gif' : ($ext === 'webp' ? 'image/webp' : 'image/jpeg'));
         $basePath = Yii::getAlias('@backend/web/images/imagemanager');
         if (!is_dir($basePath)) {
             $basePath = dirname(dirname(dirname(dirname(__DIR__)))) . '/web/images/imagemanager';
         }
         $filePath = $basePath . '/' . $id . '_' . $model->fileHash . '.' . $ext;
-        if (!is_file($filePath)) {
-            throw new NotFoundHttpException(Yii::t('app', 'ملف الصورة غير موجود.'));
+
+        if (is_file($filePath)) {
+            return Yii::$app->response->sendFile($filePath, $id . '.' . $ext, [
+                'inline' => true,
+                'mimeType' => $mime,
+            ]);
         }
-        $mime = $ext === 'png' ? 'image/png' : ($ext === 'gif' ? 'image/gif' : ($ext === 'webp' ? 'image/webp' : 'image/jpeg'));
-        return Yii::$app->response->sendFile($filePath, $id . '.' . $ext, [
-            'inline' => true,
-            'mimeType' => $mime,
-        ]);
+
+        // الملف غير موجود محلياً (مثلاً على نماء) → جلب من جادل وعرضه
+        $jadalBase = isset(Yii::$app->params['customerImagesBaseUrl']) && Yii::$app->params['customerImagesBaseUrl'] !== ''
+            ? rtrim((string) Yii::$app->params['customerImagesBaseUrl'], '/')
+            : 'https://jadal.aqssat.co';
+        $remoteUrl = $jadalBase . '/images/imagemanager/' . $id . '_' . $model->fileHash . '.' . $ext;
+        $context = stream_context_create(['http' => ['timeout' => 10]]);
+        $content = @file_get_contents($remoteUrl, false, $context);
+        if ($content === false || $content === '') {
+            throw new NotFoundHttpException(Yii::t('app', 'تعذّر جلب الصورة.'));
+        }
+        Yii::$app->response->format = Response::FORMAT_RAW;
+        Yii::$app->response->headers->set('Content-Type', $mime);
+        Yii::$app->response->headers->set('Content-Disposition', 'inline; filename="' . $id . '.' . $ext . '"');
+        Yii::$app->response->content = $content;
+        return Yii::$app->response->send();
     }
 
     /**

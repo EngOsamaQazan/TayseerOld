@@ -204,21 +204,21 @@ $contractModel = $contractCalculations->contract_model;
                     <h5 style="margin-bottom:12px"><i class="fa fa-picture-o"></i> صور العملاء <span class="badge"><?= count($allImages) ?></span></h5>
                     <div class="row">
                         <?php
-                            // رابط ثابت: /images/imagemanager/{id}_{fileHash}.{ext}
-                            // الملفات الفعلية مخزنة على سيرفر جادل فقط → عند الدخول من نماء نحمّل الصور من جادل
-                            if (isset(Yii::$app->params['customerImagesBaseUrl']) && Yii::$app->params['customerImagesBaseUrl'] !== '') {
-                                $imagesBase = rtrim((string) Yii::$app->params['customerImagesBaseUrl'], '/');
-                            } elseif (stripos((string) Yii::$app->request->hostInfo, 'namaa') !== false) {
-                                $imagesBase = 'https://jadal.aqssat.co';
-                            } else {
-                                $imagesBase = Yii::$app->request->baseUrl ?: '';
-                            }
+                            // على نماء نستخدم action تعمل كـ proxy وتجلب الصورة من جادل (نفس النطاق → لا مشاكل referrer/CORS)
+                            $isNamaa = stripos((string) Yii::$app->request->hostInfo, 'namaa') !== false;
                         ?>
                         <?php foreach ($allImages as $ei): ?>
                             <?php
                             if (empty($ei->fileHash)) continue;
-                            $ext = pathinfo((string) $ei->fileName, PATHINFO_EXTENSION) ?: 'jpg';
-                            $path = $imagesBase . '/images/imagemanager/' . (int) $ei->id . '_' . $ei->fileHash . '.' . $ext;
+                            if ($isNamaa) {
+                                $path = \yii\helpers\Url::to(['/followUp/follow-up/customer-image', 'id' => $ei->id]);
+                            } else {
+                                $imagesBase = (isset(Yii::$app->params['customerImagesBaseUrl']) && Yii::$app->params['customerImagesBaseUrl'] !== '')
+                                    ? rtrim((string) Yii::$app->params['customerImagesBaseUrl'], '/')
+                                    : (Yii::$app->request->baseUrl ?: '');
+                                $ext = pathinfo((string) $ei->fileName, PATHINFO_EXTENSION) ?: 'jpg';
+                                $path = $imagesBase . '/images/imagemanager/' . (int) $ei->id . '_' . $ei->fileHash . '.' . $ext;
+                            }
                             ?>
                             <div class="col-md-3 text-center" style="margin-bottom:12px">
                                 <a href="<?= Html::encode($path) ?>" target="_blank">
