@@ -203,11 +203,20 @@ $contractModel = $contractCalculations->contract_model;
                 ?>
                     <h5 style="margin-bottom:12px"><i class="fa fa-picture-o"></i> صور العملاء <span class="badge"><?= count($allImages) ?></span></h5>
                     <div class="row">
+                        <?php
+                            // رابط ثابت للملف كما في النظام القديم: /images/imagemanager/{id}_{fileHash}.{ext}
+                            // يُستخدم موقع الطلب الحالي (جدل → jadal.aqssat.co، نماء → namaa.aqssat.co) ما لم يُعرّف customerImagesBaseUrl
+                            if (isset(Yii::$app->params['customerImagesBaseUrl']) && Yii::$app->params['customerImagesBaseUrl'] !== '') {
+                                $imagesBase = rtrim((string) Yii::$app->params['customerImagesBaseUrl'], '/');
+                            } else {
+                                $imagesBase = Yii::$app->request->baseUrl ?: '';
+                            }
+                        ?>
                         <?php foreach ($allImages as $ei): ?>
                             <?php
-                            // استخدام action يخدم الملف من مسار backend/web — يعمل على أي سيرفر بغض النظر عن baseUrl
-                            $path = \yii\helpers\Url::to(['/followUp/follow-up/customer-image', 'id' => $ei->id]);
                             if (empty($ei->fileHash)) continue;
+                            $ext = pathinfo((string) $ei->fileName, PATHINFO_EXTENSION) ?: 'jpg';
+                            $path = $imagesBase . '/images/imagemanager/' . (int) $ei->id . '_' . $ei->fileHash . '.' . $ext;
                             ?>
                             <div class="col-md-3 text-center" style="margin-bottom:12px">
                                 <a href="<?= Html::encode($path) ?>" target="_blank">
