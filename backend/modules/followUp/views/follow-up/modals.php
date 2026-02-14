@@ -123,51 +123,185 @@ $contractModel = $contractCalculations->contract_model;
             </div>
             <div class="modal-body">
                 <?php
-                /* جلب مستندات العملاء المرتبطين بالعقد */
-                $docImages = \backend\modules\customers\models\CustomersDocument::find()
-                    ->innerJoin('os_contracts_customers', 'os_contracts_customers.customer_id = os_customers_document.customer_id')
-                    ->andWhere(['os_contracts_customers.contract_id' => $contractModel->id])
-                    ->all();
+                /**
+                 * جلب جميع أرقام العملاء المرتبطين بالعقد (للاستخدام في كل الاستعلامات)
+                 */
+                $contractCustomerIds = \backend\modules\customers\models\ContractsCustomers::find()
+                    ->select('customer_id')
+                    ->where(['contract_id' => $contractModel->id])
+                    ->column();
 
-                $docTypes = [0 => 'هوية', 1 => 'جواز سفر', 2 => 'رخصة', 3 => 'شهادة ميلاد', 4 => 'شهادة تعيين'];
+                $docTypes = [
+                    0 => 'هوية وطنية', 1 => 'جواز سفر', 2 => 'رخصة قيادة',
+                    3 => 'شهادة ميلاد', 4 => 'شهادة تعيين', 5 => 'كتاب ضمان اجتماعي',
+                    6 => 'كشف راتب', 7 => 'شهادة تعيين عسكري', 8 => 'صورة شخصية', 9 => 'أخرى',
+                ];
 
-                if (empty($docImages)): ?>
-                    <div class="alert alert-warning"><i class="fa fa-info-circle"></i> لم يتم العثور على مستندات</div>
-                <?php else: ?>
+                $hasAnyImages = false;
+
+                /* ══════════════════════════════════════════
+                   القسم 1: مستندات العملاء (النظام الجديد + القديم)
+                   ══════════════════════════════════════════ */
+                $docImages = [];
+                if (!empty($contractCustomerIds)) {
+                    $docImages = \backend\modules\customers\models\CustomersDocument::find()
+                        ->where(['customer_id' => $contractCustomerIds])
+                        ->all();
+                }
+
+                $visibleDocs = [];
+                foreach ($docImages as $img) {
+                    // النظام الجديد: document_image يحتوي مسار الملف
+                    if (!empty($img->document_image)) {
+                        $visibleDocs[] = [
+                            'src' => Yii::$app->request->baseUrl . $img->document_image,
+                            'type' => $docTypes[$img->document_type] ?? 'مستند',
+                            'source' => 'smart_media',
+                        ];
+                    }
+                    // النظام القديم: images يحتوي معرف أو اسم ملف ImageManager
+                    elseif (!empty($img->images) && $img->images != 0) {
+                        // محاولة جلب المسار من ImageManager
+                        $imgPath = null;
+                        if (is_numeric($img->images)) {
+                            try {
+                                $imgPath = Yii::$app->imagemanager->getImagePath((int)$img->images);
+                            } catch (\Exception $e) {}
+                        }
+                        if (empty($imgPath)) {
+                            $imgPath = Yii::$app->request->baseUrl . '/images/imagemanager/' . $img->images;
+                        }
+                        $visibleDocs[] = [
+                            'src' => $imgPath,
+                            'type' => $docTypes[$img->document_type] ?? 'مستند',
+                            'source' => 'imagemanager',
+                        ];
+                    }
+                }
+
+                if (!empty($visibleDocs)):
+                    $hasAnyImages = true;
+                ?>
+                    <h5 style="margin-bottom:12px"><i class="fa fa-id-card"></i> المستندات</h5>
                     <div class="row">
-                        <?php foreach ($docImages as $img): ?>
-                            <?php if (!empty($img->images) && $img->images != 0): ?>
-                                <div class="col-md-3 text-center" style="margin-bottom:15px">
-                                    <?= Html::img(Url::to(['/images/imagemanager/' . $img->images]), [
-                                        'style' => 'width:120px;height:120px;object-fit:contain;border-radius:8px;border:1px solid #ddd;padding:5px',
-                                    ]) ?>
-                                    <p class="text-muted" style="margin-top:5px;font-size:12px">
-                                        <?= $docTypes[$img->document_type] ?? 'مستند' ?>
-                                    </p>
-                                </div>
-                            <?php endif ?>
+                        <?php foreach ($visibleDocs as $doc): ?>
+                            <div class="col-md-3 text-center" style="margin-bottom:15px">
+                                <?php
+                                $isPdf = (strtolower(substr($doc['src'], -4)) === '.pdf');
+                                if ($isPdf): ?>
+                                    <a href="<?= Html::encode($doc['src']) ?>" target="_blank" style="display:inline-block;width:120px;height:120px;border-radius:8px;border:1px solid #ddd;padding:5px;background:#f9f9f9;line-height:110px;text-decoration:none">
+                                        <i class="fa fa-file-pdf-o" style="font-size:48px;color:#e74c3c"></i>
+                                    </a>
+                                <?php else: ?>
+                                    <a href="<?= Html::encode($doc['src']) ?>" target="_blank">
+                                        <img src="<?= Html::encode($doc['src']) ?>" style="width:120px;height:120px;object-fit:contain;border-radius:8px;border:1px solid #ddd;padding:5px;cursor:pointer" alt="<?= Html::encode($doc['type']) ?>">
+                                    </a>
+                                <?php endif ?>
+                                <p class="text-muted" style="margin-top:5px;font-size:12px">
+                                    <?= Html::encode($doc['type']) ?>
+                                </p>
+                            </div>
                         <?php endforeach ?>
                     </div>
                 <?php endif ?>
 
                 <?php
-                /* جلب صور إضافية من مدير الصور */
-                $extraImages = \backend\modules\imagemanager\models\Imagemanager::find()
-                    ->innerJoin('os_contracts_customers', 'os_contracts_customers.customer_id = os_ImageManager.contractId')
-                    ->where(['groupName' => 'coustmers'])
-                    ->andWhere(['os_contracts_customers.contract_id' => $contractModel->id])
-                    ->all();
+                /* ══════════════════════════════════════════
+                   القسم 2: صور من الكاميرا والرفع الذكي (Smart Media)
+                   ══════════════════════════════════════════ */
+                $smartPhotos = [];
+                if (!empty($contractCustomerIds)) {
+                    try {
+                        $smartPhotos = Yii::$app->db->createCommand(
+                            "SELECT * FROM os_customer_photos WHERE customer_id IN (" . implode(',', array_map('intval', $contractCustomerIds)) . ") ORDER BY created_at DESC"
+                        )->queryAll();
+                    } catch (\Exception $e) {
+                        // الجدول قد لا يكون موجوداً بعد
+                    }
+                }
 
-                if (!empty($extraImages)): ?>
+                if (!empty($smartPhotos)):
+                    $hasAnyImages = true;
+                ?>
                     <hr>
-                    <h5>صور إضافية</h5>
+                    <h5 style="margin-bottom:12px"><i class="fa fa-camera"></i> صور ملتقطة / مرفوعة</h5>
                     <div class="row">
-                        <?php foreach ($extraImages as $ei): ?>
-                            <?php $path = Yii::$app->imagemanager->getImagePath($ei->id); ?>
+                        <?php foreach ($smartPhotos as $sp): ?>
                             <div class="col-md-3 text-center" style="margin-bottom:10px">
-                                <img src="<?= $path ?>" style="width:100px;height:100px;object-fit:contain;border-radius:8px" alt="صورة">
+                                <?php $thumbSrc = !empty($sp['thumbnail_path']) ? Yii::$app->request->baseUrl . $sp['thumbnail_path'] : Yii::$app->request->baseUrl . $sp['file_path']; ?>
+                                <a href="<?= Html::encode(Yii::$app->request->baseUrl . $sp['file_path']) ?>" target="_blank">
+                                    <img src="<?= Html::encode($thumbSrc) ?>" style="width:100px;height:100px;object-fit:contain;border-radius:8px;border:1px solid #ddd;padding:3px" alt="صورة">
+                                </a>
+                                <p class="text-muted" style="margin-top:4px;font-size:11px">
+                                    <?= Html::encode($sp['photo_type'] ?? '') ?>
+                                    <?php if (!empty($sp['created_at'])): ?>
+                                        <br><small><?= date('Y/m/d', strtotime($sp['created_at'])) ?></small>
+                                    <?php endif ?>
+                                </p>
                             </div>
                         <?php endforeach ?>
+                    </div>
+                <?php endif ?>
+
+                <?php
+                /* ══════════════════════════════════════════
+                   القسم 3: صور إضافية من ImageManager القديم (توافقية)
+                   ══════════════════════════════════════════ */
+                $extraImages = [];
+                if (!empty($contractCustomerIds)) {
+                    try {
+                        $extraImages = \backend\modules\imagemanager\models\Imagemanager::find()
+                            ->where(['groupName' => 'coustmers'])
+                            ->andWhere(['contractId' => $contractCustomerIds])
+                            ->all();
+                    } catch (\Exception $e) {}
+
+                    // Fallback: البحث برقم العشوائي image_manager_id المخزن في العميل
+                    if (empty($extraImages)) {
+                        try {
+                            $imgManagerIds = \backend\modules\customers\models\Customers::find()
+                                ->select('image_manager_id')
+                                ->where(['id' => $contractCustomerIds])
+                                ->andWhere(['not', ['image_manager_id' => null]])
+                                ->andWhere(['!=', 'image_manager_id', ''])
+                                ->column();
+
+                            if (!empty($imgManagerIds)) {
+                                $extraImages = \backend\modules\imagemanager\models\Imagemanager::find()
+                                    ->where(['groupName' => 'coustmers'])
+                                    ->andWhere(['contractId' => $imgManagerIds])
+                                    ->all();
+                            }
+                        } catch (\Exception $e) {}
+                    }
+                }
+
+                if (!empty($extraImages)):
+                    $hasAnyImages = true;
+                ?>
+                    <hr>
+                    <h5 style="margin-bottom:12px"><i class="fa fa-picture-o"></i> صور إضافية</h5>
+                    <div class="row">
+                        <?php foreach ($extraImages as $ei): ?>
+                            <?php
+                            $path = '';
+                            try {
+                                $path = Yii::$app->imagemanager->getImagePath($ei->id);
+                            } catch (\Exception $e) {}
+                            if (empty($path)) continue;
+                            ?>
+                            <div class="col-md-3 text-center" style="margin-bottom:10px">
+                                <a href="<?= Html::encode($path) ?>" target="_blank">
+                                    <img src="<?= Html::encode($path) ?>" style="width:100px;height:100px;object-fit:contain;border-radius:8px;border:1px solid #ddd;padding:3px" alt="صورة">
+                                </a>
+                            </div>
+                        <?php endforeach ?>
+                    </div>
+                <?php endif ?>
+
+                <?php if (!$hasAnyImages): ?>
+                    <div class="alert alert-warning" style="text-align:center;border-radius:8px">
+                        <i class="fa fa-info-circle"></i> لم يتم العثور على صور أو مستندات لهذا العقد
                     </div>
                 <?php endif ?>
             </div>
