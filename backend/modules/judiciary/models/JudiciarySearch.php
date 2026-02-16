@@ -32,9 +32,9 @@ class JudiciarySearch extends Judiciary
     {
         return [
             [['id', 'court_id', 'type_id', 'lawyer_id', 'created_at', 'updated_at', 'created_by', 'last_update_by', 'is_deleted', 'number_row', 'case_cost'], 'integer'],
-            [['lawyer_cost', 'judiciary_number', 'contract_id'], 'number'],
+            [['lawyer_cost', 'contract_id'], 'number'],
             [['income_date', 'year', 'from_income_date', 'to_income_date'], 'string'],
-            [['from_income_date', 'to_income_date', 'contract_not_in_status', 'company_id'], 'safe']
+            [['from_income_date', 'to_income_date', 'contract_not_in_status', 'company_id', 'judiciary_number'], 'safe']
         ];
     }
 
@@ -82,14 +82,26 @@ class JudiciarySearch extends Judiciary
         }
 
         if (!empty($params['JudiciarySearch']['judiciary_number'])) {
-            $query->andWhere(['j.judiciary_number' => $params['JudiciarySearch']['judiciary_number']]);
+            $val = trim($params['JudiciarySearch']['judiciary_number']);
+            if (ctype_digit($val)) {
+                $query->andWhere(['j.judiciary_number' => (int)$val]);
+            } else {
+                $query->andWhere(['like', 'CAST(j.judiciary_number AS CHAR)', $val, false]);
+            }
         }
 
         if (!empty($params['JudiciarySearch']['year'])) {
             $query->andWhere(['j.year' => $params['JudiciarySearch']['year']]);
         }
 
-        // فلتر التاريخ (تم إصلاح باغ: andWhere بدل where)
+        if (!empty($params['JudiciarySearch']['type_id'])) {
+            $query->andWhere(['j.type_id' => $params['JudiciarySearch']['type_id']]);
+        }
+
+        if (!empty($params['JudiciarySearch']['lawyer_id'])) {
+            $query->andWhere(['j.lawyer_id' => $params['JudiciarySearch']['lawyer_id']]);
+        }
+
         if (!empty($params['JudiciarySearch']['from_income_date'])) {
             $query->andWhere(['>=', 'j.income_date', $params['JudiciarySearch']['from_income_date']]);
         }
@@ -137,7 +149,7 @@ class JudiciarySearch extends Judiciary
         // ─── Pagination مع حد افتراضي ───
         $pageSize = !empty($params['JudiciarySearch']['number_row'])
             ? (int) $params['JudiciarySearch']['number_row']
-            : 20;
+            : 10;
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,

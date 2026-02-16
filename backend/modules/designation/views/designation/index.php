@@ -26,6 +26,7 @@ CrudAsset::register($this);
             'columns' => require(__DIR__.'/_columns.php'),
             'toolbar'=> [
                 ['content'=>
+                    '<button type="button" class="btn btn-success" id="btnSeedDesignations" style="font-weight:600"><i class="fa fa-magic"></i> إنشاء المسميات الافتراضية</button> '.
                     Html::a('<i class="glyphicon glyphicon-plus"></i>', ['create'],
                     ['role'=>'modal-remote','title'=> 'Create new Designations','class'=>'btn btn-default']).
                     Html::a('<i class="glyphicon glyphicon-repeat"></i>', [''],
@@ -60,6 +61,28 @@ CrudAsset::register($this);
 </div>
 <?php Modal::begin([
     "id"=>"ajaxCrudModal",
-    "footer"=>"",// always need it for jquery plugin
+    "footer"=>"",
 ])?>
 <?php Modal::end(); ?>
+
+<?php
+$seedUrl = Url::to(['seed-defaults']);
+$js = <<<JS
+$('#btnSeedDesignations').on('click', function() {
+    var btn = $(this);
+    if (!confirm('سيتم إنشاء المسميات الوظيفية وفئات المستخدمين الافتراضية. هل تريد المتابعة؟')) return;
+    btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جارٍ الإنشاء...');
+    $.post('{$seedUrl}', function(res) {
+        btn.prop('disabled', false).html('<i class="fa fa-magic"></i> إنشاء المسميات الافتراضية');
+        if (res.success) {
+            alert(res.message);
+            $.pjax.reload({container: '#crud-datatable-pjax'});
+        }
+    }, 'json').fail(function() {
+        btn.prop('disabled', false).html('<i class="fa fa-magic"></i> إنشاء المسميات الافتراضية');
+        alert('حدث خطأ');
+    });
+});
+JS;
+$this->registerJs($js);
+?>

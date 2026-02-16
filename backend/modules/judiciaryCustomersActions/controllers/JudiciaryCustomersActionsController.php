@@ -255,10 +255,9 @@ class JudiciaryCustomersActionsController extends Controller
                         ? 'تم إضافة الإجراء القضائي بنجاح'
                         : 'تم إضافة الإجراء القضائي لـ ' . $savedCount . ' أطراف بنجاح';
                     return [
-                        'forceReload' => '#os_judiciary_customers_actions',
                         'forceClose' => true,
                         'title' => 'إضافة إجراء قضائي',
-                        'content' => '<span class="text-success">' . $msg . '</span>',
+                        'content' => '<span class="text-success"><i class="fa fa-check-circle"></i> ' . $msg . '</span>',
                         'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]),
                     ];
                 }
@@ -359,7 +358,6 @@ class JudiciaryCustomersActionsController extends Controller
 
                 if ($model->save()) {
                     return [
-                        'forceReload' => '#os_judiciary_customers_actions',
                         'forceClose' => true,
                         'title' => "تعديل إجراء قضائي",
                         'content' => '<span class="text-success">تم تعديل الإجراء القضائي بنجاح</span>',
@@ -463,7 +461,6 @@ class JudiciaryCustomersActionsController extends Controller
 
                 if ($model->save()) {
                     return [
-                        'forceReload' => '#crud-datatable-pjax,#os_judiciary_customers_actions',
                         'forceClose' => true,
                         'title' => 'تعديل إجراء قضائي',
                         'content' => '<span class="text-success">تم تعديل الإجراء القضائي بنجاح</span>',
@@ -510,7 +507,7 @@ class JudiciaryCustomersActionsController extends Controller
             *   Process for ajax request
             */
             Yii::$app->response->format = Response::FORMAT_JSON;
-            return ['forceClose' => true, 'forceReload' => '#os_judiciary_customers_actions'];
+            return ['forceClose' => true];
         } else {
             /*
             *   Process for non-ajax request
@@ -540,7 +537,7 @@ class JudiciaryCustomersActionsController extends Controller
             *   Process for ajax request
             */
             Yii::$app->response->format = Response::FORMAT_JSON;
-            return ['forceClose' => true, 'forceReload' => '#os_judiciary_customers_actions'];
+            return ['forceClose' => true];
         } else {
             /*
             *   Process for non-ajax request

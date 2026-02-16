@@ -140,6 +140,89 @@ $isNewRecord = $model->isNewRecord;
     <?php endif ?>
 
     <!-- ═════════════════════════════════════════════════
+         القسم 0: تصنيف المستخدم (فئات تشغيلية)
+         ═════════════════════════════════════════════════ -->
+    <?php
+    $userCategories = \backend\models\UserCategory::findActive()->orderBy(['sort_order' => SORT_ASC])->all();
+    $selectedCatIds = [];
+    if (!$isNewRecord && $model->user_id) {
+        $user = \common\models\User::findOne($model->user_id);
+        if ($user) $selectedCatIds = $user->getCategoryIds();
+    }
+    if (!empty(Yii::$app->request->post('user_categories'))) {
+        $selectedCatIds = Yii::$app->request->post('user_categories');
+    }
+    ?>
+    <div class="hr-form-section">
+        <div class="hr-form-section-header">
+            <i class="fa fa-tags"></i>
+            <span>تصنيف المستخدم</span>
+        </div>
+        <div class="hr-form-section-body">
+            <p style="font-size:12px;color:#64748B;margin-bottom:10px">
+                <i class="fa fa-info-circle"></i>
+                اختر فئة واحدة أو أكثر. إذا تم اختيار "موظف" ستظهر جميع حقول HR التفصيلية.
+            </p>
+            <div class="hr-category-picker" id="hr-category-picker">
+                <?php foreach ($userCategories as $cat): ?>
+                <label class="hr-cat-card <?= in_array($cat->id, $selectedCatIds) ? 'selected' : '' ?>" data-slug="<?= $cat->slug ?>">
+                    <input type="checkbox" name="user_categories[]" value="<?= $cat->id ?>"
+                        <?= in_array($cat->id, $selectedCatIds) ? 'checked' : '' ?>
+                        style="display:none" class="hr-cat-check">
+                    <div class="hr-cat-icon" style="background:<?= $cat->color ?>20;color:<?= $cat->color ?>">
+                        <i class="fa <?= $cat->icon ?>"></i>
+                    </div>
+                    <div class="hr-cat-info">
+                        <div class="hr-cat-name"><?= Html::encode($cat->name_ar) ?></div>
+                        <?php if ($cat->name_en): ?>
+                        <div class="hr-cat-name-en"><?= Html::encode($cat->name_en) ?></div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="hr-cat-check-icon"><i class="fa fa-check-circle"></i></div>
+                </label>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .hr-category-picker { display:flex; gap:10px; flex-wrap:wrap; }
+    .hr-cat-card {
+        display:flex; align-items:center; gap:10px; padding:10px 16px;
+        border:2px solid #E2E8F0; border-radius:10px; cursor:pointer;
+        transition:all .2s; background:#fff; min-width:160px; position:relative;
+    }
+    .hr-cat-card:hover { border-color:#94A3B8; background:#F8FAFC; }
+    .hr-cat-card.selected { border-color:#800020; background:#FDF2F4; box-shadow:0 0 0 3px rgba(128,0,32,.1); }
+    .hr-cat-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+    .hr-cat-name { font-size:13px; font-weight:600; color:#1E293B; }
+    .hr-cat-name-en { font-size:10px; color:#94A3B8; }
+    .hr-cat-check-icon { display:none; color:#800020; font-size:16px; margin-right:auto; }
+    .hr-cat-card.selected .hr-cat-check-icon { display:block; }
+    </style>
+
+    <script>
+    document.querySelectorAll('.hr-cat-card').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            e.preventDefault();
+            var cb = this.querySelector('.hr-cat-check');
+            cb.checked = !cb.checked;
+            this.classList.toggle('selected', cb.checked);
+            toggleHrSections();
+        });
+    });
+    function toggleHrSections() {
+        var hasEmployee = false;
+        document.querySelectorAll('.hr-cat-check:checked').forEach(function(cb) {
+            if (cb.closest('.hr-cat-card').dataset.slug === 'employee') hasEmployee = true;
+        });
+        var sections = document.querySelectorAll('.hr-employee-only');
+        sections.forEach(function(s) { s.style.display = hasEmployee ? '' : 'none'; });
+    }
+    document.addEventListener('DOMContentLoaded', toggleHrSections);
+    </script>
+
+    <!-- ═════════════════════════════════════════════════
          القسم 1: بيانات أساسية
          ═════════════════════════════════════════════════ -->
     <div class="hr-form-section">
@@ -338,7 +421,7 @@ $isNewRecord = $model->isNewRecord;
     <!-- ═════════════════════════════════════════════════
          القسم 2: بيانات مالية
          ═════════════════════════════════════════════════ -->
-    <div class="hr-form-section">
+    <div class="hr-form-section hr-employee-only">
         <div class="hr-form-section-header">
             <i class="fa fa-university"></i>
             <span>بيانات مالية</span>
@@ -434,7 +517,7 @@ $isNewRecord = $model->isNewRecord;
     <!-- ═════════════════════════════════════════════════
          القسم 3: بيانات وظيفية
          ═════════════════════════════════════════════════ -->
-    <div class="hr-form-section">
+    <div class="hr-form-section hr-employee-only">
         <div class="hr-form-section-header">
             <i class="fa fa-briefcase"></i>
             <span>بيانات وظيفية</span>
@@ -478,7 +561,7 @@ $isNewRecord = $model->isNewRecord;
     <!-- ═════════════════════════════════════════════════
          القسم 4: بيانات ميدانية
          ═════════════════════════════════════════════════ -->
-    <div class="hr-form-section">
+    <div class="hr-form-section hr-employee-only">
         <div class="hr-form-section-header">
             <i class="fa fa-map-marker"></i>
             <span>بيانات ميدانية</span>

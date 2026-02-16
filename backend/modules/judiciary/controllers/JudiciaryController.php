@@ -40,7 +40,7 @@ class JudiciaryController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['add-print-case', 'print-case', 'logout', 'index', 'update', 'create', 'delete', 'view', 'customer-action', 'delete-customer-action', 'report', 'cases-report', 'cases-report-data', 'export-cases-report', 'print-cases-report', 'refresh-persistence-cache', 'batch-create', 'batch-print'],
+                        'actions' => ['add-print-case', 'print-case', 'logout', 'index', 'update', 'create', 'delete', 'view', 'customer-action', 'delete-customer-action', 'report', 'cases-report', 'cases-report-data', 'export-cases-report', 'print-cases-report', 'refresh-persistence-cache', 'batch-create', 'batch-print', 'tab-cases', 'tab-actions', 'tab-persistence', 'tab-legal', 'batch-actions', 'batch-parse', 'batch-execute'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -501,6 +501,55 @@ class JudiciaryController extends Controller
         ]);
     }
 
+
+    /* ═══════════════════════════════════════════════════════════
+     *  AJAX Tab Loaders — للتحميل الكسول في الشاشة الموحدة
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionTabCases()
+    {
+        $searchModel = new JudiciarySearch();
+        $search = $searchModel->search(Yii::$app->request->queryParams);
+        return $this->renderAjax('_tab_cases', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $search['dataProvider'],
+            'counter' => $search['count'],
+        ]);
+    }
+
+    public function actionTabActions()
+    {
+        $searchModel = new \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActionsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        $searchCounter = $searchModel->searchCounter(Yii::$app->request->queryParams);
+        return $this->renderAjax('_tab_actions', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+            'searchCounter' => $searchCounter,
+        ]);
+    }
+
+    public function actionTabPersistence()
+    {
+        $db = Yii::$app->db;
+        $stats = $db->createCommand("
+            SELECT
+                COUNT(*) AS total,
+                SUM(persistence_status IN ('red_renew','red_due')) AS cnt_red,
+                SUM(persistence_status = 'orange_due') AS cnt_orange,
+                SUM(persistence_status = 'green_due' OR persistence_status LIKE 'remaining_%') AS cnt_green
+            FROM tbl_persistence_cache
+        ")->queryOne();
+        return $this->renderAjax('_tab_persistence', ['stats' => $stats]);
+    }
+
+    public function actionTabLegal()
+    {
+        $searchModel = new \backend\modules\contracts\models\ContractsSearch();
+        $dataProvider = $searchModel->searchLegalDepartment(Yii::$app->request->queryParams);
+        $dataCount = $searchModel->searchLegalDepartmentCount(Yii::$app->request->queryParams);
+        return $this->renderAjax('_tab_legal', ['dataCount' => $dataCount]);
+    }
 
     /**
      * Displays a single Judiciary model.
@@ -1006,5 +1055,192 @@ class JudiciaryController extends Controller
         $model = JudiciaryCustomersActions::findOne($id);
         $model->delete();
         $this->redirect(['update', 'id' => $judiciary]);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  الإدخال المجمّع الذكي للإجراءات القضائية
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionBatchActions()
+    {
+        return $this->render('batch_actions');
+    }
+
+    public function actionBatchParse()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $raw = Yii::$app->request->post('numbers', '');
+        $lines = preg_split('/[\r\n]+/', trim($raw));
+
+        $results = [];
+        $db = Yii::$app->db;
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') continue;
+
+            $parsed = $this->parseCaseNumber($line);
+            if (!$parsed) {
+                $results[] = ['input' => $line, 'status' => 'error', 'message' => 'تعذر تحليل الرقم'];
+                continue;
+            }
+
+            $number = $parsed['number'];
+            $year = $parsed['year'];
+
+            $query = $db->createCommand("
+                SELECT j.id, j.judiciary_number, j.year, j.contract_id, j.court_id,
+                       c.name as court_name
+                FROM os_judiciary j
+                LEFT JOIN os_court c ON c.id = j.court_id
+                WHERE j.judiciary_number = :num AND j.year = :yr AND (j.is_deleted = 0 OR j.is_deleted IS NULL)
+            ", [':num' => $number, ':yr' => $year])->queryAll();
+
+            if (count($query) === 0) {
+                $results[] = [
+                    'input' => $line, 'status' => 'not_found',
+                    'number' => $number, 'year' => $year,
+                    'message' => 'لم يتم العثور على قضية'
+                ];
+            } elseif (count($query) === 1) {
+                $row = $query[0];
+                $parties = $this->getCaseParties($row['contract_id']);
+                $results[] = [
+                    'input' => $line, 'status' => 'matched',
+                    'number' => $number, 'year' => $year,
+                    'judiciary_id' => $row['id'],
+                    'contract_id' => $row['contract_id'],
+                    'court_name' => $row['court_name'],
+                    'parties' => $parties,
+                ];
+            } else {
+                $options = [];
+                foreach ($query as $row) {
+                    $parties = $this->getCaseParties($row['contract_id']);
+                    $options[] = [
+                        'judiciary_id' => $row['id'],
+                        'contract_id' => $row['contract_id'],
+                        'court_name' => $row['court_name'],
+                        'parties' => $parties,
+                    ];
+                }
+                $results[] = [
+                    'input' => $line, 'status' => 'multiple',
+                    'number' => $number, 'year' => $year,
+                    'options' => $options,
+                    'message' => 'أكثر من قضية بنفس الرقم'
+                ];
+            }
+        }
+
+        return ['success' => true, 'results' => $results, 'total' => count($results)];
+    }
+
+    public function actionBatchExecute()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+        $casesRaw = $request->post('cases', '[]');
+        $cases = is_string($casesRaw) ? json_decode($casesRaw, true) : $casesRaw;
+        if (!is_array($cases)) $cases = [];
+        $actionId = (int)$request->post('action_id');
+        $actionDate = $request->post('action_date', date('Y-m-d'));
+        $note = $request->post('note', '');
+
+        if (empty($cases) || !$actionId) {
+            return ['success' => false, 'message' => 'بيانات ناقصة'];
+        }
+
+        $actionDef = \backend\modules\judiciaryActions\models\JudiciaryActions::findOne($actionId);
+        $savedTotal = 0;
+        $errors = [];
+        $details = [];
+
+        foreach ($cases as $case) {
+            $judiciaryId = (int)($case['judiciary_id'] ?? 0);
+            $contractId = (int)($case['contract_id'] ?? 0);
+            if (!$judiciaryId) {
+                $errors[] = $case['input'] ?? '?';
+                continue;
+            }
+
+            // Use per-case party selection if provided, otherwise all parties
+            $partyIds = $case['party_ids'] ?? [];
+            if (empty($partyIds)) {
+                $allParties = $this->getCaseParties($contractId);
+                $partyIds = array_column($allParties, 'customer_id');
+            }
+
+            $caseSaved = 0;
+            foreach ($partyIds as $customerId) {
+                $customerId = (int)$customerId;
+                if ($customerId <= 0) continue;
+                $record = new JudiciaryCustomersActions();
+                $record->judiciary_id = $judiciaryId;
+                $record->customers_id = $customerId;
+                $record->judiciary_actions_id = $actionId;
+                $record->action_date = $actionDate;
+                $record->note = $note;
+                if ($actionDef && $actionDef->action_nature === 'request') {
+                    $record->request_status = 'pending';
+                }
+                if ($record->save()) {
+                    $caseSaved++;
+                    $savedTotal++;
+                }
+            }
+            $details[] = [
+                'input' => $case['input'] ?? '',
+                'judiciary_id' => $judiciaryId,
+                'saved' => $caseSaved,
+            ];
+        }
+
+        return [
+            'success' => true,
+            'total_saved' => $savedTotal,
+            'total_cases' => count($cases),
+            'errors' => $errors,
+            'details' => $details,
+        ];
+    }
+
+    private function parseCaseNumber($input)
+    {
+        $input = trim($input);
+        $parts = preg_split('/[\/\\\\\-\s]+/', $input);
+        if (count($parts) < 2) {
+            if (ctype_digit($input)) return ['number' => (int)$input, 'year' => null];
+            return null;
+        }
+
+        $a = trim($parts[0]);
+        $b = trim($parts[1]);
+        if (!ctype_digit($a) || !ctype_digit($b)) return null;
+
+        $a = (int)$a;
+        $b = (int)$b;
+
+        if ($a >= 2005 && $a <= 2035 && !($b >= 2005 && $b <= 2035)) {
+            return ['year' => (string)$a, 'number' => $b];
+        }
+        if ($b >= 2005 && $b <= 2035 && !($a >= 2005 && $a <= 2035)) {
+            return ['year' => (string)$b, 'number' => $a];
+        }
+        if ($a >= 2005 && $a <= 2035) {
+            return ['year' => (string)$a, 'number' => $b];
+        }
+        return ['year' => (string)$b, 'number' => $a];
+    }
+
+    private function getCaseParties($contractId)
+    {
+        if (!$contractId) return [];
+        return (new \yii\db\Query())
+            ->select(['cc.customer_id', 'c.name', 'cc.customer_type'])
+            ->from('os_contracts_customers cc')
+            ->innerJoin('os_customers c', 'c.id = cc.customer_id')
+            ->where(['cc.contract_id' => $contractId])
+            ->all();
     }
 }

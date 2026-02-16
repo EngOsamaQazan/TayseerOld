@@ -243,6 +243,9 @@ class HrEmployeeController extends Controller
         $model = new HrEmployeeExtended();
         $request = Yii::$app->request;
 
+        // Ensure user category tables exist
+        \backend\models\UserCategory::ensureTablesExist();
+
         // Users without extended records
         $usersWithoutExtended = (new Query())
             ->select(['u.id', 'u.username', 'u.name'])
@@ -256,6 +259,13 @@ class HrEmployeeController extends Controller
         });
 
         if ($model->load($request->post())) {
+
+            $selectedCategories = $request->post('user_categories', []);
+            $isEmployee = false;
+            if (!empty($selectedCategories)) {
+                $empCat = \backend\models\UserCategory::find()->where(['slug' => 'employee', 'is_active' => 1])->one();
+                $isEmployee = $empCat && in_array($empCat->id, $selectedCategories);
+            }
 
             // ─── Mode: Create new user inline ───
             $createNewUser = (int)$request->post('create_new_user', 0);
@@ -273,7 +283,6 @@ class HrEmployeeController extends Controller
                 if ($newEmail === '')    $errors[] = 'البريد الإلكتروني مطلوب';
                 if (strlen($newPassword) < 6) $errors[] = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
 
-                // Check uniqueness
                 if ($newUsername && User::find()->where(['username' => $newUsername])->exists()) {
                     $errors[] = 'اسم المستخدم "' . $newUsername . '" مستخدم مسبقاً';
                 }
@@ -283,13 +292,9 @@ class HrEmployeeController extends Controller
 
                 if (!empty($errors)) {
                     Yii::$app->session->setFlash('error', implode('<br>', $errors));
-                    return $this->render('create', [
-                        'model' => $model,
-                        'userList' => $userList,
-                    ]);
+                    return $this->render('create', ['model' => $model, 'userList' => $userList]);
                 }
 
-                // Create the user record directly via DB insert (bypassing Dektrium's complex model)
                 $now = time();
                 $passwordHash = Yii::$app->security->generatePasswordHash($newPassword);
                 $authKey = Yii::$app->security->generateRandomString(32);
@@ -314,33 +319,37 @@ class HrEmployeeController extends Controller
                     ])->execute();
 
                     $newUserId = Yii::$app->db->getLastInsertID();
-                    $model->user_id = $newUserId;
 
-                    // Auto-generate employee code
-                    if (empty($model->employee_code)) {
-                        $maxCode = (new Query())->from('{{%hr_employee_extended}}')->max('id');
-                        $model->employee_code = 'EMP-' . str_pad(($maxCode ?? 0) + 1, 4, '0', STR_PAD_LEFT);
+                    // Save user categories
+                    if (!empty($selectedCategories)) {
+                        \backend\models\UserCategoryMap::syncUserCategories($newUserId, $selectedCategories, Yii::$app->user->id);
                     }
 
-                    $model->created_at = $now;
-                    $model->updated_at = $now;
-                    $model->created_by = Yii::$app->user->id;
-                    $model->updated_by = Yii::$app->user->id;
+                    // Only create HrEmployeeExtended if "employee" category is selected
+                    if ($isEmployee) {
+                        $model->user_id = $newUserId;
+                        if (empty($model->employee_code)) {
+                            $maxCode = (new Query())->from('{{%hr_employee_extended}}')->max('id');
+                            $model->employee_code = 'EMP-' . str_pad(($maxCode ?? 0) + 1, 4, '0', STR_PAD_LEFT);
+                        }
+                        $model->created_at = $now;
+                        $model->updated_at = $now;
+                        $model->created_by = Yii::$app->user->id;
+                        $model->updated_by = Yii::$app->user->id;
 
-                    if (!$model->save(false)) {
-                        throw new \Exception('فشل حفظ بيانات الموظف: ' . implode(', ', $model->getFirstErrors()));
+                        if (!$model->save(false)) {
+                            throw new \Exception('فشل حفظ بيانات الموظف: ' . implode(', ', $model->getFirstErrors()));
+                        }
                     }
 
                     $transaction->commit();
-                    Yii::$app->session->setFlash('success', 'تم إنشاء المستخدم وملف الموظف بنجاح.');
-                    return $this->redirect(['view', 'id' => $model->user_id]);
+                    $msg = $isEmployee ? 'تم إنشاء المستخدم وملف الموظف بنجاح.' : 'تم إنشاء المستخدم بنجاح.';
+                    Yii::$app->session->setFlash('success', $msg);
+                    return $this->redirect($isEmployee ? ['view', 'id' => $newUserId] : ['index']);
                 } catch (\Exception $e) {
                     $transaction->rollBack();
                     Yii::$app->session->setFlash('error', 'حدث خطأ: ' . $e->getMessage());
-                    return $this->render('create', [
-                        'model' => $model,
-                        'userList' => $userList,
-                    ]);
+                    return $this->render('create', ['model' => $model, 'userList' => $userList]);
                 }
             }
 
@@ -350,22 +359,28 @@ class HrEmployeeController extends Controller
             $model->created_by = Yii::$app->user->id;
             $model->updated_by = Yii::$app->user->id;
 
-            // Auto-generate employee code if empty
             if (empty($model->employee_code)) {
-                $maxCode = (new Query())
-                    ->from('{{%hr_employee_extended}}')
-                    ->max('id');
+                $maxCode = (new Query())->from('{{%hr_employee_extended}}')->max('id');
                 $model->employee_code = 'EMP-' . str_pad(($maxCode ?? 0) + 1, 4, '0', STR_PAD_LEFT);
             }
 
             $transaction = Yii::$app->db->beginTransaction();
             try {
-                if (!$model->save()) {
-                    throw new \Exception('فشل حفظ بيانات الموظف: ' . implode(', ', $model->getFirstErrors()));
+                if ($isEmployee) {
+                    if (!$model->save()) {
+                        throw new \Exception('فشل حفظ بيانات الموظف: ' . implode(', ', $model->getFirstErrors()));
+                    }
                 }
+
+                // Save user categories
+                $userId = $model->user_id;
+                if ($userId && !empty($selectedCategories)) {
+                    \backend\models\UserCategoryMap::syncUserCategories($userId, $selectedCategories, Yii::$app->user->id);
+                }
+
                 $transaction->commit();
-                Yii::$app->session->setFlash('success', 'تم إنشاء ملف الموظف الموسع بنجاح.');
-                return $this->redirect(['view', 'id' => $model->user_id]);
+                Yii::$app->session->setFlash('success', 'تم الحفظ بنجاح.');
+                return $this->redirect($isEmployee ? ['view', 'id' => $model->user_id] : ['index']);
             } catch (\Exception $e) {
                 $transaction->rollBack();
                 Yii::$app->session->setFlash('error', $e->getMessage());
@@ -375,18 +390,12 @@ class HrEmployeeController extends Controller
         if ($request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
             return [
-                'title' => 'إنشاء ملف موظف',
-                'content' => $this->renderAjax('create', [
-                    'model' => $model,
-                    'userList' => $userList,
-                ]),
+                'title' => 'إنشاء مستخدم',
+                'content' => $this->renderAjax('create', ['model' => $model, 'userList' => $userList]),
             ];
         }
 
-        return $this->render('create', [
-            'model' => $model,
-            'userList' => $userList,
-        ]);
+        return $this->render('create', ['model' => $model, 'userList' => $userList]);
     }
 
     /**
@@ -409,6 +418,13 @@ class HrEmployeeController extends Controller
                 if (!$model->save()) {
                     throw new \Exception('فشل تحديث بيانات الموظف: ' . implode(', ', $model->getFirstErrors()));
                 }
+
+                // Sync user categories
+                $selectedCategories = $request->post('user_categories', []);
+                if ($model->user_id) {
+                    \backend\models\UserCategoryMap::syncUserCategories($model->user_id, $selectedCategories, Yii::$app->user->id);
+                }
+
                 $transaction->commit();
                 Yii::$app->session->setFlash('success', 'تم تحديث بيانات الموظف بنجاح.');
                 return $this->redirect(['view', 'id' => $model->user_id]);

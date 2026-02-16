@@ -31,7 +31,7 @@ class DesignationController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','update','create','delete'],
+                        'actions' => ['logout', 'index','update','create','delete','seed-defaults'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -281,5 +281,43 @@ class DesignationController extends Controller
         } else {
             throw new NotFoundHttpException('The requested page does not exist.');
         }
+    }
+
+    public function actionSeedDefaults()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $defaults = [
+            'مدير عام', 'مدير مبيعات', 'محاسب', 'موظف متابعة', 'محامي',
+            'مندوب مبيعات', 'مندوب محكمة', 'موزع أجهزة', 'مدير فرع', 'أمين مخزن',
+            'مدير مالي', 'موظف استقبال', 'مسؤول موارد بشرية',
+        ];
+
+        $created = 0;
+        $skipped = 0;
+        foreach ($defaults as $title) {
+            $exists = Designation::find()->where(['title' => $title])->exists();
+            if (!$exists) {
+                $d = new Designation();
+                $d->title = $title;
+                $d->status = 'active';
+                $d->created_by = Yii::$app->user->id;
+                if ($d->save(false)) $created++;
+            } else {
+                $skipped++;
+            }
+        }
+
+        // Also seed user categories
+        \backend\models\UserCategory::ensureTablesExist();
+        $catCreated = \backend\models\UserCategory::seedDefaults();
+
+        return [
+            'success' => true,
+            'created' => $created,
+            'skipped' => $skipped,
+            'categories_created' => $catCreated,
+            'message' => "تم إنشاء {$created} مسمى وظيفي و{$catCreated} فئة مستخدم. تم تجاوز {$skipped} موجود مسبقاً.",
+        ];
     }
 }

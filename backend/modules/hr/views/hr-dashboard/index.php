@@ -257,7 +257,7 @@ foreach ($departmentHeadcount as $dept) {
             <div class="hr-quick-actions">
                 <a href="<?= Url::to(['/hr/hr-employee/create']) ?>" class="hr-btn hr-btn--primary">
                     <i class="fa fa-user-plus"></i>
-                    إضافة موظف
+                    إضافة مستخدم
                 </a>
                 <a href="<?= Url::to(['/hr/hr-attendance/create']) ?>" class="hr-btn hr-btn--success">
                     <i class="fa fa-clock-o"></i>

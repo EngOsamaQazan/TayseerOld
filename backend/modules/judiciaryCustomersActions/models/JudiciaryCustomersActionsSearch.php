@@ -57,7 +57,7 @@ class JudiciaryCustomersActionsSearch extends JudiciaryCustomersActions {
             ->where(['!=', 'os_contracts.status', 'finished']);
 
         $pageSize = !empty($params['JudiciaryCustomersActionsSearch']['number_row'])
-            ? (int)$params['JudiciaryCustomersActionsSearch']['number_row'] : 20;
+            ? (int)$params['JudiciaryCustomersActionsSearch']['number_row'] : 10;
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'pagination' => ['pageSize' => $pageSize],

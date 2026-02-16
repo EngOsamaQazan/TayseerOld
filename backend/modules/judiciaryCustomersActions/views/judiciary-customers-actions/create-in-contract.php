@@ -287,6 +287,7 @@ $existingCustomerId = $model->customers_id ?: '';
 <!-- ═══ 3. Action Tree Selector ═══ -->
 <div class="jaf-action-tree">
     <label class="jaf-label"><i class="fa fa-sitemap"></i> اختر الإجراء القضائي</label>
+    <input type="text" class="jaf-input" id="jaf-action-search" placeholder="ابحث في الإجراءات..." style="margin-bottom:10px;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2714%27 height=%2714%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2394A3B8%27 stroke-width=%272%27%3E%3Ccircle cx=%2711%27 cy=%2711%27 r=%278%27/%3E%3Cline x1=%2721%27 y1=%2721%27 x2=%2716.65%27 y2=%2716.65%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:10px center;padding-right:32px">
     <?php
     // Group actions by nature
     $grouped = [];
@@ -509,24 +510,8 @@ var JAF = (function() {
             });
         }
 
-        // Validate before submit
-        $('#jaf-form').on('beforeSubmit', function() {
-            if (isNewRecord) {
-                var ids = getSelectedCustomerIds();
-                if (ids.length === 0) {
-                    $('#jaf-party-error').show();
-                    $('html,body').animate({ scrollTop: $('#jaf-parties-container').offset().top - 100 }, 300);
-                    return false;
-                }
-            } else {
-                var cid = $('#jaf-customer-id').val();
-                if (!cid) {
-                    $('#jaf-party-error').show();
-                    return false;
-                }
-            }
-            return true;
-        });
+        // No client-side submit interception needed — ajaxcrud handles submission natively
+        // Server-side validation handles party selection requirement
 
         // Drop zone
         var $zone = $('#jaf-drop-zone');
@@ -552,6 +537,51 @@ var JAF = (function() {
             $('#nature-list-' + n).removeClass('collapsed');
             showContext(n);
         }
+
+        // Action search filter
+        var searchTimer;
+        document.getElementById('jaf-action-search').addEventListener('input', function() {
+            clearTimeout(searchTimer);
+            var q = this.value.trim().toLowerCase();
+            searchTimer = setTimeout(function() {
+                // First expand all groups so items become visible for filtering
+                document.querySelectorAll('.jaf-nature-list').forEach(function(list) {
+                    list.classList.remove('collapsed');
+                });
+                document.querySelectorAll('.jaf-nature-header').forEach(function(h) {
+                    h.classList.remove('collapsed');
+                });
+
+                if (!q) {
+                    // Show all items, re-collapse groups, restore counts
+                    document.querySelectorAll('.jaf-action-item').forEach(function(el) { el.style.display = ''; });
+                    document.querySelectorAll('.jaf-nature-list').forEach(function(list) { list.classList.add('collapsed'); });
+                    document.querySelectorAll('.jaf-nature-group').forEach(function(g) {
+                        g.style.display = '';
+                        var total = g.querySelectorAll('.jaf-action-item').length;
+                        var countSpan = g.querySelector('.jaf-nature-header span[style*="94A3B8"]');
+                        if (countSpan) countSpan.textContent = '(' + total + ')';
+                    });
+                    return;
+                }
+
+                // Filter items by name
+                document.querySelectorAll('.jaf-action-item').forEach(function(el) {
+                    var name = el.textContent.trim().toLowerCase();
+                    el.style.display = name.indexOf(q) !== -1 ? '' : 'none';
+                });
+
+                // Hide empty groups, update counts
+                document.querySelectorAll('.jaf-nature-group').forEach(function(g) {
+                    var items = g.querySelectorAll('.jaf-action-item');
+                    var visible = 0;
+                    items.forEach(function(it) { if (it.style.display !== 'none') visible++; });
+                    g.style.display = visible > 0 ? '' : 'none';
+                    var countSpan = g.querySelector('.jaf-nature-header span[style*="94A3B8"]');
+                    if (countSpan) countSpan.textContent = '(' + visible + ')';
+                });
+            }, 150);
+        });
     }
 
     function getSelectedCustomerIds() {
@@ -634,7 +664,8 @@ var JAF = (function() {
         $('<input type="hidden" name="remove_image" value="1">').insertAfter('#jaf-file-input');
     }
 
-    $(document).ready(init);
+    // Call init immediately (AJAX modal: document.ready already fired)
+    init();
 
     return {
         toggleNature: toggleNature,

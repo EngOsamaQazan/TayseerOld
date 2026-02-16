@@ -32,17 +32,8 @@ $mainMenuItems = [
     ['label' => 'الإدارة المالية', 'icon' => 'money', 'url' => ['/financialTransaction/financial-transaction/index'], 'privilege' => [Permissions::FINANCIAL_TRANSACTION, Permissions::INCOME, Permissions::EXPENSES, Permissions::LOAN_SCHEDULING]],
 
     // ─── 5. القسم القانوني ───
-    [
-        'label' => 'القسم القانوني',
-        'icon'  => 'gavel',
-        'items' => [
-            ['label' => 'التحويل للقانوني', 'icon' => 'exchange',      'url' => ['/contracts/contracts/legal-department'],                        'privilege' => Permissions::TRANSFER_TO_LEGAL_DEPARTMENT],
-            ['label' => 'القضايا',          'icon' => 'balance-scale',  'url' => ['/judiciary/judiciary/index'],                                   'privilege' => Permissions::JUDICIARY],
-            ['label' => 'كشف المثابرة',     'icon' => 'line-chart',     'url' => ['/judiciary/judiciary/cases-report'],                            'privilege' => Permissions::JUDICIARY],
-            ['label' => 'إجراءات الأطراف',  'icon' => 'legal',          'url' => ['/judiciaryCustomersActions/judiciary-customers-actions/index'], 'privilege' => Permissions::JUDICIARY_CUSTOMERS_ACTION],
-            ['label' => 'التحصيل',          'icon' => 'handshake-o',    'url' => ['/collection/collection/index'],                                'privilege' => Permissions::COLLECTION],
-        ],
-    ],
+    ['label' => 'القسم القانوني', 'icon' => 'gavel', 'url' => ['/judiciary/judiciary/index'], 'privilege' => Permissions::JUDICIARY],
+    ['label' => 'التحصيل',       'icon' => 'handshake-o', 'url' => ['/collection/collection/index'], 'privilege' => Permissions::COLLECTION],
 
     // ─── 6. التقارير ───
     ['label' => 'التقارير', 'icon' => 'bar-chart', 'url' => ['/reports/reports/index'], 'privilege' => Permissions::REPORTS],

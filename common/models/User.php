@@ -3,6 +3,9 @@
 namespace common\models;
 use dektrium\user\models\User as BaseUser;
 use dektrium\user\models\Profile;
+use backend\models\UserCategory;
+use backend\models\UserCategoryMap;
+use yii\helpers\ArrayHelper;
 use Yii;
 
 /**
@@ -282,7 +285,38 @@ class User extends BaseUser
     {
         return $this->avatar;
     }
-	
+
+    /* ═══ User Categories (operational classification, NOT RBAC) ═══ */
+
+    public function getCategoryMap()
+    {
+        return $this->hasMany(UserCategoryMap::class, ['user_id' => 'id']);
+    }
+
+    public function getCategories()
+    {
+        return $this->hasMany(UserCategory::class, ['id' => 'category_id'])
+            ->viaTable('os_user_category_map', ['user_id' => 'id']);
+    }
+
+    public function getCategoryNames()
+    {
+        return implode('، ', ArrayHelper::getColumn($this->categories, 'name_ar'));
+    }
+
+    public function getCategoryIds()
+    {
+        return ArrayHelper::getColumn($this->categoryMap, 'category_id');
+    }
+
+    public function hasCategory($slug)
+    {
+        foreach ($this->categories as $cat) {
+            if ($cat->slug === $slug) return true;
+        }
+        return false;
+    }
+
 	/**
      * @inheritdoc
      */

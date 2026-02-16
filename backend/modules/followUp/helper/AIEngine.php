@@ -1071,14 +1071,15 @@ class AIEngine
             $actionCounts[$cid] = ($actionCounts[$cid] ?? 0) + 1;
 
             // Track last of any type
-            if (!isset($lastAnyByCustomer[$cid]) || strtotime($action->action_date) > strtotime($lastAnyByCustomer[$cid]->action_date)) {
+            $aDate = $action->action_date ? strtotime($action->action_date) : 0;
+            if (!isset($lastAnyByCustomer[$cid]) || $aDate > ($lastAnyByCustomer[$cid]->action_date ? strtotime($lastAnyByCustomer[$cid]->action_date) : 0)) {
                 $lastAnyByCustomer[$cid] = $action;
             }
 
             // Track last request specifically
             $def = $actionDefs[$action->judiciary_actions_id] ?? null;
             if ($def && $def->action_nature === 'request') {
-                if (!isset($lastRequestByCustomer[$cid]) || strtotime($action->action_date) > strtotime($lastRequestByCustomer[$cid]->action_date)) {
+                if (!isset($lastRequestByCustomer[$cid]) || $aDate > ($lastRequestByCustomer[$cid]->action_date ? strtotime($lastRequestByCustomer[$cid]->action_date) : 0)) {
                     $lastRequestByCustomer[$cid] = $action;
                 }
             }
