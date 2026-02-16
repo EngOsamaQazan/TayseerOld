@@ -42,7 +42,7 @@ $years = ArrayHelper::map(\backend\modules\judiciary\models\Judiciary::find()->s
 
         <div class="row">
             <div class="col-md-2">
-                <?= $form->field($model, 'judiciary_id')->textInput(['placeholder' => 'رقم القضية', 'type' => 'number'])->label('رقم القضية') ?>
+                <?= $form->field($model, 'judiciary_number')->textInput(['placeholder' => 'رقم القضية (مثل 2313)'])->label('رقم القضية') ?>
             </div>
             <div class="col-md-3">
                 <?= $form->field($model, 'customers_id')->widget(Select2::class, [

@@ -177,6 +177,25 @@ class CustomersController extends Controller
 
                     if ($flag && $addressFlag && $phoneNumberflag && $modelRealEstatesflage) {
                         $transaction->commit();
+
+                        // ═══ Link Smart Media uploads to the new customer ═══
+                        $smartMedia = Yii::$app->request->post('SmartMedia', []);
+                        if (!empty($smartMedia) && !empty($model->id)) {
+                            $imageIds = [];
+                            foreach ($smartMedia as $item) {
+                                if (!empty($item['image_id'])) {
+                                    $imageIds[] = (int)$item['image_id'];
+                                }
+                            }
+                            if (!empty($imageIds)) {
+                                Yii::$app->db->createCommand()->update(
+                                    '{{%ImageManager}}',
+                                    ['customer_id' => (int)$model->id],
+                                    ['id' => $imageIds]
+                                )->execute();
+                            }
+                        }
+
                         Yii::$app->notifications->sendByRule(['Manager'], 'customers/customers/update?id=' . $model->id, Notification::GENERAL, Yii::t('app', ' اضافة عميل  ') . $model->name . Yii::t('app', '       الى العملاء من قبل') . Yii::$app->user->identity['username'], Yii::t('app', 'اضافة  ') . $model->name . Yii::t('app', '  الى العملاء من قبل') . Yii::$app->user->identity['username'], Yii::$app->user->id);
                         Yii::$app->cache->set(Yii::$app->params['key_customers'],Yii::$app->db->createCommand(Yii::$app->params['customers_query'])->queryAll(), Yii::$app->params['time_duration']);
                         Yii::$app->cache->set(Yii::$app->params['key_customers_name'],Yii::$app->db->createCommand(Yii::$app->params['customers_name_query'])->queryAll(), Yii::$app->params['time_duration']);
@@ -319,6 +338,24 @@ class CustomersController extends Controller
                     }
                     if ($flag && $addressFlag && $phoneNumberflag && $modelRealEstateFlag ) {
                         $transaction->commit();
+
+                        // ═══ Link Smart Media uploads to the customer ═══
+                        $smartMedia = Yii::$app->request->post('SmartMedia', []);
+                        if (!empty($smartMedia) && !empty($model->id)) {
+                            $imageIds = [];
+                            foreach ($smartMedia as $item) {
+                                if (!empty($item['image_id'])) {
+                                    $imageIds[] = (int)$item['image_id'];
+                                }
+                            }
+                            if (!empty($imageIds)) {
+                                Yii::$app->db->createCommand()->update(
+                                    '{{%ImageManager}}',
+                                    ['customer_id' => (int)$model->id],
+                                    ['id' => $imageIds]
+                                )->execute();
+                            }
+                        }
 
                         Yii::$app->cache->set(Yii::$app->params['key_customers'],Yii::$app->db->createCommand(Yii::$app->params['customers_query'])->queryAll(), Yii::$app->params['time_duration']);
                         Yii::$app->cache->set(Yii::$app->params['key_customers_name'],Yii::$app->db->createCommand(Yii::$app->params['customers_name_query'])->queryAll(), Yii::$app->params['time_duration']);

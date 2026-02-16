@@ -60,6 +60,9 @@
     }
 
     function showStep(idx) {
+        // في وضع التعديل كل الأقسام ظاهرة — لا نخفي شيء
+        if (window.soConfig && window.soConfig.isEditMode) return;
+
         $('.so-section').removeClass('active');
         $('.so-section[data-step="' + idx + '"]').addClass('active');
 
@@ -330,6 +333,9 @@
        DUPLICATE CHECK
        ══════════════════════════════════════════ */
     function initDuplicateCheck() {
+        // تخطي فحص التكرار في وضع التعديل
+        if (window.soConfig && window.soConfig.isEditMode) return;
+
         var $idNum = $('#customers-id_number');
         var $phone = $('#customers-primary_phone_number');
 

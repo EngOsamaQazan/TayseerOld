@@ -40,7 +40,7 @@ class JudiciaryController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['add-print-case', 'print-case', 'logout', 'index', 'update', 'create', 'delete', 'view', 'customer-action', 'delete-customer-action', 'report', 'cases-report', 'cases-report-data', 'export-cases-report', 'print-cases-report', 'refresh-persistence-cache'],
+                        'actions' => ['add-print-case', 'print-case', 'logout', 'index', 'update', 'create', 'delete', 'view', 'customer-action', 'delete-customer-action', 'report', 'cases-report', 'cases-report-data', 'export-cases-report', 'print-cases-report', 'refresh-persistence-cache', 'batch-create', 'batch-print'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -733,6 +733,227 @@ class JudiciaryController extends Controller
              */
             return $this->redirect(['index']);
         }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+     *  التجهيز الجماعي للقضايا — معالج Batch Create
+     * ═══════════════════════════════════════════════════════════════════ */
+
+    /**
+     * GET: عرض صفحة المعالج مع العقود المختارة
+     * POST (contract_ids فقط): تحميل بيانات العقود وعرض المعالج
+     * POST (submit): إنشاء القضايا جماعياً
+     */
+    public function actionBatchCreate()
+    {
+        $request = Yii::$app->request;
+
+        // ─── جمع أرقام العقود من POST أو GET ───
+        $rawIds = $request->post('contract_ids', $request->get('contract_ids', ''));
+        if (is_array($rawIds)) {
+            $contractIds = array_map('intval', $rawIds);
+        } else {
+            $contractIds = array_filter(array_map('intval', explode(',', $rawIds)));
+        }
+
+        if (empty($contractIds)) {
+            Yii::$app->session->setFlash('error', 'الرجاء تحديد عقود للتجهيز');
+            return $this->redirect(['/contracts/contracts/legal-department']);
+        }
+
+        // ─── التحقق: هل هذا POST للإنشاء الفعلي؟ ───
+        if ($request->isPost && $request->post('batch_submit')) {
+            return $this->processBatchCreate($contractIds, $request);
+        }
+
+        // ─── تحميل بيانات العقود لعرض المعالج ───
+        $contracts = Contracts::find()
+            ->where(['id' => $contractIds])
+            ->with(['customers'])
+            ->all();
+
+        // استبعاد العقود التي لها قضايا مسبقة
+        $existingCases = Judiciary::find()
+            ->select('contract_id')
+            ->where(['contract_id' => $contractIds, 'is_deleted' => 0])
+            ->column();
+
+        $contractsData = [];
+        foreach ($contracts as $c) {
+            if (in_array($c->id, $existingCases)) continue;
+
+            $paid = ContractInstallment::find()
+                ->where(['contract_id' => $c->id])
+                ->sum('amount') ?? 0;
+            $remaining = $c->total_value - $paid;
+            $customerNames = implode('، ', \yii\helpers\ArrayHelper::map($c->customers, 'id', 'name'));
+
+            $contractsData[] = [
+                'id'            => $c->id,
+                'customer'      => $customerNames ?: '—',
+                'total'         => (float)$c->total_value,
+                'paid'          => (float)$paid,
+                'remaining'     => round($remaining, 2),
+                'sale_date'     => $c->Date_of_sale,
+            ];
+        }
+
+        if (empty($contractsData)) {
+            Yii::$app->session->setFlash('warning', 'جميع العقود المحددة لها قضايا مسبقة');
+            return $this->redirect(['/contracts/contracts/legal-department']);
+        }
+
+        return $this->render('batch_create', [
+            'contractsData' => $contractsData,
+        ]);
+    }
+
+    /**
+     * معالجة الإنشاء الجماعي الفعلي داخل Transaction
+     */
+    private function processBatchCreate($contractIds, $request)
+    {
+        $courtId     = (int)$request->post('court_id');
+        $typeId      = (int)$request->post('type_id');
+        $lawyerId    = (int)$request->post('lawyer_id');
+        $companyId   = (int)$request->post('company_id');
+        $addressId   = (int)$request->post('judiciary_inform_address_id');
+        $year        = $request->post('year', date('Y'));
+        $percentage  = (float)$request->post('lawyer_percentage', 0);
+
+        // Validation
+        if (!$courtId || !$lawyerId) {
+            Yii::$app->session->setFlash('error', 'المحكمة والمحامي حقول مطلوبة');
+            return $this->redirect(['batch-create', 'contract_ids' => implode(',', $contractIds)]);
+        }
+
+        // استبعاد العقود التي لها قضايا مسبقة
+        $existingCases = Judiciary::find()
+            ->select('contract_id')
+            ->where(['contract_id' => $contractIds, 'is_deleted' => 0])
+            ->column();
+        $contractIds = array_diff($contractIds, $existingCases);
+
+        if (empty($contractIds)) {
+            Yii::$app->session->setFlash('warning', 'جميع العقود المحددة لها قضايا مسبقة');
+            return $this->redirect(['/contracts/contracts/legal-department']);
+        }
+
+        $transaction = Yii::$app->db->beginTransaction();
+        $createdIds = [];
+
+        try {
+            foreach ($contractIds as $contractId) {
+                $contract = Contracts::findOne($contractId);
+                if (!$contract) continue;
+
+                // حساب أتعاب المحامي بالنسبة المئوية
+                $paid = ContractInstallment::find()
+                    ->where(['contract_id' => $contractId])
+                    ->sum('amount') ?? 0;
+                $remaining = $contract->total_value - $paid;
+                $lawyerCost = ($percentage > 0) ? round($remaining * ($percentage / 100), 2) : 0;
+
+                // إنشاء سجل القضية
+                $model = new Judiciary();
+                $model->contract_id = $contractId;
+                $model->court_id = $courtId;
+                $model->type_id = $typeId ?: 1;        // افتراضي لتلبية required
+                $model->lawyer_id = $lawyerId;
+                $model->company_id = $companyId ?: null;
+                $model->judiciary_inform_address_id = $addressId ?: 1; // افتراضي لتلبية required
+                $model->lawyer_cost = $lawyerCost;
+                $model->case_cost = 0;
+                $model->year = (string)$year;
+                $model->income_date = date('Y-m-d');
+
+                if (!$model->save(false)) {
+                    throw new \Exception('فشل إنشاء القضية للعقد #' . $contractId);
+                }
+
+                $createdIds[] = $model->id;
+
+                // تحديث حالة العقد
+                Contracts::updateAll(
+                    ['company_id' => $companyId ?: $contract->company_id, 'status' => 'judiciary'],
+                    ['id' => $contractId]
+                );
+
+                // إنشاء إجراءات العملاء
+                $contractCustomers = \backend\modules\customers\models\ContractsCustomers::find()
+                    ->where(['contract_id' => $contractId])
+                    ->all();
+                foreach ($contractCustomers as $cc) {
+                    $action = new JudiciaryCustomersActions();
+                    $action->judiciary_id = $model->id;
+                    $action->customers_id = $cc->customer_id;
+                    $action->judiciary_actions_id = 1;
+                    $action->note = null;
+                    $action->action_date = date('Y-m-d');
+                    $action->save();
+                }
+
+                // إنشاء ملف المستند
+                $docFile = new ContractDocumentFile();
+                $docFile->document_type = 'judiciary file';
+                $docFile->contract_id = $model->id;
+                $docFile->save();
+            }
+
+            $transaction->commit();
+
+            // تحديث الكاش
+            try {
+                if (isset(Yii::$app->params['key_judiciary_contract'])) {
+                    Yii::$app->cache->set(
+                        Yii::$app->params['key_judiciary_contract'],
+                        Yii::$app->db->createCommand(Yii::$app->params['judiciary_contract_query'])->queryAll(),
+                        Yii::$app->params['time_duration']
+                    );
+                    Yii::$app->cache->set(
+                        Yii::$app->params['key_judiciary_year'],
+                        Yii::$app->db->createCommand(Yii::$app->params['judiciary_year_query'])->queryAll(),
+                        Yii::$app->params['time_duration']
+                    );
+                }
+            } catch (\Exception $e) { /* ignore cache errors */ }
+
+            Yii::$app->session->setFlash('success', 'تم إنشاء ' . count($createdIds) . ' قضية بنجاح');
+
+            // التحويل لصفحة الطباعة الجماعية
+            return $this->redirect(['batch-print', 'ids' => implode(',', $createdIds)]);
+
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::$app->session->setFlash('error', 'حدث خطأ: ' . $e->getMessage());
+            return $this->redirect(['batch-create', 'contract_ids' => implode(',', $contractIds)]);
+        }
+    }
+
+    /**
+     * طباعة جماعية لعدة قضايا — صفحات A4 متتالية
+     */
+    public function actionBatchPrint($ids)
+    {
+        $this->layout = '/print_cases';
+        $judiciaryIds = array_filter(array_map('intval', explode(',', $ids)));
+
+        if (empty($judiciaryIds)) {
+            throw new NotFoundHttpException('لا توجد قضايا للطباعة');
+        }
+
+        $models = Judiciary::find()
+            ->where(['id' => $judiciaryIds])
+            ->with(['contract', 'lawyer', 'court', 'customersAndGuarantor', 'informAddress'])
+            ->all();
+
+        if (empty($models)) {
+            throw new NotFoundHttpException('لا توجد قضايا للطباعة');
+        }
+
+        return $this->render('batch_print', [
+            'models' => $models,
+        ]);
     }
 
     /**

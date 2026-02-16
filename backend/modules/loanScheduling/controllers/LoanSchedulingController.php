@@ -135,6 +135,17 @@ class LoanSchedulingController extends Controller
                 $model->status_action_by = $model->status_action_by ?: Yii::$app->user->id;
 
                 if ($model->save()) {
+                    // تحديث تاريخ المتابعة القادمة ليكون تاريخ الدفعة الأولى للتسوية
+                    if ($model->first_installment_date && $model->contract_id) {
+                        $latestFollowUp = \backend\modules\followUp\models\FollowUp::find()
+                            ->where(['contract_id' => $model->contract_id])
+                            ->orderBy(['id' => SORT_DESC])
+                            ->one();
+                        if ($latestFollowUp) {
+                            $latestFollowUp->reminder = $model->first_installment_date;
+                            $latestFollowUp->save(false);
+                        }
+                    }
                     return ['success' => true, 'message' => 'تم إنشاء التسوية بنجاح'];
                 } else {
                     return [
@@ -147,15 +158,27 @@ class LoanSchedulingController extends Controller
         }
 
         /* ═══ Non-AJAX fallback ═══ */
+        if ($contract_id) {
+            $model->contract_id = $contract_id;
+        }
+
         if ($model->load($request->post())) {
-            if ($contract_id) {
-                $model->contract_id = $contract_id;
-            }
             $model->status = $model->status ?: 'pending';
             $model->status_action_by = $model->status_action_by ?: Yii::$app->user->id;
 
             if ($model->save()) {
-                return $this->redirect('index');
+                // تحديث تاريخ المتابعة القادمة ليكون تاريخ الدفعة الأولى للتسوية
+                if ($model->first_installment_date && $model->contract_id) {
+                    $latestFollowUp = \backend\modules\followUp\models\FollowUp::find()
+                        ->where(['contract_id' => $model->contract_id])
+                        ->orderBy(['id' => SORT_DESC])
+                        ->one();
+                    if ($latestFollowUp) {
+                        $latestFollowUp->reminder = $model->first_installment_date;
+                        $latestFollowUp->save(false);
+                    }
+                }
+                return $this->redirect(['/contracts/contracts/index']);
             } else {
                 return $this->render('create', ['model' => $model]);
             }

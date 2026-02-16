@@ -45,7 +45,7 @@ $actions = $cache->getOrSet('lookup_judiciary_actions', function () {
 
         <div class="row">
             <div class="col-md-2">
-                <?= $form->field($model, 'id')->textInput(['placeholder' => 'رقم القضية', 'type' => 'number'])->label('رقم القضية') ?>
+                <?= $form->field($model, 'judiciary_number')->textInput(['placeholder' => 'رقم القضية (مثل 2313)'])->label('رقم القضية') ?>
             </div>
             <div class="col-md-2">
                 <?= $form->field($model, 'contract_id')->textInput(['placeholder' => 'رقم العقد', 'type' => 'number'])->label('رقم العقد') ?>

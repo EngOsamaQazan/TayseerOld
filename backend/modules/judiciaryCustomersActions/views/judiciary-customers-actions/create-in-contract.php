@@ -204,6 +204,19 @@ $existingCustomerId = $model->customers_id ?: '';
     display:inline-flex;align-items:center;gap:4px;padding:4px 10px;
     border-radius:8px;font-size:11px;font-weight:600;
 }
+
+/* Multi-select party checkbox */
+.jaf-party-check {
+    font-size:16px;color:#CBD5E1;transition:all .2s;flex-shrink:0;
+}
+.jaf-party.selected .jaf-party-check { color:#3B82F6; }
+.jaf-party.selected .jaf-party-check i:before { content:"\f14a"; }
+
+/* Select all button */
+.jaf-select-all { cursor:pointer; }
+.jaf-select-all.all-selected { border-color:#DC2626!important;background:#FEF2F2!important; }
+.jaf-select-all.all-selected span { color:#DC2626!important; }
+.jaf-select-all.all-selected i { color:#DC2626!important; }
 </style>
 
 <div class="jaf">
@@ -215,7 +228,11 @@ $existingCustomerId = $model->customers_id ?: '';
 
 <!-- ═══ Hidden fields ═══ -->
 <?= Html::activeHiddenInput($model, 'judiciary_id', ['id' => 'jaf-judiciary-id', 'value' => $judiciary ? $judiciary->id : '']) ?>
-<?= Html::activeHiddenInput($model, 'customers_id', ['id' => 'jaf-customer-id']) ?>
+<?php if ($isNew): ?>
+    <input type="hidden" name="multi_customers_ids" id="jaf-multi-customers" value="">
+<?php else: ?>
+    <?= Html::activeHiddenInput($model, 'customers_id', ['id' => 'jaf-customer-id']) ?>
+<?php endif; ?>
 <?= Html::activeHiddenInput($model, 'judiciary_actions_id', ['id' => 'jaf-action-id']) ?>
 <?= Html::activeHiddenInput($model, 'parent_id', ['id' => 'jaf-parent-id']) ?>
 <?= Html::activeHiddenInput($model, 'request_status', ['id' => 'jaf-request-status', 'value' => $isNew ? 'pending' : $model->request_status]) ?>
@@ -234,13 +251,24 @@ $existingCustomerId = $model->customers_id ?: '';
 
 <!-- ═══ 2. Party Selector ═══ -->
 <div>
-    <label class="jaf-label"><i class="fa fa-users"></i> اختر الطرف</label>
-    <div class="jaf-parties">
+    <label class="jaf-label"><i class="fa fa-users"></i> اختر <?= $isNew ? 'الأطراف' : 'الطرف' ?> <span style="color:#DC2626">*</span></label>
+    <?php if ($isNew && count($partyRows) > 1): ?>
+    <div style="margin-bottom:6px">
+        <label class="jaf-party jaf-select-all" style="padding:5px 12px;font-size:11px;border-color:#10B981;background:#F0FDF4" data-select-all="1">
+            <i class="fa fa-check-double" style="color:#10B981"></i>
+            <span style="font-weight:600;color:#10B981">تحديد الكل</span>
+        </label>
+    </div>
+    <?php endif; ?>
+    <div class="jaf-parties" id="jaf-parties-container">
         <?php foreach ($partyRows as $p):
             $isClient = $p['customer_type'] === 'client';
             $isSelected = ($existingCustomerId == $p['customer_id']);
         ?>
         <div class="jaf-party <?= $isSelected ? 'selected' : '' ?>" data-customer-id="<?= $p['customer_id'] ?>">
+            <?php if ($isNew): ?>
+            <div class="jaf-party-check"><i class="fa fa-square-o"></i></div>
+            <?php endif; ?>
             <div class="jaf-party-avatar" style="background:<?= $isClient ? '#DBEAFE' : '#FEF3C7' ?>">
                 <i class="fa <?= $isClient ? 'fa-user' : 'fa-user-o' ?>" style="color:<?= $isClient ? '#2563EB' : '#D97706' ?>"></i>
             </div>
@@ -250,6 +278,9 @@ $existingCustomerId = $model->customers_id ?: '';
             </div>
         </div>
         <?php endforeach; ?>
+    </div>
+    <div id="jaf-party-error" style="display:none;color:#DC2626;font-size:11px;margin-top:4px;font-weight:600">
+        <i class="fa fa-exclamation-triangle"></i> يجب اختيار طرف واحد على الأقل
     </div>
 </div>
 
@@ -441,13 +472,60 @@ $existingCustomerId = $model->customers_id ?: '';
 var JAF = (function() {
     var natureMap = <?= Json::encode($actionNatureMap) ?>;
     var REFUND_ID = 55;
+    var isNewRecord = <?= $isNew ? 'true' : 'false' ?>;
 
     function init() {
-        // Party selection
-        $('.jaf-party').on('click', function() {
-            $('.jaf-party').removeClass('selected');
-            $(this).addClass('selected');
-            $('#jaf-customer-id').val($(this).data('customer-id'));
+        if (isNewRecord) {
+            // Multi-select mode for new records
+            $('#jaf-parties-container .jaf-party').on('click', function() {
+                $(this).toggleClass('selected');
+                syncMultiCustomers();
+                $('#jaf-party-error').hide();
+            });
+
+            // Select All toggle
+            $('.jaf-select-all').on('click', function() {
+                var $parties = $('#jaf-parties-container .jaf-party');
+                var allSelected = $parties.filter('.selected').length === $parties.length;
+                if (allSelected) {
+                    $parties.removeClass('selected');
+                    $(this).removeClass('all-selected');
+                    $(this).find('span').text('تحديد الكل');
+                } else {
+                    $parties.addClass('selected');
+                    $(this).addClass('all-selected');
+                    $(this).find('span').text('إلغاء تحديد الكل');
+                }
+                syncMultiCustomers();
+                $('#jaf-party-error').hide();
+            });
+        } else {
+            // Single-select mode for editing
+            $('#jaf-parties-container .jaf-party').on('click', function() {
+                $('#jaf-parties-container .jaf-party').removeClass('selected');
+                $(this).addClass('selected');
+                $('#jaf-customer-id').val($(this).data('customer-id'));
+                $('#jaf-party-error').hide();
+            });
+        }
+
+        // Validate before submit
+        $('#jaf-form').on('beforeSubmit', function() {
+            if (isNewRecord) {
+                var ids = getSelectedCustomerIds();
+                if (ids.length === 0) {
+                    $('#jaf-party-error').show();
+                    $('html,body').animate({ scrollTop: $('#jaf-parties-container').offset().top - 100 }, 300);
+                    return false;
+                }
+            } else {
+                var cid = $('#jaf-customer-id').val();
+                if (!cid) {
+                    $('#jaf-party-error').show();
+                    return false;
+                }
+            }
+            return true;
         });
 
         // Drop zone
@@ -470,12 +548,23 @@ var JAF = (function() {
         if (existingAction && natureMap[existingAction]) {
             var n = natureMap[existingAction];
             var $header = $('.jaf-nature-header[data-nature="' + n + '"]');
-            if ($header.hasClass('collapsed') || !$header.hasClass('collapsed')) {
-                $header.removeClass('collapsed');
-                $('#nature-list-' + n).removeClass('collapsed');
-            }
+            $header.removeClass('collapsed');
+            $('#nature-list-' + n).removeClass('collapsed');
             showContext(n);
         }
+    }
+
+    function getSelectedCustomerIds() {
+        var ids = [];
+        $('#jaf-parties-container .jaf-party.selected').each(function() {
+            ids.push($(this).data('customer-id'));
+        });
+        return ids;
+    }
+
+    function syncMultiCustomers() {
+        var ids = getSelectedCustomerIds();
+        $('#jaf-multi-customers').val(ids.join(','));
     }
 
     function showPreview(file) {
@@ -542,7 +631,6 @@ var JAF = (function() {
 
     function removeExisting() {
         $('#jaf-existing-preview').remove();
-        // Add a hidden field to signal removal
         $('<input type="hidden" name="remove_image" value="1">').insertAfter('#jaf-file-input');
     }
 

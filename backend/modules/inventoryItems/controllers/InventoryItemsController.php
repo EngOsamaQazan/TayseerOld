@@ -40,7 +40,7 @@ class InventoryItemsController extends Controller
                     [
                         'actions' => [
                             'logout', 'index', 'items', 'update', 'create', 'delete', 'view',
-                            'item-query', 'bulk-delete',
+                            'item-query', 'bulk-delete', 'batch-create',
                             'approve', 'reject', 'bulk-approve', 'bulk-reject',
                             'movements', 'settings',
                             'quick-add-item', 'quick-add-supplier', 'quick-add-location',
@@ -222,10 +222,10 @@ class InventoryItemsController extends Controller
             if ($model->load($request->post()) && $model->save()) {
                 return [
                     'forceReload' => '#crud-datatable-pjax',
-                    'title'       => 'إضافة صنف جديد',
+                    'forceClose'  => true,
+                    'title'       => 'تمت الإضافة',
                     'content'     => '<span class="text-success">تم إضافة الصنف بنجاح</span>',
-                    'footer'      => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
-                                     Html::a('إضافة المزيد', ['create'], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
+                    'footer'      => '',
                 ];
             }
             return [
@@ -240,6 +240,78 @@ class InventoryItemsController extends Controller
             return $this->redirect(['items']);
         }
         return $this->render('create', ['model' => $model]);
+    }
+
+    /**
+     * إضافة مجموعة أصناف دفعة واحدة (AJAX)
+     */
+    public function actionBatchCreate()
+    {
+        $request = Yii::$app->request;
+
+        if ($request->isAjax) {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+
+            if ($request->isGet) {
+                return [
+                    'title'   => '<i class="fa fa-cubes"></i> إضافة مجموعة أصناف',
+                    'content' => $this->renderAjax('_batch_form'),
+                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                                 Html::button('<i class="fa fa-plus"></i> إضافة الكل', ['class' => 'btn btn-success', 'type' => 'submit']),
+                ];
+            }
+
+            // POST — معالجة الدفعة
+            $items = $request->post('items', []);
+            $status = $this->isSupplierUser() ? InventoryItems::STATUS_PENDING : InventoryItems::STATUS_APPROVED;
+            $added = 0;
+            $errors = [];
+
+            foreach ($items as $idx => $row) {
+                $name = trim($row['item_name'] ?? '');
+                $barcode = trim($row['item_barcode'] ?? '');
+                if ($name === '') continue;
+
+                $model = new InventoryItems();
+                $model->item_name = $name;
+                $model->item_barcode = $barcode ?: null;
+                $model->serial_number = trim($row['serial_number'] ?? '') ?: null;
+                $model->category = trim($row['category'] ?? '') ?: null;
+                $model->unit_price = $row['unit_price'] ?? null;
+                $model->supplier_id = $row['supplier_id'] ?? null;
+                $model->description = trim($row['description'] ?? '') ?: null;
+                $model->status = $status;
+
+                if ($model->save()) {
+                    $added++;
+                } else {
+                    $errors[] = "سطر " . ($idx + 1) . ": " . implode('، ', $model->getFirstErrors());
+                }
+            }
+
+            if ($added > 0) {
+                $msg = "تم إضافة {$added} صنف بنجاح";
+                if (!empty($errors)) {
+                    $msg .= " — مع " . count($errors) . " أخطاء";
+                }
+                return [
+                    'forceReload' => '#crud-datatable-pjax',
+                    'forceClose'  => true,
+                    'title'       => 'تمت الإضافة',
+                    'content'     => '<span class="text-success">' . $msg . '</span>',
+                    'footer'      => '',
+                ];
+            }
+
+            return [
+                'title'   => '<i class="fa fa-cubes"></i> إضافة مجموعة أصناف',
+                'content' => '<div class="alert alert-danger">لم يتم إضافة أي صنف. تأكد من تعبئة البيانات.</div>' . $this->renderAjax('_batch_form'),
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                             Html::button('<i class="fa fa-plus"></i> إضافة الكل', ['class' => 'btn btn-success', 'type' => 'submit']),
+            ];
+        }
+
+        return $this->redirect(['items']);
     }
 
     public function actionUpdate($id)

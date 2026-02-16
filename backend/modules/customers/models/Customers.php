@@ -242,12 +242,25 @@ class Customers extends \yii\db\ActiveRecord
 
     public function getSelectedImagePath()
     {
+        /* أولاً: البحث عن صورة شخصية (groupName = '8') مرتبطة بالعميل عبر customer_id */
+        $personalPhoto = ImageManager::find()
+            ->where(['customer_id' => (int)$this->id, 'groupName' => '8'])
+            ->orderBy(new \yii\db\Expression('RAND()'))
+            ->one();
+
+        if ($personalPhoto) {
+            $ext = pathinfo($personalPhoto->fileName, PATHINFO_EXTENSION);
+            return '/images/imagemanager/' . $personalPhoto->id . '_' . $personalPhoto->fileHash . '.' . $ext;
+        }
+
+        /* ثانياً: الرجوع للصورة المختارة القديمة (selected_image) */
         if ($this->selectedImg) {
             $file_hash = $this->selectedImg->fileHash;
             $file_extention = pathinfo($this->selectedImg->fileName, PATHINFO_EXTENSION);
-
             return '/images/imagemanager/' . $this->selected_image . '_' . $file_hash . '.' . $file_extention;
         }
+
+        return null;
     }
 
 }

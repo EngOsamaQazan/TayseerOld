@@ -53,7 +53,7 @@ $statusList = [
     </div>
 
     <!-- العميل -->
-    <div class="ct-filter-group" style="grid-column: span 2">
+    <div class="ct-filter-group ct-filter-customer">
         <label for="contractssearch-customer_name">العميل</label>
         <?= $form->field($model, 'customer_name', ['template' => '{input}'])->widget(Select2::class, [
             'initValueText' => $model->customer_name,
@@ -68,9 +68,9 @@ $statusList = [
                 'ajax' => [
                     'url' => Url::to(['/customers/customers/search-customers', 'mode' => 'name']),
                     'dataType' => 'json',
-                    'delay' => 250,
+                    'delay' => 300,
                     'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
-                    'processResults' => 'function(d){return d}',
+                    'processResults' => new \yii\web\JsExpression('function(d){return d}'),
                     'cache' => true,
                 ],
                 'templateResult' => new \yii\web\JsExpression(

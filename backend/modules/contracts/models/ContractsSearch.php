@@ -110,7 +110,7 @@ class ContractsSearch extends Contracts
 
 
         $query->andFilterWhere(['os_contracts.id' => $this->id]);
-        $query->andFilterWhere(['cc.id' => $this->customer_name]);
+        $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
         $query->andFilterWhere(['os_contracts.seller_id' => $this->seller_id]);
         $query->andFilterWhere(['like', 'notes', $this->notes]);
         if (!empty($params['ContractsSearch']['followed_by'])) {
@@ -197,7 +197,7 @@ class ContractsSearch extends Contracts
 
 
         $query->andFilterWhere(['os_contracts.id' => $this->id]);
-        $query->andFilterWhere(['cc.id' => $this->customer_name]);
+        $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
         $query->andFilterWhere(['os_contracts.seller_id' => $this->seller_id]);
         $query->andFilterWhere(['like', 'notes', $this->notes]);
         if (!empty($params['ContractsSearch']['followed_by'])) {
@@ -274,7 +274,7 @@ class ContractsSearch extends Contracts
         ]);
 
         $query->andFilterWhere(['os_contracts.id' => $this->id]);
-        $query->andFilterWhere(['cc.id' => $this->customer_name]);
+        $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
         $query->andFilterWhere(['os_contracts.seller_id' => $this->seller_id]);
         $query->andFilterWhere(['like', 'notes', $this->notes]);
         if (!empty($params['ContractsSearch']['followed_by'])) {
@@ -340,7 +340,7 @@ class ContractsSearch extends Contracts
         }
 
         $query->andFilterWhere(['os_contracts.id' => $this->id]);
-        $query->andFilterWhere(['cc.id' => $this->customer_name]);
+        $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
         $query->andFilterWhere(['os_contracts.seller_id' => $this->seller_id]);
         $query->andFilterWhere(['like', 'notes', $this->notes]);
         if (!empty($params['ContractsSearch']['followed_by'])) {

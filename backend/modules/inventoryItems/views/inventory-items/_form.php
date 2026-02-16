@@ -16,7 +16,7 @@ use backend\modules\inventorySuppliers\models\InventorySuppliers;
                 'maxlength' => true,
                 'placeholder' => 'مثال: آيفون 15 برو',
                 'class' => 'form-control',
-            ])->label('اسم الصنف <span style="color:red">*</span>') ?>
+            ])->label('اسم الصنف') ?>
         </div>
         <div class="col-lg-6 col-md-6">
             <?= $form->field($model, 'item_barcode')->textInput([
@@ -24,7 +24,7 @@ use backend\modules\inventorySuppliers\models\InventorySuppliers;
                 'placeholder' => 'الباركود الفريد',
                 'class' => 'form-control',
                 'style' => 'direction:ltr; font-family:monospace',
-            ])->label('الباركود <span style="color:red">*</span>') ?>
+            ])->label('الباركود') ?>
         </div>
     </div>
 

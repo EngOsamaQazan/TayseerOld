@@ -231,8 +231,10 @@ class HrEmployeeController extends Controller
     }
 
     /**
-     * Create new extended employee record for an existing os_user that
-     * doesn't have extended data yet.
+     * Create new extended employee record.
+     * Supports two modes:
+     *   1. Select an existing user without an extended record
+     *   2. Create a brand-new user inline (name, username, email, password, mobile)
      *
      * @return string|Response
      */
@@ -254,6 +256,95 @@ class HrEmployeeController extends Controller
         });
 
         if ($model->load($request->post())) {
+
+            // ─── Mode: Create new user inline ───
+            $createNewUser = (int)$request->post('create_new_user', 0);
+            if ($createNewUser) {
+                $newName     = trim($request->post('new_user_name', ''));
+                $newUsername  = trim($request->post('new_user_username', ''));
+                $newEmail    = trim($request->post('new_user_email', ''));
+                $newPassword = $request->post('new_user_password', '');
+                $newMobile   = trim($request->post('new_user_mobile', ''));
+
+                // Validation
+                $errors = [];
+                if ($newName === '')     $errors[] = 'الاسم الكامل مطلوب';
+                if ($newUsername === '')  $errors[] = 'اسم المستخدم مطلوب';
+                if ($newEmail === '')    $errors[] = 'البريد الإلكتروني مطلوب';
+                if (strlen($newPassword) < 6) $errors[] = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+
+                // Check uniqueness
+                if ($newUsername && User::find()->where(['username' => $newUsername])->exists()) {
+                    $errors[] = 'اسم المستخدم "' . $newUsername . '" مستخدم مسبقاً';
+                }
+                if ($newEmail && User::find()->where(['email' => $newEmail])->exists()) {
+                    $errors[] = 'البريد الإلكتروني "' . $newEmail . '" مستخدم مسبقاً';
+                }
+
+                if (!empty($errors)) {
+                    Yii::$app->session->setFlash('error', implode('<br>', $errors));
+                    return $this->render('create', [
+                        'model' => $model,
+                        'userList' => $userList,
+                    ]);
+                }
+
+                // Create the user record directly via DB insert (bypassing Dektrium's complex model)
+                $now = time();
+                $passwordHash = Yii::$app->security->generatePasswordHash($newPassword);
+                $authKey = Yii::$app->security->generateRandomString(32);
+
+                $transaction = Yii::$app->db->beginTransaction();
+                try {
+                    Yii::$app->db->createCommand()->insert('{{%user}}', [
+                        'username'      => $newUsername,
+                        'email'         => $newEmail,
+                        'password_hash' => $passwordHash,
+                        'auth_key'      => $authKey,
+                        'name'          => $newName,
+                        'mobile'        => $newMobile ?: null,
+                        'confirmed_at'  => $now,
+                        'created_at'    => $now,
+                        'updated_at'    => $now,
+                        'employee_type' => 'Active',
+                        'employee_status' => 'Full_time',
+                        'gender'        => 'Male',
+                        'marital_status' => 'Single',
+                        'flags'         => 0,
+                    ])->execute();
+
+                    $newUserId = Yii::$app->db->getLastInsertID();
+                    $model->user_id = $newUserId;
+
+                    // Auto-generate employee code
+                    if (empty($model->employee_code)) {
+                        $maxCode = (new Query())->from('{{%hr_employee_extended}}')->max('id');
+                        $model->employee_code = 'EMP-' . str_pad(($maxCode ?? 0) + 1, 4, '0', STR_PAD_LEFT);
+                    }
+
+                    $model->created_at = $now;
+                    $model->updated_at = $now;
+                    $model->created_by = Yii::$app->user->id;
+                    $model->updated_by = Yii::$app->user->id;
+
+                    if (!$model->save(false)) {
+                        throw new \Exception('فشل حفظ بيانات الموظف: ' . implode(', ', $model->getFirstErrors()));
+                    }
+
+                    $transaction->commit();
+                    Yii::$app->session->setFlash('success', 'تم إنشاء المستخدم وملف الموظف بنجاح.');
+                    return $this->redirect(['view', 'id' => $model->user_id]);
+                } catch (\Exception $e) {
+                    $transaction->rollBack();
+                    Yii::$app->session->setFlash('error', 'حدث خطأ: ' . $e->getMessage());
+                    return $this->render('create', [
+                        'model' => $model,
+                        'userList' => $userList,
+                    ]);
+                }
+            }
+
+            // ─── Mode: Select existing user ───
             $model->created_at = time();
             $model->updated_at = time();
             $model->created_by = Yii::$app->user->id;
@@ -284,7 +375,7 @@ class HrEmployeeController extends Controller
         if ($request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
             return [
-                'title' => 'إنشاء ملف موظف موسع',
+                'title' => 'إنشاء ملف موظف',
                 'content' => $this->renderAjax('create', [
                     'model' => $model,
                     'userList' => $userList,

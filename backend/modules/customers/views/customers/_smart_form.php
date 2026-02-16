@@ -30,14 +30,28 @@ $this->registerJs("window.smConfig = " . json_encode([
     'deleteUrl'      => Url::to(['/customers/smart-media/delete']),
 ]) . ";", \yii\web\View::POS_HEAD);
 
+/* Determine mode early (needed by CSS/JS registrations below) */
+$isNew = $model->isNewRecord;
+
 /* Hide AdminLTE content header */
 $this->registerCss('.content-header { display: none !important; } .content-wrapper { padding-top: 0 !important; } .content { padding: 0 !important; }');
 
+/* Edit mode: show all sections, hide wizard nav */
+if (!$isNew) {
+    $this->registerCss('
+        .so-mode-edit .so-section { display: block !important; }
+        .so-mode-edit .so-nav { display: none !important; }
+        .so-mode-edit .so-section { border-top: 2px solid #e2e8f0; padding-top: 20px; margin-top: 10px; }
+        .so-mode-edit .so-section:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+    ');
+}
+
 /* Config for JS */
 $this->registerJs("window.soConfig = " . json_encode([
-    'riskCalcUrl'      => Url::to(['calculate-risk']),
+    'riskCalcUrl'       => Url::to(['calculate-risk']),
     'duplicateCheckUrl' => Url::to(['check-duplicate']),
     'customerViewUrl'   => Url::to(['view', 'id' => '__ID__']),
+    'isEditMode'        => !$isNew,
 ]) . ";", \yii\web\View::POS_HEAD);
 
 /* Cache lookups */
@@ -56,7 +70,6 @@ $cousins = ArrayHelper::map(
     'id', 'name'
 );
 
-$isNew = $model->isNewRecord;
 $imgRandId = rand(100000000, 1000000000);
 if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
 
@@ -92,11 +105,18 @@ if (!$isNew) {
 }
 ?>
 
-<div class="so-page">
+<div class="so-page <?= $isNew ? 'so-mode-create' : 'so-mode-edit' ?>">
     <!-- Header -->
     <div class="so-header">
-        <h1><i class="fa fa-user-plus"></i> <?= $isNew ? 'إضافة عميل جديد' : 'تعديل بيانات العميل' ?></h1>
+        <?php if ($isNew): ?>
+            <h1><i class="fa fa-user-plus"></i> إضافة عميل جديد</h1>
+        <?php else: ?>
+            <h1><i class="fa fa-pencil"></i> تعديل بيانات: <?= Html::encode($model->name) ?></h1>
+        <?php endif ?>
         <div class="so-header-actions">
+            <?php if (!$isNew): ?>
+                <a href="<?= Url::to(['/contracts/contracts/create', 'customer_id' => $model->id]) ?>" class="so-back-btn" style="background:#059669;color:#fff;border-color:#059669"><i class="fa fa-file-text-o"></i> إنشاء عقد</a>
+            <?php endif ?>
             <a href="<?= Url::to(['index']) ?>" class="so-back-btn"><i class="fa fa-arrow-right"></i> العودة للقائمة</a>
         </div>
     </div>
@@ -120,7 +140,8 @@ if (!$isNew) {
             ?>
             <?= $form->errorSummary($model, ['class' => 'alert alert-danger', 'style' => 'border-radius:8px; font-size:13px']) ?>
 
-            <!-- Wizard Steps -->
+            <!-- Wizard Steps (إضافة فقط) -->
+            <?php if ($isNew): ?>
             <div class="so-steps">
                 <div class="so-step active" data-step="0">
                     <span class="so-step-num">1</span>
@@ -143,6 +164,7 @@ if (!$isNew) {
                     <span class="so-step-label">الصور والمراجعة</span>
                 </div>
             </div>
+            <?php endif ?>
 
             <!-- ══════════════════════════════════════
                  STEP 1: البيانات الشخصية
@@ -376,8 +398,47 @@ if (!$isNew) {
 
                     <?php if (!$isNew && !empty($model->selected_image)): ?>
                         <div style="margin-bottom:15px">
-                            <img src="<?= $model->selectedImagePath ?>" style="max-width:350px;border-radius:8px" alt="صورة العميل">
+                            <img src="<?= $model->selectedImagePath ?>" style="max-width:200px;border-radius:8px;border:2px solid #e2e8f0" alt="صورة العميل">
+                            <span style="display:block;font-size:11px;color:#64748b;margin-top:4px"><i class="fa fa-star" style="color:#f59e0b"></i> الصورة المختارة</span>
                         </div>
+                    <?php endif ?>
+
+                    <?php if (!$isNew): ?>
+                    <!-- ═══ معرض الصور الحالية ═══ -->
+                    <?php
+                    $currentImages = $db->createCommand(
+                        "SELECT id, fileName, fileHash, groupName, created FROM os_ImageManager 
+                         WHERE CAST(contractId AS UNSIGNED) = :cid 
+                         AND groupName IN ('coustmers','customers','0','1','2','3','4','5','6','7','8','9') 
+                         ORDER BY created DESC LIMIT 20",
+                        [':cid' => $model->id]
+                    )->queryAll();
+                    ?>
+                    <?php if (!empty($currentImages)): ?>
+                    <div style="margin-bottom:16px">
+                        <h4 style="font-size:13px;font-weight:700;color:#334155;margin-bottom:8px"><i class="fa fa-images"></i> الصور المرفوعة (<?= count($currentImages) ?>)</h4>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px">
+                            <?php 
+                            $DOC_TYPES = ['0'=>'هوية وطنية','1'=>'جواز سفر','2'=>'رخصة قيادة','3'=>'شهادة ميلاد','4'=>'شهادة تعيين','5'=>'كتاب ضمان','6'=>'كشف راتب','7'=>'تعيين عسكري','8'=>'صورة شخصية','9'=>'أخرى'];
+                            foreach ($currentImages as $cimg):
+                                $imgPath = '/images/imagemanager/' . ($cimg['fileHash'] ?: $cimg['fileName']);
+                                $typeName = $DOC_TYPES[$cimg['groupName']] ?? '';
+                                $isSelected = (!empty($model->selected_image) && $model->selected_image == $cimg['id']);
+                            ?>
+                            <div style="width:110px;text-align:center;position:relative">
+                                <img src="<?= $imgPath ?>" style="width:110px;height:80px;object-fit:cover;border-radius:6px;border:2px solid <?= $isSelected ? '#f59e0b' : '#e2e8f0' ?>;cursor:pointer" 
+                                     onclick="window.open('<?= $imgPath ?>','_blank')" title="<?= $typeName ?>">
+                                <?php if ($typeName): ?>
+                                    <span style="display:block;font-size:10px;color:#64748b;margin-top:2px"><?= $typeName ?></span>
+                                <?php endif ?>
+                                <?php if ($isSelected): ?>
+                                    <span style="position:absolute;top:2px;right:2px;background:#f59e0b;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;display:flex;align-items:center;justify-content:center"><i class="fa fa-star"></i></span>
+                                <?php endif ?>
+                            </div>
+                            <?php endforeach ?>
+                        </div>
+                    </div>
+                    <?php endif ?>
                     <?php endif ?>
 
                     <!-- ═══ Smart Media: Drag & Drop Upload ═══ -->
@@ -411,7 +472,46 @@ if (!$isNew) {
 
                     <!-- ═══ Gallery: Uploaded Files + AI Results ═══ -->
                     <div class="sm-gallery">
-                        <!-- Cards added dynamically by smart-media.js -->
+                        <?php
+                        /* Pre-populate gallery with existing images from os_ImageManager */
+                        if (!$isNew && $model->id) {
+                            $existingImages = (new \yii\db\Query())
+                                ->from('{{%ImageManager}}')
+                                ->where(['customer_id' => (int)$model->id])
+                                ->orderBy(['id' => SORT_DESC])
+                                ->all();
+
+                            $docTypes = [
+                                '0' => 'هوية وطنية', '1' => 'جواز سفر', '2' => 'رخصة قيادة',
+                                '3' => 'شهادة ميلاد', '4' => 'شهادة تعيين', '5' => 'كتاب ضمان اجتماعي',
+                                '6' => 'كشف راتب', '7' => 'شهادة تعيين عسكري', '8' => 'صورة شخصية', '9' => 'أخرى'
+                            ];
+
+                            foreach ($existingImages as $idx => $img) {
+                                $imgExt = pathinfo($img['fileName'], PATHINFO_EXTENSION);
+                                $imgWebPath = '/images/imagemanager/' . $img['id'] . '_' . $img['fileHash'] . '.' . $imgExt;
+                                $imgLabel = $docTypes[$img['groupName'] ?? '9'] ?? 'أخرى';
+                                $isPdf = strtolower($imgExt) === 'pdf';
+                                $thumbSrc = $isPdf ? '/css/images/pdf-icon.png' : $imgWebPath;
+                        ?>
+                        <div class="sm-card" data-image-id="<?= $img['id'] ?>">
+                            <div class="sm-card-actions">
+                                <button type="button" class="sm-card-action danger sm-delete-btn" data-path="<?= htmlspecialchars($imgWebPath) ?>" data-image-id="<?= $img['id'] ?>" title="حذف"><i class="fa fa-trash"></i></button>
+                                <button type="button" class="sm-card-action sm-reclassify-btn" data-path="<?= htmlspecialchars($imgWebPath) ?>" data-image-id="<?= $img['id'] ?>" title="إعادة تصنيف AI"><i class="fa fa-magic"></i></button>
+                            </div>
+                            <img class="sm-card-img" src="<?= htmlspecialchars($thumbSrc) ?>" alt="">
+                            <div class="sm-card-body">
+                                <div class="sm-card-name"><?= htmlspecialchars($img['fileName']) ?></div>
+                                <div class="sm-card-meta"><span><?= $imgLabel ?></span><span><?= date('Y-m-d', strtotime($img['created'])) ?></span></div>
+                                <select class="sm-type-select" data-path="<?= htmlspecialchars($imgWebPath) ?>" data-image-id="<?= $img['id'] ?>">
+                                    <?php foreach ($docTypes as $k => $v): ?>
+                                    <option value="<?= $k ?>"<?= ($k == ($img['groupName'] ?? '9')) ? ' selected' : '' ?>><?= $v ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <?php } } ?>
+                        <!-- New cards added dynamically by smart-media.js -->
                     </div>
 
                     <!-- ═══ AI Usage Stats Widget — Dual Source ═══ -->
@@ -498,7 +598,8 @@ if (!$isNew) {
                     </details>
                 </div>
 
-                <!-- Decision Actions (Desktop — also in risk panel) -->
+                <!-- Decision Actions -->
+                <?php if ($isNew): ?>
                 <div class="so-fieldset" style="background: var(--clr-primary-50); border-color: var(--clr-primary-200)">
                     <h3 class="so-fieldset-title"><i class="fa fa-gavel"></i> اتخاذ القرار</h3>
                     <p style="font-size:13px; color: var(--clr-text-muted); margin-bottom: 16px">
@@ -519,11 +620,29 @@ if (!$isNew) {
                         </button>
                     </div>
                 </div>
-
                 <div class="so-nav">
                     <button type="button" class="so-btn so-btn-outline so-prev-btn"><i class="fa fa-arrow-right"></i> <span>السابق</span></button>
                     <span></span>
                 </div>
+                <?php else: ?>
+                <!-- أزرار الحفظ — وضع التعديل -->
+                <div class="so-fieldset" style="background:#f0fdf4; border-color:#bbf7d0">
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+                        <?= Html::submitButton('<i class="fa fa-save"></i> حفظ التعديلات', ['class' => 'so-btn so-btn-success', 'style' => 'font-size:15px; padding:12px 28px']) ?>
+                        <a href="<?= Url::to(['view', 'id' => $model->id]) ?>" class="so-btn so-btn-outline" style="font-size:13px"><i class="fa fa-eye"></i> عرض الملف</a>
+                    </div>
+                </div>
+                <!-- معلومات الإنشاء -->
+                <div style="margin-top:12px; padding:12px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; color:#64748b; display:flex; gap:20px; flex-wrap:wrap">
+                    <?php if (!empty($model->created_at)): ?>
+                        <span><i class="fa fa-calendar-plus-o"></i> تاريخ الإنشاء: <b><?= $model->created_at ?></b></span>
+                    <?php endif ?>
+                    <?php if (!empty($model->updated_at)): ?>
+                        <span><i class="fa fa-clock-o"></i> آخر تعديل: <b><?= $model->updated_at ?></b></span>
+                    <?php endif ?>
+                    <span><i class="fa fa-hashtag"></i> رقم العميل: <b>#<?= $model->id ?></b></span>
+                </div>
+                <?php endif ?>
             </div>
 
             <?php ActiveForm::end() ?>
@@ -533,7 +652,8 @@ if (!$isNew) {
              RIGHT: RISK ASSESSMENT PANEL
              ═══════════════════════════════════════════ -->
         <div class="so-risk-panel">
-            <!-- Mobile Handle -->
+            <?php if ($isNew): ?>
+            <!-- ═══ وضع الإضافة: تقييم المخاطر ═══ -->
             <div class="rp-mobile-handle">
                 <div class="rp-mobile-summary">
                     <span class="rp-mobile-score" style="font-size:18px; font-weight:800">—</span>
@@ -543,8 +663,6 @@ if (!$isNew) {
             </div>
 
             <h3 class="rp-title"><i class="fa fa-shield"></i> تقييم المخاطر</h3>
-
-            <!-- Score Gauge -->
             <div class="rp-gauge">
                 <div class="rp-gauge-ring">
                     <svg viewBox="0 0 128 128">
@@ -557,81 +675,119 @@ if (!$isNew) {
                     </div>
                 </div>
             </div>
-
-            <!-- Tier -->
-            <div class="rp-tier">
-                <span class="rp-tier-badge rp-tier-conditional">جاري التقييم...</span>
-            </div>
-
-            <!-- Completeness -->
+            <div class="rp-tier"><span class="rp-tier-badge rp-tier-conditional">جاري التقييم...</span></div>
             <div class="rp-completeness">
-                <div class="rp-completeness-header">
-                    <span class="rp-completeness-label">اكتمال الملف</span>
-                    <span class="rp-completeness-val">0%</span>
-                </div>
-                <div class="rp-completeness-bar">
-                    <div class="rp-completeness-fill" style="width: 0"></div>
-                </div>
+                <div class="rp-completeness-header"><span class="rp-completeness-label">اكتمال الملف</span><span class="rp-completeness-val">0%</span></div>
+                <div class="rp-completeness-bar"><div class="rp-completeness-fill" style="width: 0"></div></div>
             </div>
-
-            <!-- Top Factors -->
             <div class="rp-factors">
                 <h4 class="rp-factors-title"><i class="fa fa-bar-chart"></i> أهم العوامل</h4>
-                <div class="rp-factors-list">
-                    <!-- Populated by JS -->
-                    <div style="text-align:center; color:#999; font-size:12px; padding:12px 0">أدخل البيانات لبدء التقييم</div>
-                </div>
+                <div class="rp-factors-list"><div style="text-align:center; color:#999; font-size:12px; padding:12px 0">أدخل البيانات لبدء التقييم</div></div>
             </div>
-
-            <!-- Financing Recommendation -->
             <div class="rp-financing" style="display:none">
                 <h4 class="rp-financing-title"><i class="fa fa-calculator"></i> توصية التمويل</h4>
                 <div class="rp-fin-grid">
-                    <div class="rp-fin-item">
-                        <div class="rp-fin-val" id="rp-fin-max">0</div>
-                        <div class="rp-fin-label">سقف التمويل</div>
-                    </div>
-                    <div class="rp-fin-item">
-                        <div class="rp-fin-val" id="rp-fin-installment">0</div>
-                        <div class="rp-fin-label">القسط الأقصى</div>
-                    </div>
-                    <div class="rp-fin-item">
-                        <div class="rp-fin-val" id="rp-fin-months">—</div>
-                        <div class="rp-fin-label">المدة القصوى</div>
-                    </div>
-                    <div class="rp-fin-item">
-                        <div class="rp-fin-val" id="rp-fin-available">0</div>
-                        <div class="rp-fin-label">المتاح شهريًا</div>
-                    </div>
+                    <div class="rp-fin-item"><div class="rp-fin-val" id="rp-fin-max">0</div><div class="rp-fin-label">سقف التمويل</div></div>
+                    <div class="rp-fin-item"><div class="rp-fin-val" id="rp-fin-installment">0</div><div class="rp-fin-label">القسط الأقصى</div></div>
+                    <div class="rp-fin-item"><div class="rp-fin-val" id="rp-fin-months">—</div><div class="rp-fin-label">المدة القصوى</div></div>
+                    <div class="rp-fin-item"><div class="rp-fin-val" id="rp-fin-available">0</div><div class="rp-fin-label">المتاح شهريًا</div></div>
+                </div>
+            </div>
+            <div class="rp-alerts"></div>
+            <button type="button" class="rp-toggle-reasons">عرض سبب التقييم</button>
+            <div class="rp-reasons"></div>
+            <div class="rp-actions">
+                <button type="button" class="so-btn so-btn-success so-decision-btn" data-decision="approved"><i class="fa fa-check-circle"></i> حفظ — مقبول</button>
+                <button type="button" class="so-btn so-btn-warning so-decision-btn" data-decision="conditional"><i class="fa fa-exclamation-circle"></i> حفظ — مشروط</button>
+                <button type="button" class="so-btn so-btn-danger so-decision-btn" data-decision="rejected"><i class="fa fa-times-circle"></i> حفظ — مرفوض</button>
+                <button type="button" class="so-btn so-btn-ghost so-decision-btn" data-decision="draft"><i class="fa fa-save"></i> حفظ كمسودة</button>
+            </div>
+
+            <?php else: ?>
+            <!-- ═══ وضع التعديل: ملخص العميل ═══ -->
+            <?php
+            // جلب بيانات فعلية
+            $contractsCount = (int) $db->createCommand("SELECT COUNT(*) FROM os_contracts_customers WHERE customer_id=:cid", [':cid' => $model->id])->queryScalar();
+            $activeContracts = (int) $db->createCommand("SELECT COUNT(*) FROM os_contracts_customers cc INNER JOIN os_contracts c ON c.id=cc.contract_id WHERE cc.customer_id=:cid AND c.status='active'", [':cid' => $model->id])->queryScalar();
+            $totalPaid = (float) $db->createCommand("SELECT COALESCE(SUM(i.amount),0) FROM os_income i INNER JOIN os_contracts_customers cc ON cc.contract_id=i.contract_id WHERE cc.customer_id=:cid", [':cid' => $model->id])->queryScalar();
+            $lastFollowUp = $db->createCommand("SELECT MAX(f.date_time) FROM os_follow_up f INNER JOIN os_contracts_customers cc ON cc.contract_id=f.contract_id WHERE cc.customer_id=:cid", [':cid' => $model->id])->queryScalar();
+            $existingImages = (int) $db->createCommand("SELECT COUNT(*) FROM os_ImageManager WHERE contractId=:cid AND groupName IN ('coustmers','customers','0','1','2','3','4','5','6','7','8','9')", [':cid' => $model->id])->queryScalar();
+            ?>
+            <div class="rp-mobile-handle">
+                <div class="rp-mobile-summary">
+                    <span style="font-size:14px; font-weight:700">ملخص العميل</span>
+                </div>
+                <div class="rp-mobile-handle-bar"></div>
+            </div>
+
+            <h3 class="rp-title"><i class="fa fa-user-circle"></i> ملخص العميل</h3>
+
+            <!-- صورة العميل -->
+            <?php if (!empty($model->selected_image)): ?>
+            <div style="text-align:center; margin-bottom:14px">
+                <img src="<?= $model->selectedImagePath ?>" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid #e2e8f0" alt="">
+            </div>
+            <?php endif ?>
+
+            <!-- بطاقات الملخص -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px">
+                <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:10px; text-align:center">
+                    <div style="font-size:22px; font-weight:800; color:#0369a1"><?= $contractsCount ?></div>
+                    <div style="font-size:11px; color:#64748b">إجمالي العقود</div>
+                </div>
+                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px; text-align:center">
+                    <div style="font-size:22px; font-weight:800; color:#166534"><?= $activeContracts ?></div>
+                    <div style="font-size:11px; color:#64748b">عقود نشطة</div>
+                </div>
+                <div style="background:#fefce8; border:1px solid #fde68a; border-radius:8px; padding:10px; text-align:center">
+                    <div style="font-size:16px; font-weight:800; color:#92400e"><?= number_format($totalPaid, 0) ?></div>
+                    <div style="font-size:11px; color:#64748b">إجمالي المدفوع</div>
+                </div>
+                <div style="background:#fdf2f8; border:1px solid #fbcfe8; border-radius:8px; padding:10px; text-align:center">
+                    <div style="font-size:16px; font-weight:800; color:#9d174d"><?= $existingImages ?></div>
+                    <div style="font-size:11px; color:#64748b">صور مرفوعة</div>
                 </div>
             </div>
 
-            <!-- Alerts -->
-            <div class="rp-alerts">
-                <!-- Populated by JS -->
+            <!-- تفاصيل -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-size:12.5px; color:#334155">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px">
+                    <span><i class="fa fa-phone" style="color:#0891b2"></i> الهاتف</span>
+                    <b dir="ltr"><?= $model->primary_phone_number ?: '—' ?></b>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px">
+                    <span><i class="fa fa-id-card" style="color:#7c3aed"></i> الرقم الوطني</span>
+                    <b dir="ltr"><?= $model->id_number ?: '—' ?></b>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px">
+                    <span><i class="fa fa-money" style="color:#059669"></i> الراتب</span>
+                    <b><?= $model->total_salary ? number_format($model->total_salary, 0) : '—' ?></b>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px">
+                    <span><i class="fa fa-calendar" style="color:#d97706"></i> آخر متابعة</span>
+                    <b><?= $lastFollowUp ? date('Y-m-d', strtotime($lastFollowUp)) : 'لم يُتابع' ?></b>
+                </div>
+                <?php if (!empty($model->notes)): ?>
+                <div style="margin-top:8px; padding-top:8px; border-top:1px solid #e2e8f0">
+                    <span style="color:#64748b"><i class="fa fa-sticky-note"></i> ملاحظات:</span>
+                    <p style="margin:4px 0 0; font-size:12px"><?= Html::encode($model->notes) ?></p>
+                </div>
+                <?php endif ?>
             </div>
 
-            <!-- Reasons -->
-            <button type="button" class="rp-toggle-reasons">عرض سبب التقييم</button>
-            <div class="rp-reasons">
-                <!-- Populated by JS -->
+            <!-- روابط سريعة -->
+            <div style="margin-top:14px; display:flex; flex-direction:column; gap:6px">
+                <a href="<?= Url::to(['view', 'id' => $model->id]) ?>" style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; text-decoration:none; color:#1e293b; font-size:13px; font-weight:600; transition:all .2s">
+                    <i class="fa fa-eye" style="color:#0891b2"></i> عرض ملف العميل الكامل
+                </a>
+                <a href="<?= Url::to(['/contracts/contracts/create', 'customer_id' => $model->id]) ?>" style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; text-decoration:none; color:#1e293b; font-size:13px; font-weight:600; transition:all .2s">
+                    <i class="fa fa-file-text-o" style="color:#059669"></i> إنشاء عقد جديد
+                </a>
+                <a href="<?= Url::to(['/site/image-manager']) ?>" style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; text-decoration:none; color:#1e293b; font-size:13px; font-weight:600; transition:all .2s">
+                    <i class="fa fa-image" style="color:#7c3aed"></i> إدارة الصور
+                </a>
             </div>
-
-            <!-- Decision Actions (Risk Panel) -->
-            <div class="rp-actions">
-                <button type="button" class="so-btn so-btn-success so-decision-btn" data-decision="approved">
-                    <i class="fa fa-check-circle"></i> حفظ — مقبول
-                </button>
-                <button type="button" class="so-btn so-btn-warning so-decision-btn" data-decision="conditional">
-                    <i class="fa fa-exclamation-circle"></i> حفظ — مشروط
-                </button>
-                <button type="button" class="so-btn so-btn-danger so-decision-btn" data-decision="rejected">
-                    <i class="fa fa-times-circle"></i> حفظ — مرفوض
-                </button>
-                <button type="button" class="so-btn so-btn-ghost so-decision-btn" data-decision="draft">
-                    <i class="fa fa-save"></i> حفظ كمسودة
-                </button>
-            </div>
+            <?php endif ?>
         </div>
     </div>
 </div>

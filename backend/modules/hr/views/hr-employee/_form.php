@@ -149,21 +149,93 @@ $isNewRecord = $model->isNewRecord;
         </div>
         <div class="hr-form-section-body">
 
-            <?php if ($isNewRecord && !empty($userList)): ?>
-                <div class="row">
-                    <div class="col-md-12">
-                        <?= $form->field($model, 'user_id')->widget(Select2::class, [
-                            'data' => $userList,
-                            'options' => ['placeholder' => 'اختر الموظف...', 'dir' => 'rtl'],
-                            'pluginOptions' => [
-                                'allowClear' => true,
-                                'dir' => 'rtl',
-                            ],
-                        ])->label('الموظف <span class="text-danger">*</span>') ?>
+            <?php if ($isNewRecord): ?>
+                <!-- Toggle: مستخدم موجود أو إنشاء جديد -->
+                <input type="hidden" name="create_new_user" id="hr-create-new-user" value="0">
+
+                <div class="hr-user-mode-toggle">
+                    <button type="button" class="hr-mode-btn active" id="hr-mode-existing" data-mode="existing">
+                        <i class="fa fa-user"></i> اختيار مستخدم موجود
+                    </button>
+                    <button type="button" class="hr-mode-btn" id="hr-mode-new" data-mode="new">
+                        <i class="fa fa-user-plus"></i> إنشاء مستخدم جديد
+                    </button>
+                </div>
+
+                <!-- Mode 1: Select existing user -->
+                <div id="hr-existing-user-panel">
+                    <?php if (!empty($userList)): ?>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <?= $form->field($model, 'user_id')->widget(Select2::class, [
+                                'data' => $userList,
+                                'options' => ['placeholder' => 'اختر الموظف...', 'dir' => 'rtl', 'id' => 'hr-existing-user-select'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                    'dir' => 'rtl',
+                                ],
+                            ])->label('الموظف <span class="text-danger">*</span>') ?>
+                        </div>
+                    </div>
+                    <?php else: ?>
+                    <div class="alert alert-warning" style="border-radius:10px;border:none;margin:12px 0">
+                        <i class="fa fa-info-circle"></i>
+                        لا يوجد مستخدمون بدون ملفات موظفين موسعة. استخدم "إنشاء مستخدم جديد" لإضافة موظف.
+                    </div>
+                    <?php endif ?>
+                </div>
+
+                <!-- Mode 2: Create new user inline -->
+                <div id="hr-new-user-panel" style="display:none">
+                    <div class="hr-new-user-card">
+                        <div class="hr-new-user-card-header">
+                            <i class="fa fa-user-plus"></i> بيانات المستخدم الجديد
+                        </div>
+                        <div class="hr-new-user-card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="hr-form-label">الاسم الكامل <span class="text-danger">*</span></label>
+                                        <input type="text" name="new_user_name" id="new_user_name" class="form-control hr-form-input"
+                                               placeholder="مثال: أحمد محمد" dir="rtl">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="hr-form-label">اسم المستخدم <span class="text-danger">*</span></label>
+                                        <input type="text" name="new_user_username" id="new_user_username" class="form-control hr-form-input"
+                                               placeholder="مثال: ahmed.m" dir="ltr" style="text-align:left">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="hr-form-label">البريد الإلكتروني <span class="text-danger">*</span></label>
+                                        <input type="email" name="new_user_email" id="new_user_email" class="form-control hr-form-input"
+                                               placeholder="مثال: ahmed@company.com" dir="ltr" style="text-align:left">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="hr-form-label">كلمة المرور <span class="text-danger">*</span></label>
+                                        <input type="password" name="new_user_password" id="new_user_password" class="form-control hr-form-input"
+                                               placeholder="6 أحرف على الأقل" dir="ltr" style="text-align:left">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="hr-form-label">رقم الجوال</label>
+                                        <input type="text" name="new_user_mobile" id="new_user_mobile" class="form-control hr-form-input"
+                                               placeholder="07XXXXXXXX" dir="ltr" style="text-align:left">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            <?php elseif ($isNewRecord): ?>
-                <?= $form->field($model, 'user_id')->hiddenInput()->label(false) ?>
             <?php endif ?>
 
             <div class="row">
@@ -487,9 +559,10 @@ $isNewRecord = $model->isNewRecord;
 
 <?php
 /* ═══════════════════════════════════════════════════════════════
- *  JavaScript — Toggle field role visibility
+ *  JavaScript — Toggle field role visibility + New user mode
  * ═══════════════════════════════════════════════════════════════ */
-$js = <<<JS
+$js = <<<'JS'
+// Field staff toggle
 $(document).on('change', '#is-field-staff-checkbox', function(){
     if ($(this).is(':checked')) {
         $('#field-role-wrapper').slideDown(200);
@@ -497,6 +570,50 @@ $(document).on('change', '#is-field-staff-checkbox', function(){
         $('#field-role-wrapper').slideUp(200);
         $('#field-role-select').val('');
     }
+});
+
+// User creation mode toggle
+$(document).on('click', '.hr-mode-btn', function(){
+    var mode = $(this).data('mode');
+    $('.hr-mode-btn').removeClass('active');
+    $(this).addClass('active');
+
+    if (mode === 'new') {
+        $('#hr-existing-user-panel').slideUp(200);
+        $('#hr-new-user-panel').slideDown(200);
+        $('#hr-create-new-user').val('1');
+        // Clear existing user selection
+        if ($('#hr-existing-user-select').length) {
+            $('#hr-existing-user-select').val('').trigger('change');
+        }
+    } else {
+        $('#hr-new-user-panel').slideUp(200);
+        $('#hr-existing-user-panel').slideDown(200);
+        $('#hr-create-new-user').val('0');
+        // Clear new user fields
+        $('#new_user_name, #new_user_username, #new_user_email, #new_user_password, #new_user_mobile').val('');
+    }
+});
+
+// Form validation before submit
+$('#hr-employee-form').on('beforeSubmit', function(){
+    var isNew = $('#hr-create-new-user').val() === '1';
+    if (isNew) {
+        var name = $('#new_user_name').val().trim();
+        var username = $('#new_user_username').val().trim();
+        var email = $('#new_user_email').val().trim();
+        var pass = $('#new_user_password').val();
+        var errors = [];
+        if (!name) errors.push('الاسم الكامل مطلوب');
+        if (!username) errors.push('اسم المستخدم مطلوب');
+        if (!email) errors.push('البريد الإلكتروني مطلوب');
+        if (pass.length < 6) errors.push('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+        if (errors.length > 0) {
+            alert(errors.join('\n'));
+            return false;
+        }
+    }
+    return true;
 });
 JS;
 $this->registerJs($js, \yii\web\View::POS_READY);
@@ -640,6 +757,68 @@ $css = <<<CSS
 .text-left {
     text-align: left !important;
     direction: ltr !important;
+}
+
+/* ─── User Mode Toggle ─── */
+.hr-user-mode-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 4px;
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+.hr-mode-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+}
+.hr-mode-btn:hover {
+    background: #fff;
+    color: #334155;
+}
+.hr-mode-btn.active {
+    background: #fff;
+    color: #800020;
+    border-color: #800020;
+    box-shadow: 0 1px 4px rgba(128,0,32,0.12);
+}
+.hr-mode-btn i {
+    font-size: 15px;
+}
+
+/* ─── New User Card ─── */
+.hr-new-user-card {
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 8px;
+    background: #fefce8;
+}
+.hr-new-user-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 18px;
+    background: #fef9c3;
+    border-bottom: 1px solid #fde68a;
+    font-size: 14px;
+    font-weight: 700;
+    color: #92400e;
+}
+.hr-new-user-card-body {
+    padding: 18px;
 }
 
 CSS;

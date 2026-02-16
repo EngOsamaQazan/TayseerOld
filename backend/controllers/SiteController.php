@@ -433,8 +433,8 @@ class SiteController extends Controller
         } elseif ($filter === 'smart_media') {
             $imWhere .= " AND 1=0"; // skip ImageManager
         } elseif ($filter === 'unlinked') {
-            // صور contractId فارغ أو صفر
-            $imWhere .= " AND c.id IS NULL AND (im.contractId IS NULL OR im.contractId = '' OR im.contractId = '0')";
+            // صور بدون ربط بعميل
+            $imWhere .= " AND c.id IS NULL AND (im.customer_id IS NULL OR im.customer_id = 0) AND (im.contractId IS NULL OR im.contractId = '' OR im.contractId = '0')";
         } elseif ($filter === 'no_customer') {
             // كل صورة غير مرتبطة بعميل فعلي (يتيمة + بدون ربط)
             $imWhere .= " AND im.groupName != 'contracts' AND c.id IS NULL";
@@ -443,9 +443,10 @@ class SiteController extends Controller
         }
 
         if ($search !== '') {
-            $imWhere .= " AND (c.name LIKE :search OR im.contractId LIKE :searchId OR im.id = :exactId)";
+            $imWhere .= " AND (c.name LIKE :search OR im.contractId LIKE :searchId OR im.customer_id = :custId OR im.id = :exactId)";
             $imParams[':search'] = "%$search%";
             $imParams[':searchId'] = "%$search%";
+            $imParams[':custId'] = is_numeric($search) ? (int)$search : 0;
             $imParams[':exactId'] = $search;
         }
         if ($dateFrom !== '') {
@@ -482,7 +483,7 @@ class SiteController extends Controller
 
         // ── Count total ──
         $countSql = "SELECT COUNT(*) FROM os_ImageManager im
-                     LEFT JOIN os_customers c ON CAST(im.contractId AS UNSIGNED) = c.id AND im.groupName = 'coustmers'
+                     LEFT JOIN os_customers c ON im.customer_id = c.id
                      $imWhere";
         $total = (int) $db->createCommand($countSql, $imParams)->queryScalar();
 
@@ -497,13 +498,13 @@ class SiteController extends Controller
 
         // ── Get ImageManager images ──
         $sql = "SELECT 
-                    im.id, im.fileName, im.fileHash, im.contractId, im.groupName,
+                    im.id, im.fileName, im.fileHash, im.contractId, im.customer_id, im.groupName,
                     im.created, im.modified,
                     c.name AS customer_name, c.id AS real_customer_id,
                     c.selected_image,
                     'imagemanager' AS _source
                 FROM os_ImageManager im
-                LEFT JOIN os_customers c ON CAST(im.contractId AS UNSIGNED) = c.id AND im.groupName = 'coustmers'
+                LEFT JOIN os_customers c ON im.customer_id = c.id
                 $imWhere
                 ORDER BY im.created DESC";
 
@@ -738,9 +739,9 @@ class SiteController extends Controller
                 return ['success' => false, 'error' => 'العميل غير موجود'];
             }
 
-            // تحديث contractId + groupName + نوع الصورة
-            $db->createCommand("UPDATE os_ImageManager SET contractId = :cid, groupName = :docType, modified = NOW() WHERE id = :id", [
-                ':cid'     => $newCustomerId,
+            // تحديث customer_id + groupName + نوع الصورة
+            $db->createCommand("UPDATE os_ImageManager SET customer_id = :cid, groupName = :docType, modified = NOW() WHERE id = :id", [
+                ':cid'     => (int)$newCustomerId,
                 ':docType' => $docType,
                 ':id'      => $imageId,
             ])->execute();
@@ -823,7 +824,7 @@ class SiteController extends Controller
         // إذا صورة شخصية (8) + مرتبطة بعميل → تعيين تلقائي كـ selected_image
         $autoSelected = false;
         if ($docType === '8') {
-            $customerId = (int) $image['contractId'];
+            $customerId = (int)($image['customer_id'] ?? 0) ?: (int)$image['contractId'];
             if ($customerId > 0) {
                 $exists = $db->createCommand("SELECT id FROM os_customers WHERE id = :id", [':id' => $customerId])->queryScalar();
                 if ($exists) {
@@ -860,25 +861,25 @@ class SiteController extends Controller
 
         $orphans = $db->createCommand(
             "SELECT COUNT(*) FROM os_ImageManager im 
-             LEFT JOIN os_customers c ON CAST(im.contractId AS UNSIGNED) = c.id 
+             LEFT JOIN os_customers c ON im.customer_id = c.id
              WHERE im.groupName IN ('coustmers','customers','0','1','2','3','4','5','6','7','8','9') AND c.id IS NULL"
         )->queryScalar();
 
         $linked = $db->createCommand(
             "SELECT COUNT(*) FROM os_ImageManager im 
-             INNER JOIN os_customers c ON CAST(im.contractId AS UNSIGNED) = c.id 
-             WHERE im.groupName = 'coustmers'"
+             INNER JOIN os_customers c ON im.customer_id = c.id
+             WHERE im.groupName IN ('coustmers','customers','0','1','2','3','4','5','6','7','8','9')"
         )->queryScalar();
 
         $unlinked = $db->createCommand(
             "SELECT COUNT(*) FROM os_ImageManager im 
-             LEFT JOIN os_customers c ON CAST(im.contractId AS UNSIGNED) = c.id 
-             WHERE c.id IS NULL AND (im.contractId IS NULL OR im.contractId = '' OR im.contractId = '0')"
+             LEFT JOIN os_customers c ON im.customer_id = c.id
+             WHERE c.id IS NULL AND (im.customer_id IS NULL OR im.customer_id = 0)"
         )->queryScalar();
 
         $noCustomer = $db->createCommand(
             "SELECT COUNT(*) FROM os_ImageManager im 
-             LEFT JOIN os_customers c ON CAST(im.contractId AS UNSIGNED) = c.id AND im.groupName = 'coustmers'
+             LEFT JOIN os_customers c ON im.customer_id = c.id
              WHERE im.groupName != 'contracts' AND c.id IS NULL"
         )->queryScalar();
 

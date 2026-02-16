@@ -107,7 +107,7 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
             <div class="ocp-status-bar__customer">
                 <span class="ocp-status-bar__customer-name" title="<?= Html::encode($customerName) ?>"><?= Html::encode($customerName) ?></span>
                 <?php if ($customer): ?>
-                <a href="<?= Url::to(['/customers/customers/view', 'id' => $customer->id]) ?>" class="ocp-status-bar__customer-link" title="فتح ملف العميل">
+                <a href="<?= Url::to(['/customers/customers/update', 'id' => $customer->id]) ?>" class="ocp-status-bar__customer-link" title="تعديل بيانات العميل" target="_blank">
                     <i class="fa fa-external-link"></i>
                 </a>
                 <?php endif; ?>
@@ -406,7 +406,7 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
 
                     <?php // FINANCIAL TAB ?>
                     <div class="ocp-tab-content ocp-hidden" id="tab-financial">
-                        <?= $this->render('panel/_financial', ['financials' => $financials]) ?>
+                        <?= $this->render('panel/_financial', ['financials' => $financials, 'settlementFinancials' => $settlementFinancials ?? null]) ?>
                     </div>
 
                     <?php // PHONE NUMBERS TAB (from old index) ?>
@@ -430,15 +430,13 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                         </div>
                     </div>
 
-                    <?php // SETTLEMENTS TAB (from old index) ?>
+                    <?php // SETTLEMENTS TAB — Cards ?>
                     <div class="ocp-tab-content ocp-hidden" id="tab-settlements">
-                        <div class="ocp-card" style="padding:var(--ocp-space-lg)">
-                            <?= $this->render('partial/tabs/loan_scheduling.php', [
-                                'contract_id' => $contract_id,
-                                'model' => $model,
-                                'contractCalculations' => $contractCalculations,
-                            ]) ?>
-                        </div>
+                        <?= $this->render('partial/tabs/loan_scheduling.php', [
+                            'contract_id' => $contract_id,
+                            'model' => $model,
+                            'contractCalculations' => $contractCalculations,
+                        ]) ?>
                     </div>
 
                     <?php // JUDICIARY ACTIONS TAB — يظهر فقط إذا العقد عليه قضية ?>

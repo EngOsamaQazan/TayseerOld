@@ -97,14 +97,28 @@ class JudiciaryCustomersActionsController extends Controller
     public function actionCreate()
     {
         $request = Yii::$app->request;
-        $model = new JudiciaryCustomersActions();
-        if ($model->load($request->post()) && $model->save()) {
-            $this->redirect('index');
-        } else {
-            return $this->render('create', [
-                'model' => $model,
-            ]);
+
+        if ($request->isAjax) {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+
+            $judiciaries = (new \yii\db\Query())
+                ->select(['j.id', 'j.judiciary_number', 'j.year', 'j.contract_id', 'c.name as court_name'])
+                ->from('os_judiciary j')
+                ->leftJoin('os_court c', 'c.id = j.court_id')
+                ->where(['or', ['j.is_deleted' => 0], ['j.is_deleted' => null]])
+                ->orderBy(['j.id' => SORT_DESC])
+                ->all();
+
+            return [
+                'title' => '<i class="fa fa-gavel"></i> اختر القضية لإضافة إجراء',
+                'content' => $this->renderAjax('_select_judiciary', [
+                    'judiciaries' => $judiciaries,
+                ]),
+                'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']),
+            ];
         }
+
+        return $this->redirect(['index']);
     }
 
     public function actionCreateFollowupJudicaryCustamerAction($contractID)
@@ -113,9 +127,6 @@ class JudiciaryCustomersActionsController extends Controller
         $model = new JudiciaryCustomersActions();
 
         if ($request->isAjax) {
-            /*
-        *   Process for AJAX request
-        */
             Yii::$app->response->format = Response::FORMAT_JSON;
 
             if ($request->isGet) {
@@ -129,26 +140,46 @@ class JudiciaryCustomersActionsController extends Controller
                         Html::button('<i class="fa fa-plus"></i> إضافة', ['class' => 'btn btn-primary', 'type' => "submit"]),
                     'size' => 'large',
                 ];
-            } else if ($model->load($request->post())) {
-                // Handle remove_image flag
+            }
+
+            if ($model->load($request->post())) {
+                // Multi-party support: get selected customer IDs
+                $multiCustomersRaw = $request->post('multi_customers_ids', '');
+                $multiCustomerIds = array_filter(array_map('intval', explode(',', $multiCustomersRaw)));
+
+                // Validate: at least one party must be selected
+                if (empty($multiCustomerIds)) {
+                    $model->addError('customers_id', 'يجب اختيار طرف واحد على الأقل');
+                    return [
+                        'title' => '<i class="fa fa-gavel"></i> إضافة إجراء قضائي',
+                        'content' => $this->renderAjax('create-in-contract', [
+                            'model' => $model,
+                            'contractID' => $contractID
+                        ]),
+                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                            Html::button('<i class="fa fa-plus"></i> إضافة', ['class' => 'btn btn-primary', 'type' => "submit"]),
+                    ];
+                }
+
+                // Handle file upload (shared across all parties)
+                $imagePath = null;
                 if ($request->post('remove_image')) {
                     $model->image = null;
                 }
-                // Handle file upload
                 $uploadedFile = \yii\web\UploadedFile::getInstance($model, 'image');
                 if ($uploadedFile) {
                     $uploadDir = Yii::getAlias('@webroot/uploads/judiciary_customers_actions');
                     if (!is_dir($uploadDir)) {
                         mkdir($uploadDir, 0777, true);
                     }
-
                     $filePath = $uploadDir . '/' . uniqid() . '.' . $uploadedFile->extension;
                     if ($uploadedFile->saveAs($filePath)) {
-                        $model->image = str_replace(Yii::getAlias('@webroot'), '', $filePath);
+                        $imagePath = str_replace(Yii::getAlias('@webroot'), '', $filePath);
                     }
                 }
 
-                // Handle decision_file upload for requests
+                // Handle decision_file upload
+                $decisionPath = null;
                 $decisionFile = \yii\web\UploadedFile::getInstance($model, 'decision_file');
                 if ($decisionFile) {
                     $uploadDir = Yii::getAlias('@webroot/uploads/judiciary_decisions');
@@ -157,23 +188,26 @@ class JudiciaryCustomersActionsController extends Controller
                     }
                     $decPath = $uploadDir . '/' . uniqid() . '.' . $decisionFile->extension;
                     if ($decisionFile->saveAs($decPath)) {
-                        $model->decision_file = str_replace(Yii::getAlias('@webroot'), '', $decPath);
+                        $decisionPath = str_replace(Yii::getAlias('@webroot'), '', $decPath);
                     }
                 }
 
-                // Governance: validate document needs approved parent request
+                // Governance check
                 $actionDef = \backend\modules\judiciaryActions\models\JudiciaryActions::findOne($model->judiciary_actions_id);
-                $governanceError = null;
                 if ($actionDef && $actionDef->action_nature === 'document' && $model->parent_id) {
                     $parentAction = JudiciaryCustomersActions::findOne($model->parent_id);
                     if ($parentAction && $parentAction->request_status !== 'approved') {
-                        $governanceError = 'لا يمكن إضافة كتاب على طلب لم تتم الموافقة عليه بعد';
+                        $model->addError('parent_id', 'لا يمكن إضافة كتاب على طلب لم تتم الموافقة عليه بعد');
+                        return [
+                            'title' => 'إضافة إجراء قضائي',
+                            'content' => $this->renderAjax('create-in-contract', [
+                                'model' => $model,
+                                'contractID' => $contractID
+                            ]),
+                            'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                                Html::button('<i class="fa fa-plus"></i> إضافة', ['class' => 'btn btn-primary', 'type' => "submit"]),
+                        ];
                     }
-                }
-
-                // Auto-set request_status for new requests
-                if ($actionDef && $actionDef->action_nature === 'request' && $model->isNewRecord && !$model->request_status) {
-                    $model->request_status = 'pending';
                 }
 
                 // When adding doc_status, mark previous current statuses as non-current
@@ -184,55 +218,72 @@ class JudiciaryCustomersActionsController extends Controller
                     );
                 }
 
-                if ($governanceError) {
-                    $model->addError('parent_id', $governanceError);
-                    return [
-                        'title' => "إضافة إجراء قضائي",
-                        'content' => $this->renderAjax('create-in-contract', [
-                            'model' => $model,
-                            'contractID' => $contractID
-                        ]),
-                        'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                            Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
-                    ];
+                // Create one record per selected party
+                $savedCount = 0;
+                $errors = [];
+                foreach ($multiCustomerIds as $customerId) {
+                    $record = new JudiciaryCustomersActions();
+                    $record->judiciary_id = $model->judiciary_id;
+                    $record->customers_id = $customerId;
+                    $record->judiciary_actions_id = $model->judiciary_actions_id;
+                    $record->note = $model->note;
+                    $record->action_date = $model->action_date;
+                    $record->parent_id = $model->parent_id;
+                    $record->is_current = $model->is_current;
+                    $record->amount = $model->amount;
+                    $record->request_target = $model->request_target;
+                    $record->image = $imagePath;
+                    $record->decision_text = $model->decision_text;
+                    $record->decision_file = $decisionPath;
+
+                    // Auto-set request_status for new requests
+                    if ($actionDef && $actionDef->action_nature === 'request') {
+                        $record->request_status = $model->request_status ?: 'pending';
+                    } else {
+                        $record->request_status = $model->request_status;
+                    }
+
+                    if ($record->save()) {
+                        $savedCount++;
+                    } else {
+                        $errors[] = $customerId;
+                    }
                 }
 
-                if ($model->save()) {
+                if ($savedCount > 0) {
+                    $msg = $savedCount === 1
+                        ? 'تم إضافة الإجراء القضائي بنجاح'
+                        : 'تم إضافة الإجراء القضائي لـ ' . $savedCount . ' أطراف بنجاح';
                     return [
                         'forceReload' => '#os_judiciary_customers_actions',
                         'forceClose' => true,
-                        'title' => "إضافة إجراء قضائي",
-                        'content' => '<span class="text-success">تم إضافة الإجراء القضائي بنجاح</span>',
-                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"])
-                    ];
-                } else {
-                    return [
-                        'title' => "إضافة إجراء قضائي",
-                        'content' => $this->renderAjax('create-in-contract', [
-                            'model' => $model,
-                            'contractID' => $contractID
-                        ]),
-                        'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                            Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
+                        'title' => 'إضافة إجراء قضائي',
+                        'content' => '<span class="text-success">' . $msg . '</span>',
+                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]),
                     ];
                 }
+
+                return [
+                    'title' => 'إضافة إجراء قضائي',
+                    'content' => $this->renderAjax('create-in-contract', [
+                        'model' => $model,
+                        'contractID' => $contractID
+                    ]),
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                        Html::button('<i class="fa fa-plus"></i> إضافة', ['class' => 'btn btn-primary', 'type' => "submit"]),
+                ];
             }
         } else {
-            /*
-        *   Process for non-AJAX request
-        */
             if ($model->load($request->post())) {
-                // Handle file upload
                 $uploadedFile = \yii\web\UploadedFile::getInstance($model, 'image');
                 if ($uploadedFile) {
                     $uploadDir = Yii::getAlias('@webroot/uploads/judiciary_customers_actions');
                     if (!is_dir($uploadDir)) {
                         mkdir($uploadDir, 0777, true);
                     }
-
                     $filePath = $uploadDir . '/' . uniqid() . '.' . $uploadedFile->extension;
                     if ($uploadedFile->saveAs($filePath)) {
-                        $model->image = str_replace(Yii::getAlias('@webroot'), '', $filePath); // Save relative path
+                        $model->image = str_replace(Yii::getAlias('@webroot'), '', $filePath);
                     }
                 }
 
@@ -343,8 +394,7 @@ class JudiciaryCustomersActionsController extends Controller
 
     /**
      * Updates an existing JudiciaryCustomersActions model.
-     * For ajax request will return json object
-     * and for non-ajax request if update is successful, the browser will be redirected to the 'view' page.
+     * Supports AJAX modal and uses the enhanced create-in-contract form.
      * @param integer $id
      * @return mixed
      */
@@ -353,17 +403,94 @@ class JudiciaryCustomersActionsController extends Controller
         $request = Yii::$app->request;
         $model = $this->findModel($id);
 
-
-        /*
-        *   Process for non-ajax request
-        */
-        if ($model->load($request->post()) && $model->save()) {
-            $this->redirect('index');
-        } else {
-            return $this->render('update', [
-                'model' => $model,
-            ]);
+        // Derive contractID from judiciary
+        $contractID = 0;
+        if ($model->judiciary_id) {
+            $jud = \backend\modules\judiciary\models\Judiciary::findOne($model->judiciary_id);
+            if ($jud) $contractID = $jud->contract_id;
         }
+
+        if ($request->isAjax) {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+
+            if ($request->isGet) {
+                return [
+                    'title' => '<i class="fa fa-pencil"></i> تعديل إجراء قضائي',
+                    'content' => $this->renderAjax('create-in-contract', [
+                        'model' => $model,
+                        'contractID' => $contractID,
+                    ]),
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                        Html::button('<i class="fa fa-save"></i> حفظ التعديلات', ['class' => 'btn btn-primary', 'type' => 'submit']),
+                    'size' => 'large',
+                ];
+            }
+
+            if ($model->load($request->post())) {
+                // Handle remove_image flag
+                if ($request->post('remove_image')) {
+                    $model->image = null;
+                }
+                // Handle file upload
+                $uploadedFile = \yii\web\UploadedFile::getInstance($model, 'image');
+                if ($uploadedFile) {
+                    $uploadDir = Yii::getAlias('@webroot/uploads/judiciary_customers_actions');
+                    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+                    $filePath = $uploadDir . '/' . uniqid() . '.' . $uploadedFile->extension;
+                    if ($uploadedFile->saveAs($filePath)) {
+                        $model->image = str_replace(Yii::getAlias('@webroot'), '', $filePath);
+                    }
+                }
+                // Handle decision_file upload
+                $decisionFile = \yii\web\UploadedFile::getInstance($model, 'decision_file');
+                if ($decisionFile) {
+                    $uploadDir = Yii::getAlias('@webroot/uploads/judiciary_decisions');
+                    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+                    $decPath = $uploadDir . '/' . uniqid() . '.' . $decisionFile->extension;
+                    if ($decisionFile->saveAs($decPath)) {
+                        $model->decision_file = str_replace(Yii::getAlias('@webroot'), '', $decPath);
+                    }
+                }
+
+                // When marking doc_status as current, deactivate old ones
+                $actionDef = \backend\modules\judiciaryActions\models\JudiciaryActions::findOne($model->judiciary_actions_id);
+                if ($actionDef && $actionDef->action_nature === 'doc_status' && $model->is_current && $model->parent_id) {
+                    JudiciaryCustomersActions::updateAll(
+                        ['is_current' => 0],
+                        ['and', ['parent_id' => $model->parent_id, 'is_current' => 1, 'is_deleted' => 0], ['!=', 'id', $model->id]]
+                    );
+                }
+
+                if ($model->save()) {
+                    return [
+                        'forceReload' => '#crud-datatable-pjax,#os_judiciary_customers_actions',
+                        'forceClose' => true,
+                        'title' => 'تعديل إجراء قضائي',
+                        'content' => '<span class="text-success">تم تعديل الإجراء القضائي بنجاح</span>',
+                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']),
+                    ];
+                }
+
+                return [
+                    'title' => '<i class="fa fa-pencil"></i> تعديل إجراء قضائي',
+                    'content' => $this->renderAjax('create-in-contract', [
+                        'model' => $model,
+                        'contractID' => $contractID,
+                    ]),
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                        Html::button('<i class="fa fa-save"></i> حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
+                ];
+            }
+        }
+
+        // Non-AJAX
+        if ($model->load($request->post()) && $model->save()) {
+            return $this->redirect(['index']);
+        }
+        return $this->render('create-in-contract', [
+            'model' => $model,
+            'contractID' => $contractID,
+        ]);
     }
 
     /**

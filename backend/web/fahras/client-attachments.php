@@ -1,49 +1,98 @@
 <?php
+/**
+ * Fahras Client Attachments — مرفقات العميل (صور)
+ * يعرض صور العميل من os_ImageManager مباشرة من قاعدة البيانات
+ */
 header('Access-Control-Allow-Origin: *');
-function curl_load($url) {
+date_default_timezone_set("Asia/Amman");
 
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-    curl_setopt($ch, CURLOPT_HEADER, false);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_REFERER, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5); // 3 sec.
-    curl_setopt($ch, CURLOPT_TIMEOUT, 5); // 10 sec.
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(E_ALL);
+ini_set('log_errors', 1);
 
-    $result = curl_exec($ch);
+require('db.php');
+$db_host = 'localhost';
+$db_user = 'osama';
+$db_pass = 'O$amaDaTaBase@123';
 
-    if (curl_errno($ch)) {
-        $error_msg = curl_error($ch);
-    } 
+// الفهرس يرسل db=jadal أو db=namaa للمرفقات
+$dbMap = [
+  'jadal' => 'namaa_jadal',
+  'namaa' => 'namaa_erp',
+  'erp'   => 'namaa_erp',
+];
 
-    if (isset($error_msg)) {
-        $result = $error_msg;
-    }
+// عنوان URL الأساسي لكل شركة
+$baseUrlMap = [
+  'jadal' => 'https://jadal.aqssat.co/images/imagemanager/',
+  'namaa' => 'https://namaa.aqssat.co/images/imagemanager/',
+  'erp'   => 'https://namaa.aqssat.co/images/imagemanager/',
+];
 
-    curl_close($ch);
+$requestDb = $_GET['db'] ?? '';
+$db_name = $dbMap[$requestDb] ?? null;
+$baseUrl = $baseUrlMap[$requestDb] ?? '';
 
-    return $result;
-
+if (!$db_name) {
+  echo '<div class="alert alert-danger">معرّف قاعدة البيانات غير صحيح</div>';
+  exit();
 }
 
+$custId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+if ($custId <= 0) {
+  echo '<div class="alert alert-warning">لم يتم تحديد العميل</div>';
+  exit();
+}
 
-$result = curl_load('https://api-'.$_GET['db'].'.aqssat.co/v1/customer-images/index?customer_id=' . $_GET['id']);
+try {
+  $db = new smplPDO("mysql:host=$db_host;dbname=$db_name;charset=utf8", $db_user, $db_pass);
+} catch (Exception $e) {
+  echo '<div class="alert alert-danger">فشل الاتصال بقاعدة البيانات</div>';
+  exit();
+}
 
-$result = json_decode($result);
+// جلب صور العميل — نبحث بـ customer_id أولاً ثم contractId كـ fallback
+$images = [];
+
+try {
+  $db->bind = [];
+  $stmt = $db->run("SELECT fileName FROM os_ImageManager WHERE customer_id = " . $custId . " ORDER BY id DESC LIMIT 50");
+  if ($stmt && is_object($stmt)) {
+    $images = $stmt->fetchAll();
+  }
+} catch (Exception $e) {
+  // customer_id column might not exist, fallback to contractId
+  try {
+    $db->bind = [];
+    $stmt = $db->run("SELECT fileName FROM os_ImageManager WHERE contractId = " . $custId . " ORDER BY id DESC LIMIT 50");
+    if ($stmt && is_object($stmt)) {
+      $images = $stmt->fetchAll();
+    }
+  } catch (Exception $e2) {
+    $images = [];
+  }
+}
 
 $count = 0;
 
-foreach ($result as $key) {
-
-  if (!empty($key->url)) {
-    $count += 1;
-    echo '<img class="img-responsive" src="'.$key->url.'" />'; 
+if (!empty($images)) {
+  echo '<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">';
+  foreach ($images as $img) {
+    $fileName = $img['fileName'] ?? '';
+    if (!empty($fileName)) {
+      $count++;
+      $imgUrl = $baseUrl . rawurlencode($fileName);
+      echo '<div style="text-align:center;margin-bottom:10px;">';
+      echo '<a href="' . htmlspecialchars($imgUrl, ENT_QUOTES, 'UTF-8') . '" target="_blank">';
+      echo '<img style="max-width:300px;max-height:300px;border:1px solid #ddd;border-radius:4px;padding:3px;" src="' . htmlspecialchars($imgUrl, ENT_QUOTES, 'UTF-8') . '" />';
+      echo '</a>';
+      echo '</div>';
+    }
   }
-
+  echo '</div>';
 }
 
 if ($count == 0) {
-  echo 'لم يتم العثور على اي مرفقات لهذا العميل';
+  echo '<div class="alert alert-info">لم يتم العثور على أي مرفقات لهذا العميل</div>';
 }

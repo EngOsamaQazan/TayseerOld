@@ -324,42 +324,271 @@ $contractModel = $contractCalculations->contract_model;
     </div>
 </div>
 
-<!-- ═══ نافذة إضافة تسوية ═══ -->
+<!-- ═══ نافذة إضافة تسوية (محدّثة) ═══ -->
+<?php
+/* ── حساب إجمالي الدين تلقائياً ── */
+$_stlTotalDebt = (float)($contractModel->total_value ?? 0);
+$_stlLawyerCost = 0;
+
+// أتعاب المحاماة من القضايا
+$_stlJudiciary = \backend\modules\judiciary\models\Judiciary::find()
+    ->where(['contract_id' => $contractModel->id, 'is_deleted' => 0])->all();
+if (!empty($_stlJudiciary)) {
+    foreach ($_stlJudiciary as $j) {
+        $_stlLawyerCost += (float)($j->lawyer_cost ?? 0);
+    }
+}
+
+// مجموع كل مصاريف Outcome على العقد (جميع التصنيفات)
+$_stlAllExpenses = (float)((new \yii\db\Query())
+    ->from('os_expenses')
+    ->where(['contract_id' => $contractModel->id])
+    ->sum('amount') ?? 0);
+
+// المدفوع (كل حركات Income)
+$_stlPaidAmount = (float)(\backend\modules\contractInstallment\models\ContractInstallment::find()
+    ->where(['contract_id' => $contractModel->id])
+    ->sum('amount') ?? 0);
+
+$_stlAutoTotal = $_stlTotalDebt + $_stlAllExpenses + $_stlLawyerCost;
+$_stlNetDebt = max(0, $_stlAutoTotal - $_stlPaidAmount);
+?>
+
+<style>
+.stl-modal .form-group{margin-bottom:14px}
+.stl-modal label{font-size:13px;font-weight:600;color:#555;margin-bottom:5px;display:block}
+.stl-modal label .fa{margin-left:4px;color:#800020;font-size:11px}
+.stl-modal .form-control{border-radius:6px;height:40px;font-size:13px;border:1.5px solid #ddd;transition:border-color .2s}
+.stl-modal .form-control:focus{border-color:#800020;box-shadow:0 0 0 3px rgba(128,0,32,.08)}
+.stl-modal .stl-section{font-size:11px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.4px;margin:14px 0 10px;padding-bottom:5px;border-bottom:2px solid #f0f0f0}
+.stl-modal .stl-type-toggle{display:flex;gap:6px;margin-bottom:14px}
+.stl-modal .stl-type-btn{flex:1;padding:10px 12px;border:2px solid #e2e8f0;border-radius:8px;text-align:center;cursor:pointer;transition:all .2s;background:#f8f9fa;font-weight:600;font-size:12px}
+.stl-modal .stl-type-btn:hover{border-color:#800020;background:#fff}
+.stl-modal .stl-type-btn.active{border-color:#800020;background:#800020;color:#fff}
+.stl-modal .stl-type-btn i{display:block;font-size:18px;margin-bottom:3px}
+.stl-modal .stl-preview{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin-top:10px}
+.stl-modal .stl-preview-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px}
+.stl-modal .stl-preview-row:last-child{border-bottom:none}
+.stl-modal .stl-preview-row .stl-lbl{color:#64748b}
+.stl-modal .stl-preview-row .stl-val{font-weight:700;color:#1e293b}
+.stl-modal .stl-amount{font-weight:600;text-align:center;font-size:15px!important}
+.stl-modal .stl-debt-card{background:linear-gradient(135deg,#f0f4ff,#e8eeff);border:1px solid #c7d2fe;border-radius:8px;padding:14px;margin-bottom:14px}
+.stl-modal .stl-debt-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:#475569}
+.stl-modal .stl-debt-row.stl-debt-total{border-top:2px solid #800020;margin-top:6px;padding-top:8px;font-size:14px;font-weight:700;color:#800020}
+</style>
+
 <div class="modal fade" id="settlementModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+        <div class="modal-content stl-modal">
+            <div class="modal-header" style="background:linear-gradient(135deg,#800020,#a0003a);color:#fff;border-radius:4px 4px 0 0">
+                <button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:.8"><span>&times;</span></button>
                 <h4 class="modal-title"><i class="fa fa-balance-scale"></i> إضافة تسوية</h4>
             </div>
             <div class="modal-body">
-                <div class="alert alert-info loan-alert" style="display:none"></div>
+                <div class="alert loan-alert" style="display:none;border-radius:6px"></div>
+
+                <!-- إجمالي الدين (محسوب تلقائياً) -->
+                <div class="stl-debt-card">
+                    <div class="stl-section" style="margin-top:0;border-bottom:none">إجمالي الدين</div>
+                    <div class="stl-debt-row"><span>المبلغ الأصلي للعقد</span><span><?= number_format($_stlTotalDebt, 2) ?> د.أ</span></div>
+                    <?php if ($_stlAllExpenses > 0): ?>
+                    <div class="stl-debt-row"><span>إجمالي المصاريف (Outcome)</span><span><?= number_format($_stlAllExpenses, 2) ?> د.أ</span></div>
+                    <?php endif ?>
+                    <?php if ($_stlLawyerCost > 0): ?>
+                    <div class="stl-debt-row"><span>أتعاب المحاماة</span><span><?= number_format($_stlLawyerCost, 2) ?> د.أ</span></div>
+                    <?php endif ?>
+                    <div class="stl-debt-row" style="border-top:1px solid #c7d2fe;margin-top:4px;padding-top:6px"><span>الإجمالي قبل الخصم</span><span><?= number_format($_stlAutoTotal, 2) ?> د.أ</span></div>
+                    <div class="stl-debt-row" style="color:#059669"><span><i class="fa fa-check-circle"></i> المدفوع</span><span style="color:#059669">- <?= number_format($_stlPaidAmount, 2) ?> د.أ</span></div>
+                    <div class="stl-debt-row stl-debt-total"><span>صافي الدين</span><span id="stl_total_display"><?= number_format($_stlNetDebt, 2) ?> د.أ</span></div>
+                </div>
+                <input type="hidden" id="stl_total_debt" value="<?= $_stlNetDebt ?>">
+
+                <!-- نوع التسوية -->
+                <div class="stl-section">نوع التسوية</div>
+                <div class="stl-type-toggle">
+                    <div class="stl-type-btn active" data-type="monthly" onclick="StlForm.setType('monthly')">
+                        <i class="fa fa-calendar"></i> شهري
+                    </div>
+                    <div class="stl-type-btn" data-type="weekly" onclick="StlForm.setType('weekly')">
+                        <i class="fa fa-calendar-o"></i> أسبوعي
+                    </div>
+                </div>
+                <input type="hidden" id="stl_settlement_type" value="monthly">
+
+                <!-- تفاصيل التسوية -->
+                <div class="stl-section">تفاصيل التسوية</div>
                 <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-sm-6">
                         <div class="form-group">
-                            <label>القسط الشهري</label>
-                            <input type="number" class="form-control" id="monthly_installment" placeholder="القسط الشهري">
+                            <label><i class="fa fa-money"></i> الدفعة الأولى (مبلغ ثابت)</label>
+                            <input type="number" step="0.01" class="form-control stl-amount" id="stl_first_payment" placeholder="0.00" oninput="StlForm.calculate()">
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-sm-6">
                         <div class="form-group">
-                            <label>تاريخ أول دفعة</label>
-                            <input type="date" class="form-control" id="new_installment_date">
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>تاريخ التسوية</label>
-                            <input type="date" class="form-control" id="first_installment_date">
+                            <label><i class="fa fa-money"></i> <span id="stl_installment_label">القسط الشهري</span></label>
+                            <input type="number" step="0.01" class="form-control stl-amount" id="monthly_installment" placeholder="0.00" oninput="StlForm.calculate()">
                         </div>
                     </div>
                 </div>
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <label><i class="fa fa-calendar"></i> تاريخ الدفعة الأولى للتسوية</label>
+                            <input type="date" class="form-control" id="first_installment_date" onchange="StlForm.onFirstDateChange()">
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <label><i class="fa fa-calendar-plus-o"></i> تاريخ القسط الجديد</label>
+                            <input type="date" class="form-control" id="new_installment_date" onchange="StlForm.validateNewDate()">
+                            <span class="help-block" id="stl_date_error" style="display:none;color:#e74c3c;font-size:11px"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- معاينة الجدولة -->
+                <div class="stl-preview" id="stl_preview_box" style="display:none">
+                    <div class="stl-section" style="border-bottom:none;margin:0 0 6px">معاينة الجدولة</div>
+                    <div class="stl-preview-row"><span class="stl-lbl">إجمالي الدين</span><span class="stl-val" id="stl_p_debt">—</span></div>
+                    <div class="stl-preview-row"><span class="stl-lbl">الدفعة الأولى</span><span class="stl-val" id="stl_p_fp">—</span></div>
+                    <div class="stl-preview-row"><span class="stl-lbl">المبلغ المتبقي بعد الدفعة</span><span class="stl-val" id="stl_p_after_fp">—</span></div>
+                    <div class="stl-preview-row"><span class="stl-lbl">قيمة القسط</span><span class="stl-val" id="stl_p_inst">—</span></div>
+                    <div class="stl-preview-row"><span class="stl-lbl">عدد الأقساط</span><span class="stl-val" id="stl_p_count">—</span></div>
+                    <div class="stl-preview-row"><span class="stl-lbl">آخر قسط (تقريبي)</span><span class="stl-val" id="stl_p_last">—</span></div>
+                    <div class="stl-preview-row"><span class="stl-lbl">المستحق الكلي (دفعة + أقساط)</span><span class="stl-val" id="stl_p_total_due">—</span></div>
+                </div>
+
+                <input type="hidden" id="stl_installments_count" value="">
+                <input type="hidden" id="stl_remaining_debt" value="">
+
+                <!-- ملاحظات -->
+                <div class="form-group" style="margin-top:12px">
+                    <label><i class="fa fa-sticky-note-o"></i> ملاحظات</label>
+                    <textarea class="form-control" id="stl_notes" rows="2" placeholder="ملاحظات إضافية (اختياري)..." style="height:auto;border-radius:6px"></textarea>
+                </div>
+
                 <input type="hidden" value="<?= $contractModel->id ?>" id="contract_id">
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> إلغاء</button>
-                <button type="button" class="btn btn-primary" id="save"><i class="fa fa-save"></i> حفظ التسوية</button>
+                <button type="button" class="btn btn-primary" id="save" style="background:#800020;border-color:#800020">
+                    <i class="fa fa-plus-circle"></i> إنشاء التسوية
+                </button>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+var StlForm = (function(){
+    function setType(type) {
+        document.getElementById('stl_settlement_type').value = type;
+        document.querySelectorAll('.stl-type-btn').forEach(function(btn){
+            btn.classList.toggle('active', btn.getAttribute('data-type') === type);
+        });
+        document.getElementById('stl_installment_label').textContent = type === 'weekly' ? 'القسط الأسبوعي' : 'القسط الشهري';
+        calculate();
+    }
+    function calculate() {
+        var totalDebt = parseFloat(document.getElementById('stl_total_debt').value) || 0;
+        var fp   = parseFloat(document.getElementById('stl_first_payment').value) || 0;
+        var inst = parseFloat(document.getElementById('monthly_installment').value) || 0;
+        var box  = document.getElementById('stl_preview_box');
+        var afterFp = Math.max(0, totalDebt - fp);
+
+        if (inst > 0 && afterFp > 0) {
+            var count = Math.ceil(afterFp / inst);
+            var type = document.getElementById('stl_settlement_type').value;
+            var firstEl = document.getElementById('first_installment_date');
+            var lastDate = '—';
+            if (firstEl && firstEl.value) {
+                var d = new Date(firstEl.value);
+                if (type === 'weekly') d.setDate(d.getDate() + (count - 1) * 7);
+                else d.setMonth(d.getMonth() + (count - 1));
+                lastDate = d.toISOString().split('T')[0];
+            }
+            var totalDue = fp + (count * inst);
+
+            document.getElementById('stl_p_debt').textContent = totalDebt.toLocaleString('ar-JO') + ' د.أ';
+            document.getElementById('stl_p_fp').textContent = fp > 0 ? fp.toLocaleString('ar-JO') + ' د.أ' : 'لا يوجد';
+            document.getElementById('stl_p_after_fp').textContent = afterFp.toLocaleString('ar-JO') + ' د.أ';
+            document.getElementById('stl_p_inst').textContent = inst.toLocaleString('ar-JO') + ' د.أ ' + (type === 'weekly' ? '(أسبوعي)' : '(شهري)');
+            document.getElementById('stl_p_count').textContent = count + ' قسط';
+            document.getElementById('stl_p_last').textContent = lastDate;
+            document.getElementById('stl_p_total_due').textContent = totalDue.toLocaleString('ar-JO') + ' د.أ';
+
+            document.getElementById('stl_installments_count').value = count;
+            document.getElementById('stl_remaining_debt').value = Math.max(0, afterFp - count * inst);
+            box.style.display = 'block';
+        } else if (fp > 0 && inst <= 0) {
+            // فقط دفعة أولى بدون أقساط
+            document.getElementById('stl_p_debt').textContent = totalDebt.toLocaleString('ar-JO') + ' د.أ';
+            document.getElementById('stl_p_fp').textContent = fp.toLocaleString('ar-JO') + ' د.أ';
+            document.getElementById('stl_p_after_fp').textContent = afterFp.toLocaleString('ar-JO') + ' د.أ';
+            document.getElementById('stl_p_inst').textContent = '—';
+            document.getElementById('stl_p_count').textContent = '—';
+            document.getElementById('stl_p_last').textContent = '—';
+            document.getElementById('stl_p_total_due').textContent = fp.toLocaleString('ar-JO') + ' د.أ';
+            document.getElementById('stl_installments_count').value = 0;
+            document.getElementById('stl_remaining_debt').value = afterFp;
+            box.style.display = 'block';
+        } else {
+            box.style.display = 'none';
+        }
+    }
+    function onFirstDateChange() {
+        var firstEl = document.getElementById('first_installment_date');
+        var newEl = document.getElementById('new_installment_date');
+        if (firstEl.value) {
+            var type = document.getElementById('stl_settlement_type').value;
+            var d = new Date(firstEl.value);
+            // اقتراح تاريخ القسط الجديد: أسبوع بعد الدفعة الأولى أو شهر حسب النوع
+            if (type === 'weekly') {
+                d.setDate(d.getDate() + 7);
+            } else {
+                d.setMonth(d.getMonth() + 1);
+            }
+            newEl.value = d.toISOString().split('T')[0];
+            // تحديد الحد الأدنى: أسبوع بعد الدفعة الأولى
+            var minDate = new Date(firstEl.value);
+            minDate.setDate(minDate.getDate() + 7);
+            newEl.min = minDate.toISOString().split('T')[0];
+        }
+        calculate();
+        validateNewDate();
+    }
+
+    function validateNewDate() {
+        var firstEl = document.getElementById('first_installment_date');
+        var newEl = document.getElementById('new_installment_date');
+        var errEl = document.getElementById('stl_date_error');
+        if (!firstEl.value || !newEl.value) {
+            errEl.style.display = 'none';
+            return true;
+        }
+        var firstDate = new Date(firstEl.value);
+        var newDate = new Date(newEl.value);
+        var minDate = new Date(firstEl.value);
+        minDate.setDate(minDate.getDate() + 7);
+
+        if (newDate <= firstDate) {
+            errEl.textContent = 'يجب أن يكون تاريخ القسط الجديد بعد تاريخ الدفعة الأولى';
+            errEl.style.display = 'block';
+            newEl.style.borderColor = '#e74c3c';
+            return false;
+        }
+        if (newDate < minDate) {
+            errEl.textContent = 'يجب أن يكون تاريخ القسط الجديد بعد الدفعة الأولى بأسبوع على الأقل';
+            errEl.style.display = 'block';
+            newEl.style.borderColor = '#e74c3c';
+            return false;
+        }
+        errEl.style.display = 'none';
+        newEl.style.borderColor = '#ddd';
+        return true;
+    }
+
+    return { setType: setType, calculate: calculate, onFirstDateChange: onFirstDateChange, validateNewDate: validateNewDate };
+})();
+</script>

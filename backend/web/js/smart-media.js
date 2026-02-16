@@ -129,6 +129,7 @@
         var $card = $('#' + tempId);
         var f = resp.file;
         var ai = resp.ai;
+        var imageId = f.id || 0;
 
         // Update image
         if (f.thumb) {
@@ -151,18 +152,18 @@
         }
 
         // Build type selector
-        var selectHtml = '<select class="sm-type-select" data-path="' + escapeHtml(f.path) + '">';
+        var selectHtml = '<select class="sm-type-select" data-path="' + escapeHtml(f.path) + '" data-image-id="' + imageId + '">';
         var selectedType = (ai && ai.classification) ? ai.classification.type : '';
         $.each(SM.docTypes, function(k, v) {
             selectHtml += '<option value="' + k + '"' + (k === selectedType ? ' selected' : '') + '>' + v + '</option>';
         });
         selectHtml += '</select>';
 
-        // Add actions
+        // Add actions (include image_id for delete/reclassify)
         var actionsHtml =
             '<div class="sm-card-actions">' +
-                '<button class="sm-card-action danger sm-delete-btn" data-path="' + escapeHtml(f.path) + '" title="حذف"><i class="fa fa-trash"></i></button>' +
-                '<button class="sm-card-action sm-reclassify-btn" data-path="' + escapeHtml(f.path) + '" title="إعادة تصنيف AI"><i class="fa fa-magic"></i></button>' +
+                '<button class="sm-card-action danger sm-delete-btn" data-path="' + escapeHtml(f.path) + '" data-image-id="' + imageId + '" title="حذف"><i class="fa fa-trash"></i></button>' +
+                '<button class="sm-card-action sm-reclassify-btn" data-path="' + escapeHtml(f.path) + '" data-image-id="' + imageId + '" title="إعادة تصنيف AI"><i class="fa fa-magic"></i></button>' +
             '</div>';
 
         $card.find('.sm-card-body').html(
@@ -176,16 +177,19 @@
         // Store file data
         $card.data('file-info', f);
         $card.data('ai-info', ai);
+        $card.data('image-id', imageId);
 
-        // Add hidden inputs for form submission
+        // Add hidden inputs for form submission (includes image_id for linking on save)
         var idx = $('.sm-gallery .sm-card').index($card);
         var inputsHtml =
+            '<input type="hidden" name="SmartMedia[' + idx + '][image_id]" value="' + imageId + '">' +
             '<input type="hidden" name="SmartMedia[' + idx + '][file_path]" value="' + escapeHtml(f.path) + '">' +
             '<input type="hidden" name="SmartMedia[' + idx + '][file_name]" value="' + escapeHtml(f.name) + '">' +
             '<input type="hidden" name="SmartMedia[' + idx + '][file_size]" value="' + f.size + '">' +
             '<input type="hidden" name="SmartMedia[' + idx + '][mime_type]" value="' + escapeHtml(f.mime) + '">' +
             '<input type="hidden" name="SmartMedia[' + idx + '][capture_method]" value="' + f.capture_method + '">' +
             '<input type="hidden" name="SmartMedia[' + idx + '][thumb_path]" value="' + escapeHtml(f.thumb || '') + '">' +
+            '<input type="hidden" name="SmartMedia[' + idx + '][group_name]" value="' + escapeHtml(f.group_name || '9') + '">' +
             '<input type="hidden" name="SmartMedia[' + idx + '][ai_classification]" value="' + escapeHtml((ai && ai.classification) ? ai.classification.key : '') + '">' +
             '<input type="hidden" name="SmartMedia[' + idx + '][ai_confidence]" value="' + ((ai && ai.classification) ? ai.classification.confidence : '0') + '">' +
             '<input type="hidden" name="SmartMedia[' + idx + '][ai_text]" value="' + escapeHtml((ai ? ai.text_preview : '') || '') + '">';
@@ -335,11 +339,11 @@
             e.stopPropagation();
             var $card = $(this).closest('.sm-card');
             var path = $(this).data('path');
-            var type = $(this).data('type') || 'document';
+            var imageId = $(this).data('image-id') || 0;
 
             if (!confirm('حذف هذا الملف؟')) return;
 
-            $.post(window.smConfig.deleteUrl, { file_path: path, type: type }, function(resp) {
+            $.post(window.smConfig.deleteUrl, { file_path: path, image_id: imageId }, function(resp) {
                 if (resp.success) {
                     $card.fadeOut(200, function() { $(this).remove(); });
                 } else {
@@ -353,12 +357,14 @@
             e.stopPropagation();
             var $card = $(this).closest('.sm-card');
             var path = $(this).data('path');
+            var imageId = $(this).data('image-id') || 0;
 
             $card.append('<div class="sm-card-analyzing"><div class="spinner"></div><span>تحليل AI...</span></div>');
 
             $.post(window.smConfig.classifyUrl, {
                 file_path: path,
-                customer_id: getCustomerId()
+                customer_id: getCustomerId(),
+                image_id: imageId
             }, function(resp) {
                 $card.find('.sm-card-analyzing').remove();
 
@@ -374,6 +380,8 @@
                     );
 
                     $card.find('.sm-type-select').val(c.type);
+                    // Update hidden group_name input
+                    $card.find('input[name*="[group_name]"]').val(c.type);
                     showToast('تم التصنيف: ' + c.label + ' (ثقة ' + Math.round(c.confidence) + '%)', 'success');
                 } else {
                     showToast('فشل التصنيف: ' + (resp.error || ''), 'warning');
@@ -383,12 +391,22 @@
             });
         });
 
-        // Type change
+        // Type change — update groupName in os_ImageManager via AJAX
         $(document).on('change', '.sm-type-select', function() {
             var $card = $(this).closest('.sm-card');
-            var idx = $('.sm-gallery .sm-card').index($card);
-            // Update hidden input if exists
-            $card.find('input[name*="[document_type]"]').val($(this).val());
+            var newType = $(this).val();
+            var imageId = $(this).data('image-id') || $card.data('image-id') || 0;
+
+            // Update hidden group_name input
+            $card.find('input[name*="[group_name]"]').val(newType);
+
+            // Update in DB if we have an image ID
+            if (imageId) {
+                $.post(window.smConfig.uploadUrl.replace('/upload', '/update-type'), {
+                    image_id: imageId,
+                    group_name: newType
+                });
+            }
         });
     }
 

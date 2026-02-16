@@ -94,13 +94,30 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
             [['image'], 'string'],
             [['image'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, gif'],
             [['parent_id', 'is_current'], 'integer'],
-            [['request_status'], 'in', 'range' => ['pending', 'approved', 'rejected']],
-            [['request_target'], 'in', 'range' => ['judge', 'accounting', 'other']],
+            [['request_status'], 'in', 'range' => ['pending', 'approved', 'rejected'], 'skipOnEmpty' => true],
+            [['request_target'], 'in', 'range' => ['judge', 'accounting', 'other'], 'skipOnEmpty' => true],
             [['decision_text'], 'string'],
             [['decision_file'], 'string', 'max' => 255],
             [['amount'], 'number'],
             [['parent_id', 'request_status', 'decision_text', 'decision_file', 'is_current', 'amount', 'request_target'], 'safe'],
         ];
+    }
+
+    /**
+     * Convert empty strings to null for nullable fields before saving
+     */
+    public function beforeSave($insert)
+    {
+        if (!parent::beforeSave($insert)) {
+            return false;
+        }
+        $nullableFields = ['request_status', 'request_target', 'decision_text', 'decision_file', 'parent_id', 'amount'];
+        foreach ($nullableFields as $field) {
+            if ($this->$field === '' || $this->$field === null) {
+                $this->$field = null;
+            }
+        }
+        return true;
     }
 
     /**

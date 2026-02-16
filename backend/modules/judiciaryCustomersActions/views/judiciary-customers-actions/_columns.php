@@ -4,7 +4,6 @@
  */
 use yii\helpers\Url;
 use yii\helpers\Html;
-use yii\bootstrap\ButtonDropdown;
 
 return [
     /* رقم القضية */
@@ -88,28 +87,30 @@ return [
     /* الإجراءات */
     [
         'class' => 'yii\grid\ActionColumn',
-        'contentOptions' => ['style' => 'width:80px;text-align:center'],
-        'header' => 'إجراءات',
+        'contentOptions' => ['style' => 'width:50px;text-align:center;overflow:visible;position:relative'],
+        'header' => '',
         'template' => '{all}',
         'buttons' => [
-            'all' => fn($url, $m) => ButtonDropdown::widget([
-                'encodeLabel' => false,
-                'label' => '<i class="fa fa-cogs"></i>',
-                'dropdown' => [
-                    'encodeLabels' => false,
-                    'items' => [
-                        ['label' => '<i class="fa fa-eye text-info"></i> عرض', 'url' => ['view', 'id' => $m->id], 'linkOptions' => ['role' => 'modal-remote']],
-                        ['label' => '<i class="fa fa-pencil text-primary"></i> تعديل', 'url' => ['update', 'id' => $m->id], 'linkOptions' => ['role' => 'modal-remote']],
-                        '<li class="divider"></li>',
-                        ['label' => '<i class="fa fa-trash text-danger"></i> حذف', 'url' => ['delete', 'id' => $m->id], 'linkOptions' => [
-                            'data' => ['method' => 'post', 'confirm' => 'هل أنت متأكد من حذف هذا الإجراء؟'],
-                        ]],
-                    ],
-                    'options' => ['class' => 'dropdown-menu-right'],
-                ],
-                'options' => ['class' => 'btn-default btn-xs'],
-                'split' => false,
-            ]),
+            'all' => function($url, $m) {
+                $contractID = 0;
+                if ($m->judiciary_id) {
+                    $jud = $m->judiciary;
+                    if ($jud) $contractID = $jud->contract_id;
+                }
+                $viewUrl = Url::to(['view', 'id' => $m->id]);
+                $editUrl = Url::to(['update-followup-judicary-custamer-action', 'id' => $m->id, 'contractID' => $contractID]);
+                $delUrl  = Url::to(['delete', 'id' => $m->id]);
+
+                return '<div class="jca-act-wrap">'
+                    . '<button type="button" class="jca-act-trigger"><i class="fa fa-ellipsis-v"></i></button>'
+                    . '<div class="jca-act-menu">'
+                    .   '<a href="' . $viewUrl . '" role="modal-remote"><i class="fa fa-eye text-info"></i> عرض</a>'
+                    .   '<a href="' . $editUrl . '" role="modal-remote"><i class="fa fa-pencil text-primary"></i> تعديل</a>'
+                    .   '<div class="jca-act-divider"></div>'
+                    .   '<a href="' . $delUrl . '" role="modal-remote" data-request-method="post" data-confirm-title="تأكيد الحذف" data-confirm-message="هل أنت متأكد من حذف هذا الإجراء؟"><i class="fa fa-trash text-danger"></i> حذف</a>'
+                    . '</div>'
+                    . '</div>';
+            },
         ],
     ],
 ];

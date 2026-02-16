@@ -1,53 +1,31 @@
 <?php
-
+/**
+ * تخطيط الطباعة — صفحات A4 نظيفة
+ * بدون sidebar / header / footer
+ */
 use yii\helpers\Html;
-
 ?>
 <?php $this->beginPage() ?>
-<style>
-body {
-  background: rgb(204,204,204); 
-}
-page[size="A4"] {
-  background: white;
-  height: 37cm;
-  display: block;
-  margin: 0 auto;
-  margin-bottom: 0.5cm;
-  box-shadow: 0 0 0.5cm rgba(0,0,0,0.5);
-}
-@media print {
-  body, page[size="A4"] {
-    margin: 0;
-    box-shadow: 0;
-  }
-}
-</style>
+<!DOCTYPE html>
 <html dir="rtl" lang="ar">
-<?= Html::csrfMetaTags() ?>
-<?php $this->head() ?>
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="">
-    <meta name="author" content="">
-    <title>Print Template</title>
-    <!-- Bootstrap core CSS -->
-    <link rel="stylesheet" href="https://cdn.rtlcss.com/bootstrap/v4.5.3/css/bootstrap.min.css"
-        integrity="sha384-JvExCACAZcHNJEc7156QaHXTnQL3hQBixvj5RV5buE7vgnNEzzskDtx9NQ4p6BJe" crossorigin="anonymous">
-    <!-- Custom styles for this template -->
-    <!-- jquery cdn -->
+    <title><?= Html::encode($this->title ?: 'طباعة') ?></title>
+    <?= Html::csrfMetaTags() ?>
+    <!-- Google Fonts: Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <!-- jQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <!-- jquery cdn -->
     <script src="/js/Tafqeet.js"></script>
+    <?php $this->head() ?>
 </head>
-
-<body>
+<body style="margin:0;padding:0;background:#e0e0e0;font-family:'Cairo','Segoe UI',sans-serif">
     <?php $this->beginBody() ?>
-    <?= $this->render('content.php', ['content' => $content]) ?>
+    <?= $content ?>
     <?php $this->endBody() ?>
 </body>
-
 </html>
 <?php $this->endPage() ?>

@@ -27,6 +27,7 @@ use \common\models\User;
  * @property float|null $total_debt
  * @property float|null $remaining_debt
  * @property int|null $installments_count
+ * @property float|null $first_payment
  * @property string|null $notes
  * @property int $is_deleted
  * @property int $number_row
@@ -77,7 +78,7 @@ class LoanScheduling extends \yii\db\ActiveRecord
         return [
             [['contract_id', 'monthly_installment', 'first_installment_date', 'settlement_type'], 'required'],
             [['contract_id',  'status_action_by', 'created_by', 'last_update_by', 'is_deleted','number_row', 'installments_count'], 'integer'],
-            [['monthly_installment', 'total_debt', 'remaining_debt'], 'number'],
+            [['monthly_installment', 'total_debt', 'remaining_debt', 'first_payment'], 'number'],
             [['first_installment_date', 'created_at', 'updated_at'], 'safe'],
             [['status', 'new_installment_date', 'notes'], 'string'],
             [['settlement_type'], 'in', 'range' => ['monthly', 'weekly']],
@@ -110,6 +111,7 @@ class LoanScheduling extends \yii\db\ActiveRecord
             'total_debt' => 'إجمالي الدين',
             'remaining_debt' => 'المبلغ المتبقي',
             'installments_count' => 'عدد الأقساط',
+            'first_payment' => 'الدفعة الأولى',
             'notes' => 'ملاحظات',
         ];
     }

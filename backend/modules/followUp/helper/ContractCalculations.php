@@ -7,12 +7,18 @@ use DateTime;
 use common\helper\LoanContract;
 use backend\modules\expenses\models\Expenses;
 use backend\modules\judiciary\models\Judiciary;
+use backend\modules\contracts\models\Contracts;
 use backend\modules\contractInstallment\models\ContractInstallment;
-use phpDocumentor\Reflection\Types\Boolean;
 
 class ContractCalculations
 {
     public $contract_id, $judicary_contract, $contract_model, $modelf;
+
+    /**
+     * العقد الأصلي بدون أي تعديلات من التسويات
+     * يُستخدم في "الحسابات الأصلية" فقط
+     */
+    public $original_contract;
 
     public function __construct($contract_id)
     {
@@ -23,132 +29,180 @@ class ContractCalculations
             'is_deleted' => 0
         ])->all();
 
+        // العقد بعد دمج بيانات التسوية (للتوافق مع الكود القديم)
         $this->contract_model = $this->modelf->findContract($contract_id);
+
+        // العقد الأصلي — مباشرة من قاعدة البيانات بدون تعديلات
+        $this->original_contract = Contracts::findOne($contract_id);
     }
 
-    public function getContractTotalWithlawyerAndCaseCost(): int
+    /* ═══════════════════════════════════════════════════
+     *  الحسابات الأصلية — لا تنظر للتسويات نهائياً
+     *  تستخدم original_contract (البيانات الحقيقية)
+     * ═══════════════════════════════════════════════════ */
+
+    /**
+     * المبلغ الأصلي للعقد
+     */
+    public function getContractTotal(): float
     {
-        if ($this->hasJdicary()) {
-            return $this->getContractTotal() + $this->lawyerCost() + $this->caseCost();
+        return (float)($this->original_contract->total_value ?? 0);
+    }
+
+    /**
+     * مجموع كل مصاريف Outcome على العقد (كل التصنيفات)
+     */
+    public function allExpenses(): float
+    {
+        return (float)(Expenses::find()
+            ->where(['contract_id' => $this->contract_id])
+            ->sum('amount') ?? 0);
+    }
+
+    /**
+     * مجموع أتعاب المحاماة من القضايا
+     */
+    public function allLawyerCosts(): float
+    {
+        $total = 0;
+        if (!empty($this->judicary_contract)) {
+            foreach ($this->judicary_contract as $j) {
+                $total += (float)($j->lawyer_cost ?? 0);
+            }
         }
-        return $this->getContractTotal();
+        return $total;
     }
 
-    public function getContractTotal(): int
+    /**
+     * مجموع رسوم القضية فقط (category_id=4)
+     */
+    public function caseCost(): float
     {
-        return $this->contract_model->total_value;
+        return (float)(Expenses::find()
+            ->where(['contract_id' => $this->contract_id, 'category_id' => 4])
+            ->sum('amount') ?? 0);
     }
 
+    /**
+     * المبلغ الإجمالي = أصلي + كل Outcome + أتعاب محاماة
+     */
+    public function totalDebt(): float
+    {
+        return $this->getContractTotal() + $this->allExpenses() + $this->allLawyerCosts();
+    }
+
+    /**
+     * المدفوع — مجموع كل Income على العقد (كل المدفوعات بلا استثناء)
+     */
+    public function paidAmount($without_loan_condtion = false): float
+    {
+        $paid = ContractInstallment::find()
+            ->andWhere(['contract_id' => $this->contract_id])
+            ->sum('amount');
+        return (float)($paid ?? 0);
+    }
+
+    /**
+     * المتبقي = المبلغ الإجمالي - المدفوع
+     */
+    public function remainingAmount(): float
+    {
+        return max(0, $this->totalDebt() - $this->paidAmount());
+    }
+
+    /**
+     * عدد الأشهر من أول قسط (أصلي) حتى اليوم
+     */
+    public function timeInterval(): int
+    {
+        $firstDate = $this->original_contract->first_installment_date ?? null;
+        if (empty($firstDate)) return 0;
+        $d1 = new DateTime($firstDate);
+        $d2 = new DateTime(date('Y-m-d'));
+        $interval = $d2->diff($d1);
+        return $interval->y * 12 + $interval->m;
+    }
+
+    /**
+     * المبلغ المستحق حتى اليوم (أصلي) = min(أشهر × قسط_أصلي, إجمالي الدين)
+     */
+    public function amountShouldBePaid(): float
+    {
+        $months = $this->timeInterval() + 1;
+        $monthly = (float)($this->original_contract->monthly_installment_value ?? 0);
+        $shouldPaid = $months * $monthly;
+        $total = $this->totalDebt();
+        return min($shouldPaid, $total);
+    }
+
+    /**
+     * المتأخر (أصلي) = المستحق حتى اليوم - المدفوع
+     */
+    public function deservedAmount(): float
+    {
+        $firstDate = $this->original_contract->first_installment_date ?? null;
+        if (empty($firstDate) || date('Y-m-d') < $firstDate) {
+            return 0;
+        }
+        return max(0, $this->amountShouldBePaid() - $this->paidAmount());
+    }
+
+    /* ═══════════════════════════════════════════════════
+     *  هل العقد عليه قضية؟
+     * ═══════════════════════════════════════════════════ */
 
     public function hasJdicary(): bool
     {
         return !empty($this->judicary_contract);
     }
 
-    public function timeInterval()
+    /* ═══════════════════════════════════════════════════
+     *  دوال مساعدة (للتوافق مع الكود القديم)
+     * ═══════════════════════════════════════════════════ */
+
+    /** @deprecated use totalDebt() */
+    public function totalCosts(): float
     {
-        $d1 = new DateTime($this->contract_model->first_installment_date);
-        $d2 = new DateTime(date('Y-m-d'));
-        $interval = $d2->diff($d1);
-        return $interval->y * 12 + $interval->m;
+        return $this->totalDebt();
     }
 
-    public function caseCost()
+    /** @deprecated use totalDebt() */
+    public function getContractTotalWithlawyerAndCaseCost(): float
     {
-        $sum_case_cost = 0;
-        if (!empty($this->judicary_contract)) {
-            $all_case_cost = Expenses::find()->where(['contract_id' => $this->contract_model->id])->andWhere(['category_id' => 4])->all();
-
-            foreach ($all_case_cost as $case_cost) {
-                $sum_case_cost = $sum_case_cost + $case_cost->amount;
-            }
-            return $sum_case_cost;
-        }
-        return $sum_case_cost;
+        return $this->totalDebt();
     }
 
-    public function totalCosts()
+    /** @deprecated use remainingAmount() */
+    public function calculationRemainingAmount(): float
     {
-        $total_costs = 0;
-        if (!empty($this->judicary_contract)) {
-            $costs = \backend\modules\judiciary\models\Judiciary::find()
-                ->where([
-                    'contract_id' => $this->contract_model->id,
-                    'is_deleted' => 0 // Assuming '0' means the record is not deleted
-                ])
-                ->all();
-            $total_costs = $this->contract_model->total_value;
-            foreach ($costs as $cost) {
-                $total_costs += $cost->lawyer_cost;
-            }
-            $total_costs += $this->caseCost();
-            return $total_costs;
-        }
-
-        // echo 'contract_model->monthly_installment_value:' . $this->contract_model->monthly_installment_value . '</br>';
-        return $this->contract_model->total_value;
+        return $this->remainingAmount();
     }
 
-    public function amountShouldBePaid()
+    /** مصاريف مرجعية (category_id=19) */
+    public function customerReferance(): float
     {
-        $batches_should_be_paid_count = $this->timeInterval() + 1;
-        // check if the total installment's less than total contact cost
-        $total = (($batches_should_be_paid_count * $this->contract_model->monthly_installment_value) < $this->totalCosts()) ? $batches_should_be_paid_count * $this->contract_model->monthly_installment_value : $this->totalCosts();
-        return $total;
+        return (float)(Expenses::find()
+            ->where(['contract_id' => $this->contract_id, 'category_id' => 19])
+            ->sum('amount') ?? 0);
     }
 
-    public function paidAmount($without_loan_condtion = false)
-    {
-        if ($this->contract_model->is_loan == 1 and !$without_loan_condtion) {
-            $paid_amount = ContractInstallment::find()
-                ->andWhere(['contract_id' => $this->contract_model->id])->andwhere(['>', 'date', $this->contract_model->loan_scheduling_new_instalment_date])->sum('amount');
-        } else {
-            $paid_amount = ContractInstallment::find()
-                ->andWhere(['contract_id' => $this->contract_model->id])
-                ->sum('amount');
-        }
-        return $paid_amount;
-    }
-
-    public function deservedAmount()
-    {
-        return(date('Y-m-d') >= $this->contract_model->first_installment_date) ? $this->amountShouldBePaid() - $this->paidAmount() : 0;
-    }
-
-    public function remainingAmount()
-    {
-        $total_value = ($this->totalCosts() > 0) ? $this->totalCosts() : 0;
-        return $total_value - $this->paidAmount();
-    }
-
-    public function calculationRemainingAmount()
-    {
-        $remaining_amount = ($this->getContractTotalWithlawyerAndCaseCost() + $this->customerReferance()) - $this->paidAmount(true);
-        return $remaining_amount;
-    }
-
-    public function customerReferance()
-    {
-        return Expenses::find()->andWhere(['contract_id' => $this->contract_model->id])->andWhere(['category_id' => 19])->sum('amount');
-    }
-
+    /** أتعاب محاماة (أول قضية) — للتوافق القديم */
     public function lawyerCost()
     {
         if (!empty($this->judicary_contract)) {
-            $cost = Judiciary::find()->where(['contract_id' => $this->contract_model->id])->orderBy(['contract_id' => SORT_DESC])->one();
-            if (empty($cost)) {
-                return Yii::t('app', 'لا يوجد');
-            } else {
-                return $cost->lawyer_cost;
-            }
+            $cost = Judiciary::find()
+                ->where(['contract_id' => $this->contract_id])
+                ->orderBy(['id' => SORT_DESC])
+                ->one();
+            return $cost ? (float)$cost->lawyer_cost : 0;
         }
+        return 0;
     }
-    public function getExecutedAmount()
+
+    /** المبلغ التنفيذي */
+    public function getExecutedAmount(): float
     {
-
-        $paid_amount = ($this->paidAmount() > 0) ? $this->paidAmount() : 0;
-
-        return($this->contract_model->total_value - $paid_amount) + $this->lawyerCost();
+        $paid = max(0, $this->paidAmount());
+        return ($this->original_contract->total_value - $paid) + $this->allLawyerCosts();
     }
-
 }

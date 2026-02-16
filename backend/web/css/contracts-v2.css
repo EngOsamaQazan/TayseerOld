@@ -181,6 +181,11 @@ body:has(.ct-page) .content-header {
 .ct-filter-group {
   display: flex;
   flex-direction: column;
+  min-width: 0; /* prevent grid overflow */
+}
+/* العميل — يأخذ عمودين على الشاشات الكبيرة فقط */
+.ct-filter-customer {
+  grid-column: span 2;
 }
 .ct-filter-group label {
   font-size: 12px;
@@ -192,6 +197,8 @@ body:has(.ct-page) .content-header {
 .ct-filter-group .select2-container {
   font-size: 13px !important;
   border-radius: var(--radius-sm, 6px) !important;
+  width: 100% !important;
+  max-width: 100%;
 }
 .ct-filter-group .form-control {
   border: 1.5px solid var(--clr-border, #e0e0e0);
@@ -875,6 +882,9 @@ body:has(.ct-page) .content-header {
   }
   .ct-filter-grid {
     grid-template-columns: 1fr;
+  }
+  .ct-filter-customer {
+    grid-column: span 1;
   }
   .ct-table tbody tr {
     grid-template-columns: 1fr 1fr;

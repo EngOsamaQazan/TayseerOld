@@ -347,9 +347,11 @@ function renderGrid(images) {
             // عرض مجموعة الدفعة
             const first = batch[0];
             const batchDate = first.created ? first.created.substring(0, 16) : '—';
-            const batchLabel = first.customerName 
+            const isLinked = !!first.customerName;
+            const batchLabel = isLinked 
                 ? `${first.customerName} (#${first.customerId})`
                 : (first.isOrphan ? `يتيم — contractId: ${first.contractId}` : `${first.groupName}: ${first.contractId}`);
+            const batchBtnText = isLinked ? 'إعادة ربط الدفعة' : 'ربط الدفعة';
             
             html += `<div class="batch-group" style="--batch-color:${color}">
                 <div class="batch-header">
@@ -357,8 +359,8 @@ function renderGrid(images) {
                     <span class="batch-label"><i class="fa fa-layer-group"></i> دفعة: ${batch.length} صور</span>
                     <span class="batch-meta">${batchLabel}</span>
                     <span class="batch-time"><i class="fa fa-clock-o"></i> ${batchDate}</span>
-                    <button class="btn-batch-reassign" onclick="openBatchReassign('${batchId}', ${JSON.stringify(batch.map(b=>b.id)).replace(/"/g, '&quot;')})" title="إعادة ربط الدفعة كاملة">
-                        <i class="fa fa-exchange"></i> ربط الدفعة
+                    <button class="btn-batch-reassign" onclick="openBatchReassign('${batchId}', ${JSON.stringify(batch.map(b=>b.id)).replace(/"/g, '&quot;')})" title="${batchBtnText}">
+                        <i class="fa fa-exchange"></i> ${batchBtnText}
                     </button>
                 </div>
                 <div class="batch-images">`;
@@ -743,7 +745,11 @@ function openBatchReassign(batchId, imageIds) {
     document.getElementById('singlePreview').style.display = 'none';
     document.getElementById('batchPreview').style.display = '';
     document.getElementById('singleDocTypeSection').style.display = 'none';
-    document.getElementById('modalTitle').textContent = `ربط دفعة: ${imageIds.length} صور`;
+    // تحقق إذا الدفعة مرتبطة بعميل أصلاً
+    const firstCard = document.querySelector(`.img-card[data-id="${imageIds[0]}"]`);
+    const hasCustomer = firstCard && firstCard.querySelector('.customer-link');
+    const batchAction = hasCustomer ? 'إعادة ربط' : 'ربط';
+    document.getElementById('modalTitle').textContent = `${batchAction} دفعة: ${imageIds.length} صور`;
     document.getElementById('modalSubtitle').textContent = 'تأكد من أنواع الصور ثم اختر العميل';
     
     // بناء معرض الصور

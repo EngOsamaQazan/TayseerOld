@@ -340,24 +340,37 @@ class FollowUpController extends Controller
 
     public function actionAddNewLoan()
     {
-        $monthlyInstallment = (int)(@Yii::$app->request->post('monthly_installment'));
-        $newInstallmentDate = @Yii::$app->request->post('new_installment_date');
-        $firstInstallmentDate = @Yii::$app->request->post('first_installment_date');
-        $contract = (int)(@Yii::$app->request->post('contract_id'));
-        $msg = ' ';
+        $req = Yii::$app->request;
         $model = new LoanScheduling();
-        $model->first_installment_date = $firstInstallmentDate;
-        $model->new_installment_date = $newInstallmentDate;
-        $model->monthly_installment = $monthlyInstallment;
-        $model->status_action_by = Yii::$app->user->id;
-        $model->status = 'pending';
-        $model->contract_id = $contract;
+        $model->contract_id            = (int) $req->post('contract_id');
+        $model->monthly_installment    = (float) $req->post('monthly_installment');
+        $model->first_installment_date = $req->post('first_installment_date');
+        $model->new_installment_date   = $req->post('new_installment_date') ?: null;
+        $model->settlement_type        = $req->post('settlement_type', 'monthly');
+        $model->total_debt             = $req->post('total_debt') ? (float) $req->post('total_debt') : null;
+        $model->installments_count     = $req->post('installments_count') ? (int) $req->post('installments_count') : null;
+        $model->remaining_debt         = $req->post('remaining_debt') ? (float) $req->post('remaining_debt') : null;
+        $model->first_payment          = $req->post('first_payment') ? (float) $req->post('first_payment') : null;
+        $model->notes                  = $req->post('notes') ?: null;
+        $model->status_action_by       = Yii::$app->user->id;
+        $model->status                 = 'pending';
+
         if ($model->save()) {
-            $msg = 'تم اضافة التسوية بنجاح';
-        } else {
-            $msg = 'يجب التاكد من البيات المدخلة';
+            // تحديث تاريخ المتابعة القادمة ليكون تاريخ الدفعة الأولى للتسوية
+            if ($model->first_installment_date) {
+                $latestFollowUp = \backend\modules\followUp\models\FollowUp::find()
+                    ->where(['contract_id' => $model->contract_id])
+                    ->orderBy(['id' => SORT_DESC])
+                    ->one();
+                if ($latestFollowUp) {
+                    $latestFollowUp->reminder = $model->first_installment_date;
+                    $latestFollowUp->save(false);
+                }
+            }
+            return 'تم إضافة التسوية بنجاح';
         }
-        return $msg;
+        $errors = implode(' | ', array_map(fn($e) => implode(', ', $e), $model->errors));
+        return 'خطأ: ' . $errors;
     }
 
     public function actionPrinter($contract_id)
@@ -595,16 +608,23 @@ class FollowUpController extends Controller
         // ContractCalculations — needed for old tabs (phone_numbers, payments, settlements, judiciary)
         $calc = new ContractCalculations($contract_id);
 
-        // Financial Snapshot
-        $total = $calc->getContractTotal();
-        $paid = $calc->paidAmount();
-        $shouldPaid = $calc->amountShouldBePaid();
-        $remaining = $calc->remainingAmount();
-        $overdue = max(0, $calc->deservedAmount());
-        $monthlyAmount = $contract->monthly_installment_value ?: 1;
-        $overdueInstallments = ($monthlyAmount > 0) ? (int)ceil($overdue / $monthlyAmount) : 0;
-        $remainingInstallments = ($monthlyAmount > 0) ? (int)ceil($remaining / $monthlyAmount) : 0;
+        // Financial Snapshot — حسابات أصلية (لا تنظر للتسويات أبداً)
+        $total = $calc->totalDebt();                       // إجمالي = أصلي + كل Outcome + أتعاب
+        $paid = $calc->paidAmount();                        // المدفوع = كل Income
+        $remaining = $calc->remainingAmount();              // المتبقي = إجمالي - مدفوع
+        $shouldPaid = $calc->amountShouldBePaid();          // المستحق حتى اليوم (أصلي)
+        $overdue = $calc->deservedAmount();                 // المتأخر (أصلي)
+        // القسط الشهري الأصلي (ليس من التسوية)
+        $monthlyAmount = (float)($calc->original_contract->monthly_installment_value ?: 1);
+        $overdueInstallments = ($monthlyAmount > 0 && $overdue > 0) ? (int)ceil($overdue / $monthlyAmount) : 0;
+        $remainingInstallments = ($monthlyAmount > 0 && $remaining > 0) ? (int)ceil($remaining / $monthlyAmount) : 0;
         $complianceRate = ($shouldPaid > 0) ? min(100, (int)round(($paid / $shouldPaid) * 100)) : 100;
+
+        // هل العقد عليه قضية؟
+        $hasJudiciary = $calc->hasJdicary();
+        $lawyerCosts = $calc->allLawyerCosts();
+        $caseCosts = $calc->caseCost();
+        $contractOriginalValue = $calc->getContractTotal();
 
         $financials = [
             'total' => $total,
@@ -614,7 +634,52 @@ class FollowUpController extends Controller
             'overdue_installments' => $overdueInstallments,
             'remaining_installments' => $remainingInstallments,
             'compliance_rate' => $complianceRate,
+            'has_judiciary' => $hasJudiciary,
+            'lawyer_costs' => $lawyerCosts,
+            'case_costs' => $caseCosts,
+            'contract_value' => $contractOriginalValue,
         ];
+
+        // Settlement data for financial snapshot
+        $latestSettlement = \backend\modules\loanScheduling\models\LoanScheduling::find()
+            ->where(['contract_id' => $contract_id])
+            ->orderBy(['id' => SORT_DESC])
+            ->one();
+
+        $settlementFinancials = null;
+        if ($latestSettlement) {
+            $stlTotal = (float)($latestSettlement->total_debt ?? 0);
+            $stlFirstPayment = (float)($latestSettlement->first_payment ?? 0);
+            $stlInstallment = (float)($latestSettlement->monthly_installment ?? 0);
+            $stlCount = (int)($latestSettlement->installments_count ?? 0);
+            $stlType = $latestSettlement->settlement_type ?? 'monthly';
+
+            // حساب المدفوع بعد التسوية (من تاريخ الدفعة الأولى للتسوية)
+            $stlPaidAfter = 0;
+            if ($latestSettlement->first_installment_date) {
+                $stlPaidAfter = (float)(\backend\modules\contractInstallment\models\ContractInstallment::find()
+                    ->where(['contract_id' => $contract_id])
+                    ->andWhere(['>=', 'date', $latestSettlement->first_installment_date])
+                    ->sum('amount') ?? 0);
+            }
+
+            $stlRemaining = max(0, $stlTotal - $stlPaidAfter);
+            $stlRemainingInstallments = ($stlInstallment > 0 && $stlRemaining > 0) ? (int)ceil($stlRemaining / $stlInstallment) : 0;
+
+            $settlementFinancials = [
+                'total_debt' => $stlTotal,
+                'first_payment' => $stlFirstPayment,
+                'installment' => $stlInstallment,
+                'installments_count' => $stlCount,
+                'type' => $stlType,
+                'type_label' => $stlType === 'weekly' ? 'أسبوعي' : 'شهري',
+                'paid_after' => $stlPaidAfter,
+                'remaining' => $stlRemaining,
+                'remaining_installments' => $stlRemainingInstallments,
+                'first_date' => $latestSettlement->first_installment_date,
+                'next_date' => $latestSettlement->new_installment_date,
+            ];
+        }
 
         // Timeline (combine follow-ups + payments + judiciary actions)
         $timeline = $this->buildTimeline($contract_id);
@@ -639,6 +704,7 @@ class FollowUpController extends Controller
             'kanbanData' => $kanbanData,
             'timeline' => $timeline,
             'financials' => $financials,
+            'settlementFinancials' => $settlementFinancials,
             'alerts' => $alerts,
             'contractCalculations' => $calc,
             'contract_id' => $contract_id,

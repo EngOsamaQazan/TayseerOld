@@ -2,6 +2,9 @@
 /**
  * SmartMediaController — Smart Document & Photo Management
  * Handles: file upload, webcam capture, AI classification, usage stats
+ * 
+ * IMPORTANT: All uploads are saved into os_ImageManager + images/imagemanager/
+ * to ensure compatibility with the rest of the system (print preview, image manager, etc.)
  */
 
 namespace backend\modules\customers\controllers;
@@ -38,8 +41,11 @@ class SmartMediaController extends Controller
 
     /**
      * Upload file(s) via AJAX — supports drag-and-drop and traditional upload
-     * POST: file (multipart), customer_id (optional)
+     * POST: file (multipart), customer_id (optional), auto_classify (0|1)
      * Returns: JSON with file info + AI classification
+     * 
+     * Files are saved to os_ImageManager table AND images/imagemanager/ directory
+     * so they are visible in: image manager, print preview, customer photo display
      */
     public function actionUpload()
     {
@@ -64,59 +70,88 @@ class SmartMediaController extends Controller
         $customerId = Yii::$app->request->post('customer_id');
 
         try {
-            // Generate unique filename
+            // AI Classification first (to determine groupName before saving)
+            $aiResult = null;
+            $autoClassify = Yii::$app->request->post('auto_classify', '1');
             $ext = strtolower($file->extension);
-            $filename = 'doc_' . date('Ymd_His') . '_' . Yii::$app->security->generateRandomString(8) . '.' . $ext;
 
-            // Create upload directory
-            $uploadDir = Yii::getAlias('@backend/web/uploads/customers/documents');
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+            if ($autoClassify === '1' && strpos($file->type, 'image/') === 0) {
+                // Save to temp for AI analysis
+                $tempPath = Yii::getAlias('@runtime') . '/temp_' . Yii::$app->security->generateRandomString(8) . '.' . $ext;
+                $file->saveAs($tempPath, false); // false = don't delete the temp file yet
+                $aiResult = VisionService::classify($tempPath, $customerId ? (int)$customerId : null);
+                @unlink($tempPath); // clean up temp
+            }
 
-            $filePath = $uploadDir . '/' . $filename;
-            $webPath = '/uploads/customers/documents/' . $filename;
+            // Determine groupName from AI classification
+            $groupName = '9'; // default: "أخرى" (other)
+            if ($aiResult && !empty($aiResult['classification']['type'])) {
+                $groupName = (string)$aiResult['classification']['type'];
+            }
 
-            // Save file
-            if (!$file->saveAs($filePath)) {
+            // Generate hash for ImageManager
+            $fileHash = Yii::$app->security->generateRandomString(32);
+
+            // Insert into os_ImageManager FIRST to get the ID
+            $db = Yii::$app->db;
+            $db->createCommand()->insert('{{%ImageManager}}', [
+                'fileName'    => $file->name,
+                'fileHash'    => $fileHash,
+                'customer_id' => $customerId ? (int)$customerId : null,
+                'contractId'  => null,  // contractId reserved for contract images only
+                'groupName'   => $groupName,
+                'created'     => date('Y-m-d H:i:s'),
+                'modified'    => date('Y-m-d H:i:s'),
+                'createdBy'   => Yii::$app->user->id ?? null,
+                'modifiedBy'  => Yii::$app->user->id ?? null,
+            ])->execute();
+
+            $imageId = $db->getLastInsertID();
+
+            // Save file to images/imagemanager/ with the correct naming: {id}_{hash}.{ext}
+            $imageManagerDir = Yii::getAlias('@backend/web/images/imagemanager');
+            if (!is_dir($imageManagerDir)) mkdir($imageManagerDir, 0755, true);
+
+            $destFilename = $imageId . '_' . $fileHash . '.' . $ext;
+            $destPath = $imageManagerDir . '/' . $destFilename;
+            $webPath = '/images/imagemanager/' . $destFilename;
+
+            if (!$file->saveAs($destPath)) {
+                // Rollback DB insert if file save fails
+                $db->createCommand()->delete('{{%ImageManager}}', ['id' => $imageId])->execute();
                 throw new \Exception('فشل في حفظ الملف');
             }
 
-            // Create thumbnail for images
-            $thumbPath = null;
+            // Create thumbnail in uploads/customers/documents/thumbs/ for the UI card
             $thumbWebPath = null;
             if (strpos($file->type, 'image/') === 0) {
-                $thumbDir = $uploadDir . '/thumbs';
+                $thumbDir = Yii::getAlias('@backend/web/uploads/customers/documents/thumbs');
                 if (!is_dir($thumbDir)) mkdir($thumbDir, 0755, true);
-                $thumbFile = 'thumb_' . $filename;
+                $thumbFile = 'thumb_' . $destFilename;
                 $thumbFullPath = $thumbDir . '/' . $thumbFile;
-                if (VisionService::createThumbnail($filePath, $thumbFullPath)) {
-                    $thumbPath = $thumbFullPath;
+                if (VisionService::createThumbnail($destPath, $thumbFullPath)) {
                     $thumbWebPath = '/uploads/customers/documents/thumbs/' . $thumbFile;
                 }
-            }
-
-            // AI Classification (only for images, not PDF)
-            $aiResult = null;
-            $autoClassify = Yii::$app->request->post('auto_classify', '1');
-            if ($autoClassify === '1' && strpos($file->type, 'image/') === 0) {
-                $aiResult = VisionService::classify($filePath, $customerId ? (int)$customerId : null);
             }
 
             return [
                 'success' => true,
                 'file' => [
-                    'name' => $file->name,
-                    'path' => $webPath,
-                    'full_path' => $filePath,
-                    'thumb' => $thumbWebPath,
-                    'size' => $file->size,
-                    'mime' => $file->type,
+                    'id'             => (int)$imageId,
+                    'name'           => $file->name,
+                    'path'           => $webPath,
+                    'full_path'      => $destPath,
+                    'thumb'          => $thumbWebPath ?: $webPath,
+                    'size'           => $file->size,
+                    'mime'           => $file->type,
                     'capture_method' => 'upload',
+                    'group_name'     => $groupName,
                 ],
                 'ai' => $aiResult ? [
                     'classification' => $aiResult['classification'],
-                    'text_preview' => mb_substr($aiResult['text'] ?? '', 0, 200),
-                    'labels' => array_slice($aiResult['labels'] ?? [], 0, 5),
-                    'response_time' => $aiResult['response_time_ms'] ?? 0,
+                    'text_preview'   => mb_substr($aiResult['text'] ?? '', 0, 200),
+                    'labels'         => array_slice($aiResult['labels'] ?? [], 0, 5),
+                    'response_time'  => $aiResult['response_time_ms'] ?? 0,
                 ] : null,
             ];
 
@@ -128,6 +163,8 @@ class SmartMediaController extends Controller
     /**
      * Capture webcam photo
      * POST: image_data (base64 data URL), customer_id (optional), photo_type
+     * 
+     * Saved to os_ImageManager + images/imagemanager/ for system-wide compatibility
      */
     public function actionWebcamCapture()
     {
@@ -158,54 +195,61 @@ class SmartMediaController extends Controller
             $customerId = Yii::$app->request->post('customer_id');
             $photoType = Yii::$app->request->post('photo_type', 'webcam');
 
-            // Generate filename
-            $filename = 'cam_' . date('Ymd_His') . '_' . Yii::$app->security->generateRandomString(6) . '.' . $ext;
+            // Map photo_type to groupName
+            $groupName = '8'; // default: صورة شخصية (personal photo)
+            if ($photoType === 'id_front' || $photoType === 'id_back') {
+                $groupName = '0'; // هوية وطنية
+            }
 
-            // Create directory
-            $uploadDir = Yii::getAlias('@backend/web/uploads/customers/photos');
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+            // Generate hash & filename for ImageManager
+            $fileHash = Yii::$app->security->generateRandomString(32);
+            $originalName = 'cam_' . date('Ymd_His') . '.' . $ext;
 
-            $filePath = $uploadDir . '/' . $filename;
-            $webPath = '/uploads/customers/photos/' . $filename;
+            // Insert into os_ImageManager
+            $db = Yii::$app->db;
+            $db->createCommand()->insert('{{%ImageManager}}', [
+                'fileName'    => $originalName,
+                'fileHash'    => $fileHash,
+                'customer_id' => $customerId ? (int)$customerId : null,
+                'contractId'  => null,
+                'groupName'   => $groupName,
+                'created'     => date('Y-m-d H:i:s'),
+                'modified'    => date('Y-m-d H:i:s'),
+                'createdBy'   => Yii::$app->user->id ?? null,
+                'modifiedBy'  => Yii::$app->user->id ?? null,
+            ])->execute();
 
-            // Save file
-            file_put_contents($filePath, $binaryData);
+            $imageId = $db->getLastInsertID();
+
+            // Save to images/imagemanager/
+            $imageManagerDir = Yii::getAlias('@backend/web/images/imagemanager');
+            if (!is_dir($imageManagerDir)) mkdir($imageManagerDir, 0755, true);
+
+            $destFilename = $imageId . '_' . $fileHash . '.' . $ext;
+            $destPath = $imageManagerDir . '/' . $destFilename;
+            $webPath = '/images/imagemanager/' . $destFilename;
+
+            file_put_contents($destPath, $binaryData);
 
             // Create thumbnail
             $thumbWebPath = null;
-            $thumbDir = $uploadDir . '/thumbs';
+            $thumbDir = Yii::getAlias('@backend/web/uploads/customers/documents/thumbs');
             if (!is_dir($thumbDir)) mkdir($thumbDir, 0755, true);
-            $thumbFile = 'thumb_' . $filename;
+            $thumbFile = 'thumb_' . $destFilename;
             $thumbFullPath = $thumbDir . '/' . $thumbFile;
-            if (VisionService::createThumbnail($filePath, $thumbFullPath, 150, 150)) {
-                $thumbWebPath = '/uploads/customers/photos/thumbs/' . $thumbFile;
+            if (VisionService::createThumbnail($destPath, $thumbFullPath, 150, 150)) {
+                $thumbWebPath = '/uploads/customers/documents/thumbs/' . $thumbFile;
             }
-
-            // Save to database
-            $fileSize = filesize($filePath);
-            Yii::$app->db->createCommand()->insert('os_customer_photos', [
-                'customer_id' => $customerId ?: 0,
-                'photo_type' => $photoType,
-                'file_path' => $webPath,
-                'thumbnail_path' => $thumbWebPath,
-                'file_size' => $fileSize,
-                'mime_type' => $mimeType,
-                'capture_method' => 'webcam',
-                'is_primary' => ($photoType === 'profile') ? 1 : 0,
-                'created_by' => Yii::$app->user->id ?? null,
-                'created_at' => date('Y-m-d H:i:s'),
-            ])->execute();
-
-            $photoId = Yii::$app->db->getLastInsertID();
 
             return [
                 'success' => true,
                 'photo' => [
-                    'id' => $photoId,
-                    'path' => $webPath,
-                    'thumb' => $thumbWebPath,
-                    'size' => $fileSize,
-                    'type' => $photoType,
+                    'id'    => (int)$imageId,
+                    'path'  => $webPath,
+                    'thumb' => $thumbWebPath ?: $webPath,
+                    'size'  => strlen($binaryData),
+                    'type'  => $photoType,
+                    'group_name' => $groupName,
                 ],
             ];
 
@@ -216,7 +260,7 @@ class SmartMediaController extends Controller
 
     /**
      * Classify an already-uploaded document with AI
-     * POST: file_path (server path to image)
+     * POST: file_path (web path to image), image_id (os_ImageManager ID)
      */
     public function actionClassify()
     {
@@ -234,8 +278,18 @@ class SmartMediaController extends Controller
         }
 
         $customerId = Yii::$app->request->post('customer_id');
+        $imageId = Yii::$app->request->post('image_id');
 
         $result = VisionService::classify($filePath, $customerId ? (int)$customerId : null);
+
+        // Update groupName in os_ImageManager if we have an image_id and classification succeeded
+        if ($result['success'] && $imageId && !empty($result['classification']['type'])) {
+            Yii::$app->db->createCommand()->update(
+                '{{%ImageManager}}',
+                ['groupName' => (string)$result['classification']['type']],
+                ['id' => (int)$imageId]
+            )->execute();
+        }
 
         return [
             'success' => $result['success'],
@@ -267,42 +321,78 @@ class SmartMediaController extends Controller
     }
 
     /**
+     * Update document type (groupName) for an image
+     * POST: image_id, group_name
+     */
+    public function actionUpdateType()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $imageId = Yii::$app->request->post('image_id');
+        $groupName = Yii::$app->request->post('group_name');
+
+        if (!$imageId) {
+            return ['success' => false, 'error' => 'معرف الصورة مطلوب'];
+        }
+
+        try {
+            Yii::$app->db->createCommand()->update(
+                '{{%ImageManager}}',
+                ['groupName' => (string)$groupName],
+                ['id' => (int)$imageId]
+            )->execute();
+
+            return ['success' => true];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Delete an uploaded file
-     * POST: file_path, type (document|photo)
+     * POST: file_path, image_id (os_ImageManager ID)
      */
     public function actionDelete()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
         $webPath = Yii::$app->request->post('file_path');
-        $type = Yii::$app->request->post('type', 'document');
+        $imageId = Yii::$app->request->post('image_id');
 
-        if (!$webPath) {
-            return ['success' => false, 'error' => 'مسار الملف مطلوب'];
-        }
-
-        $filePath = Yii::getAlias('@backend/web') . $webPath;
-
-        // Security: make sure path is within uploads directory
-        $uploadsDir = Yii::getAlias('@backend/web/uploads/');
-        if (strpos(realpath($filePath), realpath($uploadsDir)) !== 0) {
-            return ['success' => false, 'error' => 'مسار غير مسموح'];
+        if (!$webPath && !$imageId) {
+            return ['success' => false, 'error' => 'مسار الملف أو معرف الصورة مطلوب'];
         }
 
         try {
-            if (file_exists($filePath)) {
-                unlink($filePath);
+            // Delete the physical file
+            if ($webPath) {
+                $filePath = Yii::getAlias('@backend/web') . $webPath;
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+                // Delete thumbnail
+                $thumbPath = str_replace(basename($webPath), 'thumbs/thumb_' . basename($webPath), Yii::getAlias('@backend/web/uploads/customers/documents/') . basename($webPath));
+                if (file_exists($thumbPath)) {
+                    unlink($thumbPath);
+                }
             }
 
-            // Delete thumbnail
-            $thumbPath = str_replace(basename($webPath), 'thumbs/thumb_' . basename($webPath), $filePath);
-            if (file_exists($thumbPath)) {
-                unlink($thumbPath);
-            }
+            // Delete from os_ImageManager if we have the ID
+            if ($imageId) {
+                // Get the record to find the file
+                $record = Yii::$app->db->createCommand(
+                    "SELECT id, fileName, fileHash FROM {{%ImageManager}} WHERE id = :id",
+                    [':id' => (int)$imageId]
+                )->queryOne();
 
-            // Remove from DB if photo
-            if ($type === 'photo') {
-                Yii::$app->db->createCommand()->delete('os_customer_photos', ['file_path' => $webPath])->execute();
+                if ($record) {
+                    $ext = pathinfo($record['fileName'], PATHINFO_EXTENSION);
+                    $imgPath = Yii::getAlias('@backend/web/images/imagemanager/') . $record['id'] . '_' . $record['fileHash'] . '.' . $ext;
+                    if (file_exists($imgPath)) {
+                        unlink($imgPath);
+                    }
+                    Yii::$app->db->createCommand()->delete('{{%ImageManager}}', ['id' => (int)$imageId])->execute();
+                }
             }
 
             return ['success' => true];

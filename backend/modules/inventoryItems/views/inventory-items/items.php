@@ -75,6 +75,10 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
             <?= Html::a('<i class="fa fa-plus"></i> <span>صنف جديد</span>', ['create'], [
                 'class' => 'fin-btn fin-btn--add', 'title' => 'إضافة صنف جديد', 'role' => 'modal-remote',
             ]) ?>
+            <?= Html::a('<i class="fa fa-cubes"></i> <span>إضافة دفعة</span>', ['batch-create'], [
+                'class' => 'fin-btn fin-btn--add', 'title' => 'إضافة مجموعة أصناف دفعة واحدة', 'role' => 'modal-remote',
+                'style' => 'background:#0ea5e9;margin-right:6px',
+            ]) ?>
         </div>
         <?php endif ?>
         <div class="fin-act-group">
@@ -114,6 +118,25 @@ $rejectBaseUrl  = Url::to(['reject', 'id' => '__ID__']);
 $csrfToken  = Yii::$app->request->csrfToken;
 
 $js = <<<JS
+// إظهار إشعار نجاح بعد إغلاق المودال
+$('#ajaxCrudModal').on('hidden.bs.modal', function () {
+    // بعد إغلاق المودال تلقائياً (forceClose) نعرض إشعار
+    if (window._itemSaveSuccess) {
+        window._itemSaveSuccess = false;
+    }
+});
+// تتبع نجاح الحفظ
+$(document).ajaxComplete(function(e, xhr, settings) {
+    try {
+        var resp = typeof xhr.responseJSON !== 'undefined' ? xhr.responseJSON : JSON.parse(xhr.responseText);
+        if (resp && resp.forceClose && resp.forceReload) {
+            // عرض إشعار نجاح
+            var notif = $('<div style="position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:99999;background:#166534;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.15);"><i class=\"fa fa-check-circle\"></i> تمت العملية بنجاح</div>');
+            $('body').append(notif);
+            setTimeout(function(){ notif.fadeOut(400, function(){ notif.remove(); }); }, 2500);
+        }
+    } catch(ex) {}
+});
 $(document).on('click', '.inv-approve-btn', function(e){
     e.preventDefault();
     var id = $(this).data('id');

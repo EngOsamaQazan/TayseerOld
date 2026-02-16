@@ -190,6 +190,9 @@ if (!empty($contractIds)) {
             <table class="ct-table" role="grid">
                 <thead>
                     <tr>
+                        <th style="width:40px;text-align:center">
+                            <input type="checkbox" id="ctSelectAll" title="تحديد الكل" style="cursor:pointer;width:18px;height:18px">
+                        </th>
                         <th class="ct-th-id"><?= $sortLink('id', '#') ?></th>
                         <th>العميل</th>
                         <th><?= $sortLink('seller_id', 'البائع') ?></th>
@@ -234,6 +237,16 @@ if (!empty($contractIds)) {
                         $judCosts = $jud ? number_format(($jud->case_cost ?? 0) + ($jud->lawyer_cost ?? 0), 0) : '—';
                     ?>
                     <tr data-id="<?= $m->id ?>">
+                        <td style="text-align:center;vertical-align:middle">
+                            <?php if (!$jud): ?>
+                            <input type="checkbox" class="ct-batch-check" value="<?= $m->id ?>"
+                                   data-remaining="<?= round($remaining, 2) ?>"
+                                   data-customer="<?= Html::encode($customerNames) ?>"
+                                   style="cursor:pointer;width:18px;height:18px">
+                            <?php else: ?>
+                            <span class="ct-text-muted" title="تم إنشاء القضية"><i class="fa fa-check-circle text-success" style="font-size:16px"></i></span>
+                            <?php endif ?>
+                        </td>
                         <td class="ct-td-id" data-label="#">
                             <?= $m->id ?>
                         </td>
@@ -397,8 +410,114 @@ if (!empty($contractIds)) {
 <?php Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '']) ?>
 <?php Modal::end() ?>
 
+<!-- ===== BATCH ACTION FLOATING BAR ===== -->
+<div id="ctBatchBar" class="ct-batch-bar" style="display:none">
+    <div class="ct-batch-bar-inner">
+        <span class="ct-batch-bar-count">
+            <i class="fa fa-check-square-o"></i>
+            تم تحديد <strong id="ctBatchCount">0</strong> عقد
+        </span>
+        <button type="button" id="ctBatchClear" class="ct-btn ct-btn-outline" style="border-color:rgba(255,255,255,.4);color:#fff;padding:6px 16px">
+            <i class="fa fa-times"></i> إلغاء التحديد
+        </button>
+        <form id="ctBatchForm" method="POST" action="<?= Url::to(['/judiciary/judiciary/batch-create']) ?>" style="display:inline">
+            <input type="hidden" name="<?= Yii::$app->request->csrfParam ?>" value="<?= Yii::$app->request->csrfToken ?>">
+            <input type="hidden" name="contract_ids" id="ctBatchIds" value="">
+            <button type="submit" class="ct-btn ct-btn-primary" style="padding:8px 24px;font-weight:700;font-size:14px">
+                <i class="fa fa-gavel"></i> تجهيز القضايا
+            </button>
+        </form>
+    </div>
+</div>
+
 <?php
+$this->registerCss(<<<'CSS'
+/* ═══ Batch Selection Bar ═══ */
+.ct-batch-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1050;
+    background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+    padding: 12px 20px;
+    animation: ctSlideUp .3s ease;
+}
+@keyframes ctSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.ct-batch-bar-inner {
+    max-width: 1200px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
+}
+.ct-batch-bar-count { color: #fff; font-size: 15px; }
+.ct-batch-bar-count strong { color: #fbbf24; font-size: 18px; margin: 0 4px; }
+/* Checkbox highlight row */
+tr.ct-row-selected { background: #fffbeb !important; }
+tr.ct-row-selected:hover { background: #fef3c7 !important; }
+CSS
+);
+
 $this->registerJs(<<<'JS'
+/* ═══ Batch Selection Logic ═══ */
+(function(){
+    var $bar = $('#ctBatchBar'), $count = $('#ctBatchCount'), $ids = $('#ctBatchIds');
+    var $checkAll = $('#ctSelectAll');
+    var selected = {};
+
+    function updateBar() {
+        var keys = Object.keys(selected);
+        var n = keys.length;
+        $count.text(n);
+        $ids.val(keys.join(','));
+        if (n > 0) { $bar.stop(true).slideDown(300); } else { $bar.stop(true).slideUp(200); }
+    }
+
+    $(document).on('change', '.ct-batch-check', function(){
+        var id = $(this).val();
+        if (this.checked) {
+            selected[id] = true;
+            $(this).closest('tr').addClass('ct-row-selected');
+        } else {
+            delete selected[id];
+            $(this).closest('tr').removeClass('ct-row-selected');
+        }
+        updateBar();
+        // Update select-all state
+        var total = $('.ct-batch-check').length;
+        var checked = $('.ct-batch-check:checked').length;
+        $checkAll.prop('checked', checked === total && total > 0);
+        $checkAll.prop('indeterminate', checked > 0 && checked < total);
+    });
+
+    $checkAll.on('change', function(){
+        var isChecked = this.checked;
+        $('.ct-batch-check').each(function(){
+            this.checked = isChecked;
+            var id = $(this).val();
+            if (isChecked) {
+                selected[id] = true;
+                $(this).closest('tr').addClass('ct-row-selected');
+            } else {
+                delete selected[id];
+                $(this).closest('tr').removeClass('ct-row-selected');
+            }
+        });
+        updateBar();
+    });
+
+    $('#ctBatchClear').on('click', function(){
+        selected = {};
+        $('.ct-batch-check').prop('checked', false);
+        $checkAll.prop('checked', false).prop('indeterminate', false);
+        $('tr.ct-row-selected').removeClass('ct-row-selected');
+        updateBar();
+    });
+
+    // Validate before submit
+    $('#ctBatchForm').on('submit', function(e){
+        if (Object.keys(selected).length === 0) {
+            e.preventDefault();
+            alert('الرجاء تحديد عقد واحد على الأقل');
+        }
+    });
+})();
+
 $('.ct-alert-close').on('click', function(){ $(this).closest('.ct-alert').fadeOut(300); });
 setTimeout(function(){ $('.ct-alert').fadeOut(500); }, 5000);
 JS

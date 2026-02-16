@@ -4,6 +4,7 @@ use yii\helpers\Html;
 
 /**
  * @var array $financials
+ * @var array|null $settlementFinancials
  */
 
 $total = $financials['total'] ?? 0;
@@ -15,91 +16,139 @@ $remainingInstallments = $financials['remaining_installments'] ?? 0;
 $complianceRate = $financials['compliance_rate'] ?? 0;
 $paidRatio = $total > 0 ? round(($paid / $total) * 100) : 0;
 $overdueRatio = $total > 0 ? round(($overdue / $total) * 100) : 0;
+
+$hasSettlement = !empty($settlementFinancials);
 ?>
 
+<style>
+.ocp-fin-divider{display:flex;align-items:center;gap:10px;margin:18px 0 14px;color:#800020;font-size:12px;font-weight:700}
+.ocp-fin-divider::before,.ocp-fin-divider::after{content:'';flex:1;height:2px;background:linear-gradient(90deg,#800020 0%,transparent 100%)}
+.ocp-fin-divider::after{background:linear-gradient(90deg,transparent 0%,#800020 100%)}
+.ocp-fin-divider i{font-size:14px}
+.ocp-stl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.ocp-stl-item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;text-align:center}
+.ocp-stl-item__value{font-size:16px;font-weight:700;color:#1e293b}
+.ocp-stl-item__label{font-size:11px;color:#64748b;margin-top:2px}
+.ocp-stl-item--primary{border-color:#800020;background:linear-gradient(135deg,#fdf2f4,#fff)}
+.ocp-stl-item--primary .ocp-stl-item__value{color:#800020}
+.ocp-stl-item--success .ocp-stl-item__value{color:#059669}
+.ocp-stl-item--info .ocp-stl-item__value{color:#0284c7}
+.ocp-stl-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+</style>
+
+<!-- ═══ القسم الأول: الحسابات الأصلية ═══ -->
 <div class="ocp-section">
     <div class="ocp-section-title">
         <i class="fa fa-money"></i>
-        اللقطة المالية
+        الحسابات الأصلية
     </div>
 
     <div class="ocp-financial">
-        <?php // Total Contract ?>
         <div class="ocp-fin-card">
-            <div class="ocp-fin-card__icon ocp-fin-card__icon--total">
-                <i class="fa fa-file-text-o"></i>
-            </div>
+            <div class="ocp-fin-card__icon ocp-fin-card__icon--total"><i class="fa fa-file-text-o"></i></div>
             <div class="ocp-fin-card__value"><?= number_format($total) ?></div>
             <div class="ocp-fin-card__label">إجمالي العقد</div>
-            <div class="ocp-fin-card__bar">
-                <div class="ocp-fin-card__bar-fill" style="width:100%;background:var(--ocp-primary)"></div>
-            </div>
+            <div class="ocp-fin-card__bar"><div class="ocp-fin-card__bar-fill" style="width:100%;background:var(--ocp-primary)"></div></div>
         </div>
 
-        <?php // Paid ?>
         <div class="ocp-fin-card">
-            <div class="ocp-fin-card__icon ocp-fin-card__icon--paid">
-                <i class="fa fa-check-circle"></i>
-            </div>
+            <div class="ocp-fin-card__icon ocp-fin-card__icon--paid"><i class="fa fa-check-circle"></i></div>
             <div class="ocp-fin-card__value ocp-text-success"><?= number_format($paid) ?></div>
             <div class="ocp-fin-card__label">المدفوع</div>
-            <div class="ocp-fin-card__bar">
-                <div class="ocp-fin-card__bar-fill" style="width:<?= $paidRatio ?>%;background:var(--ocp-success)"></div>
-            </div>
+            <div class="ocp-fin-card__bar"><div class="ocp-fin-card__bar-fill" style="width:<?= $paidRatio ?>%;background:var(--ocp-success)"></div></div>
         </div>
 
-        <?php // Remaining ?>
         <div class="ocp-fin-card">
-            <div class="ocp-fin-card__icon ocp-fin-card__icon--remain">
-                <i class="fa fa-hourglass-half"></i>
-            </div>
+            <div class="ocp-fin-card__icon ocp-fin-card__icon--remain"><i class="fa fa-hourglass-half"></i></div>
             <div class="ocp-fin-card__value"><?= number_format($remaining) ?></div>
             <div class="ocp-fin-card__label">المتبقي</div>
-            <div class="ocp-fin-card__bar">
-                <div class="ocp-fin-card__bar-fill" style="width:<?= (100 - $paidRatio) ?>%;background:var(--ocp-info)"></div>
-            </div>
+            <div class="ocp-fin-card__bar"><div class="ocp-fin-card__bar-fill" style="width:<?= (100 - $paidRatio) ?>%;background:var(--ocp-info)"></div></div>
         </div>
 
-        <?php // Overdue Amount ?>
         <div class="ocp-fin-card">
-            <div class="ocp-fin-card__icon ocp-fin-card__icon--overdue">
-                <i class="fa fa-exclamation-triangle"></i>
-            </div>
+            <div class="ocp-fin-card__icon ocp-fin-card__icon--overdue"><i class="fa fa-exclamation-triangle"></i></div>
             <div class="ocp-fin-card__value ocp-text-danger"><?= number_format($overdue) ?></div>
             <div class="ocp-fin-card__label">المتأخر</div>
-            <div class="ocp-fin-card__bar">
-                <div class="ocp-fin-card__bar-fill" style="width:<?= $overdueRatio ?>%;background:var(--ocp-danger)"></div>
-            </div>
+            <div class="ocp-fin-card__bar"><div class="ocp-fin-card__bar-fill" style="width:<?= $overdueRatio ?>%;background:var(--ocp-danger)"></div></div>
         </div>
 
-        <?php // Overdue Installments ?>
         <div class="ocp-fin-card">
-            <div class="ocp-fin-card__icon ocp-fin-card__icon--count">
-                <i class="fa fa-calendar-times-o"></i>
-            </div>
+            <div class="ocp-fin-card__icon ocp-fin-card__icon--count"><i class="fa fa-calendar-times-o"></i></div>
             <div class="ocp-fin-card__value ocp-text-danger"><?= $overdueInstallments ?></div>
             <div class="ocp-fin-card__label">أقساط متأخرة</div>
         </div>
 
-        <?php // Remaining Installments ?>
         <div class="ocp-fin-card">
-            <div class="ocp-fin-card__icon ocp-fin-card__icon--count">
-                <i class="fa fa-calendar"></i>
-            </div>
+            <div class="ocp-fin-card__icon ocp-fin-card__icon--count"><i class="fa fa-calendar"></i></div>
             <div class="ocp-fin-card__value"><?= $remainingInstallments ?></div>
             <div class="ocp-fin-card__label">أقساط متبقية</div>
         </div>
 
-        <?php // Compliance Rate ?>
         <div class="ocp-fin-card">
             <div class="ocp-fin-card__icon" style="background:<?= $complianceRate >= 70 ? 'var(--ocp-success-bg)' : ($complianceRate >= 40 ? 'var(--ocp-warning-bg)' : 'var(--ocp-danger-bg)') ?>;color:<?= $complianceRate >= 70 ? 'var(--ocp-success)' : ($complianceRate >= 40 ? 'var(--ocp-warning)' : 'var(--ocp-danger)') ?>">
                 <i class="fa fa-pie-chart"></i>
             </div>
             <div class="ocp-fin-card__value" style="color:<?= $complianceRate >= 70 ? 'var(--ocp-success)' : ($complianceRate >= 40 ? 'var(--ocp-warning)' : 'var(--ocp-danger)') ?>"><?= $complianceRate ?>%</div>
             <div class="ocp-fin-card__label">نسبة الالتزام</div>
-            <div class="ocp-fin-card__bar">
-                <div class="ocp-fin-card__bar-fill" style="width:<?= $complianceRate ?>%;background:<?= $complianceRate >= 70 ? 'var(--ocp-success)' : ($complianceRate >= 40 ? 'var(--ocp-warning)' : 'var(--ocp-danger)') ?>"></div>
-            </div>
+            <div class="ocp-fin-card__bar"><div class="ocp-fin-card__bar-fill" style="width:<?= $complianceRate ?>%;background:<?= $complianceRate >= 70 ? 'var(--ocp-success)' : ($complianceRate >= 40 ? 'var(--ocp-warning)' : 'var(--ocp-danger)') ?>"></div></div>
         </div>
     </div>
 </div>
+
+<?php if ($hasSettlement): ?>
+<!-- ═══ فاصل بصري ═══ -->
+<div class="ocp-fin-divider">
+    <i class="fa fa-balance-scale"></i>
+    بعد التسوية
+</div>
+
+<!-- ═══ القسم الثاني: حسابات ما بعد التسوية ═══ -->
+<div class="ocp-section" style="margin-top:0">
+    <?php
+    $stl = $settlementFinancials;
+    $stlPaidRatio = $stl['total_debt'] > 0 ? round(($stl['paid_after'] / $stl['total_debt']) * 100) : 0;
+    ?>
+    <div class="ocp-stl-grid">
+        <div class="ocp-stl-item ocp-stl-item--primary">
+            <div class="ocp-stl-item__value"><?= number_format($stl['total_debt']) ?></div>
+            <div class="ocp-stl-item__label">إجمالي دين التسوية</div>
+        </div>
+        <div class="ocp-stl-item ocp-stl-item--success">
+            <div class="ocp-stl-item__value"><?= number_format($stl['paid_after']) ?></div>
+            <div class="ocp-stl-item__label">المدفوع بعد التسوية</div>
+        </div>
+        <div class="ocp-stl-item">
+            <div class="ocp-stl-item__value"><?= number_format($stl['remaining']) ?></div>
+            <div class="ocp-stl-item__label">المتبقي</div>
+        </div>
+        <?php if ($stl['first_payment'] > 0): ?>
+        <div class="ocp-stl-item">
+            <div class="ocp-stl-item__value"><?= number_format($stl['first_payment']) ?></div>
+            <div class="ocp-stl-item__label">الدفعة الأولى</div>
+        </div>
+        <?php endif ?>
+        <div class="ocp-stl-item">
+            <div class="ocp-stl-item__value"><?= number_format($stl['installment']) ?></div>
+            <div class="ocp-stl-item__label">القسط <span class="ocp-stl-badge" style="background:#f0f4ff;color:#4338ca"><?= $stl['type_label'] ?></span></div>
+        </div>
+        <div class="ocp-stl-item">
+            <div class="ocp-stl-item__value"><?= $stl['remaining_installments'] ?></div>
+            <div class="ocp-stl-item__label">أقساط متبقية</div>
+        </div>
+        <div class="ocp-stl-item ocp-stl-item--info">
+            <div class="ocp-stl-item__value" style="font-size:13px"><?= $stl['first_date'] ?: '—' ?></div>
+            <div class="ocp-stl-item__label">تاريخ الدفعة الأولى</div>
+        </div>
+        <div class="ocp-stl-item ocp-stl-item--info">
+            <div class="ocp-stl-item__value" style="font-size:13px"><?= $stl['next_date'] ?: '—' ?></div>
+            <div class="ocp-stl-item__label">تاريخ القسط الجديد</div>
+        </div>
+    </div>
+    <?php if ($stl['total_debt'] > 0): ?>
+    <div style="margin-top:10px;background:#f0f0f0;border-radius:6px;height:8px;overflow:hidden">
+        <div style="width:<?= $stlPaidRatio ?>%;height:100%;background:linear-gradient(90deg,#059669,#10b981);border-radius:6px;transition:width .3s"></div>
+    </div>
+    <div style="font-size:11px;color:#64748b;text-align:center;margin-top:4px">تقدم السداد: <?= $stlPaidRatio ?>%</div>
+    <?php endif ?>
+</div>
+<?php endif ?>

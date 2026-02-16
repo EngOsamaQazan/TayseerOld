@@ -13,8 +13,6 @@ use kartik\grid\GridView;
 use backend\modules\judiciaryType\models\JudiciaryType;
 use backend\modules\court\models\Court;
 use backend\modules\lawyers\models\Lawyers;
-use backend\modules\customers\models\ContractsCustomers;
-use backend\modules\judiciaryActions\models\JudiciaryActions;
 use backend\modules\JudiciaryInformAddress\model\JudiciaryInformAddress;
 use backend\modules\companies\models\Companies;
 
@@ -122,104 +120,162 @@ $form = ActiveForm::begin();
     <!-- ═══ إجراءات العملاء (في حالة التعديل فقط) ═══ -->
     <?php if (!$isNew): ?>
         <?php
-        $customerData = ContractsCustomers::find()->select(['c.id', 'c.name'])->alias('cc')
-            ->innerJoin('{{%customers}} c', 'c.id=cc.customer_id')
-            ->where(['cc.contract_id' => $model->contract_id])
-            ->createCommand()->queryAll();
-        $judiciaryActions = ArrayHelper::map(JudiciaryActions::find()->asArray()->all(), 'id', 'name');
+        \johnitvn\ajaxcrud\CrudAsset::register($this);
+
+        $natureStyles = [
+            'request'    => ['icon' => 'fa-file-text-o', 'color' => '#3B82F6', 'bg' => '#EFF6FF', 'label' => 'طلب إجرائي'],
+            'document'   => ['icon' => 'fa-file-o',      'color' => '#8B5CF6', 'bg' => '#F5F3FF', 'label' => 'كتاب / مذكرة'],
+            'doc_status' => ['icon' => 'fa-exchange',     'color' => '#EA580C', 'bg' => '#FFF7ED', 'label' => 'حالة كتاب'],
+            'process'    => ['icon' => 'fa-cog',          'color' => '#64748B', 'bg' => '#F1F5F9', 'label' => 'إجراء إداري'],
+        ];
+        $statusColors = ['pending' => '#F59E0B', 'approved' => '#10B981', 'rejected' => '#EF4444'];
+        $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejected' => 'مرفوض'];
         ?>
 
+        <style>
+        .jca-act-wrap { position:relative;display:inline-block; }
+        .jca-act-trigger {
+            background:none;border:1px solid #E2E8F0;border-radius:6px;
+            width:30px;height:28px;display:inline-flex;align-items:center;justify-content:center;
+            cursor:pointer;color:#64748B;font-size:14px;transition:all .15s;padding:0;
+        }
+        .jca-act-trigger:hover { background:#F1F5F9;color:#1E293B;border-color:#CBD5E1; }
+        .jca-act-menu {
+            display:none;position:fixed;left:auto;top:auto;margin:0;min-width:160px;
+            background:#fff;border:1px solid #E2E8F0;border-radius:8px;
+            box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:99999;padding:4px 0;
+            direction:rtl;font-size:12px;
+        }
+        .jca-act-wrap.open .jca-act-menu { display:block; }
+        .jca-act-menu a {
+            display:flex;align-items:center;gap:8px;padding:7px 14px;
+            color:#334155;text-decoration:none;white-space:nowrap;transition:background .12s;
+        }
+        .jca-act-menu a:hover { background:#F1F5F9;color:#1D4ED8; }
+        .jca-act-menu a i { width:16px;text-align:center; }
+        .jca-act-divider { height:1px;background:#E2E8F0;margin:4px 0; }
+        #os_judiciary_customers_actions .panel-body,
+        #os_judiciary_customers_actions .kv-grid-container,
+        #os_judiciary_customers_actions-container { overflow:visible !important; }
+        #os_judiciary_customers_actions .table-responsive { overflow:visible !important; }
+        </style>
+
         <fieldset style="margin-top:20px">
-            <legend><i class="fa fa-users"></i> إضافة إجراء عميل</legend>
-            <div id="customerActionCollapse">
-                <?php $caForm = ActiveForm::begin([
-                    'method' => 'post',
-                    'action' => 'customer-action?judiciary=' . $model->id . '&contract_id=' . $model->contract_id,
-                    'options' => ['enctype' => 'multipart/form-data'],
-                ]) ?>
-
-                <div class="row">
-                    <div class="col-md-4">
-                        <?= $caForm->field($modelCustomerAction, 'customers_id')->widget(Select2::class, [
-                            'options' => ['placeholder' => 'ابحث بالاسم أو الرقم الوطني...'],
-                            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
-                                'ajax' => [
-                                    'url' => \yii\helpers\Url::to(['/customers/customers/search-customers']),
-                                    'dataType' => 'json', 'delay' => 250,
-                                    'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
-                                    'processResults' => new \yii\web\JsExpression('function(d){return d}'),
-                                    'cache' => true,
-                                ],
-                                'templateResult' => new \yii\web\JsExpression("function(i){if(i.loading)return i.text;var h='<div><b>'+i.text+'</b>';if(i.id_number)h+=' <small style=\"color:#64748b\">· '+i.id_number+'</small>';if(i.phone)h+=' <small style=\"color:#0891b2\">☎ '+i.phone+'</small>';return $(h+'</div>')}"),
-                                'templateSelection' => new \yii\web\JsExpression("function(i){return i.text||i.id}"),
-                            ],
-                        ])->label('العميل') ?>
-                    </div>
-                    <div class="col-md-4">
-                        <?= $caForm->field($modelCustomerAction, 'judiciary_actions_id')->widget(Select2::class, [
-                            'data' => $judiciaryActions,
-                            'options' => ['placeholder' => 'اختر الإجراء'],
-                            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                        ])->label('الإجراء') ?>
-                    </div>
-                    <div class="col-md-4">
-                        <?= $caForm->field($modelCustomerAction, 'action_date')->widget(DatePicker::class, [
-                            'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
-                        ])->label('تاريخ الإجراء') ?>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-4">
-                        <?= $caForm->field($modelCustomerAction, 'image')->fileInput(['accept' => 'image/*,.pdf'])->label('مرفق') ?>
-                    </div>
-                    <div class="col-md-8">
-                        <?= $caForm->field($modelCustomerAction, 'note')->textarea(['rows' => 2, 'placeholder' => 'ملاحظات'])->label('ملاحظات') ?>
-                    </div>
-                </div>
-                <div class="jadal-form-actions">
-                    <?= Html::submitButton('<i class="fa fa-plus"></i> إضافة إجراء', ['class' => 'btn btn-success']) ?>
-                </div>
-
-                <?php ActiveForm::end() ?>
+            <legend><i class="fa fa-users"></i> إجراءات الأطراف</legend>
+            <div style="margin-bottom:14px">
+                <?= Html::a(
+                    '<i class="fa fa-plus"></i> إضافة إجراء جديد',
+                    ['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $model->contract_id],
+                    [
+                        'role' => 'modal-remote',
+                        'class' => 'btn btn-success',
+                        'style' => 'border-radius:8px;font-size:13px;padding:8px 20px;font-weight:600',
+                    ]
+                ) ?>
             </div>
-        </fieldset>
 
-        <!-- جدول الإجراءات السابقة -->
-        <fieldset style="margin-top:20px">
-            <legend><i class="fa fa-list"></i> الإجراءات السابقة</legend>
             <?php
-            $actionsDP = new yii\data\ArrayDataProvider([
-                'key' => 'id',
-                'allModels' => \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActions::find()
-                    ->where(['judiciary_id' => $model->id])->all(),
+            $contractIdForGrid = $model->contract_id;
+            $judiciaryIdForGrid = $model->id;
+            $actionsDP = new yii\data\ActiveDataProvider([
+                'query' => \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActions::find()
+                    ->where(['judiciary_id' => $model->id]),
+                'sort' => ['defaultOrder' => ['action_date' => SORT_DESC]],
+                'pagination' => ['pageSize' => 20],
             ]);
             echo GridView::widget([
-                'id' => 'judiciary-actions-grid',
+                'id' => 'os_judiciary_customers_actions',
                 'dataProvider' => $actionsDP,
-                'summary' => '',
+                'pjax' => true,
+                'summary' => '<span style="font-size:11px;color:#94A3B8">عرض {begin}-{end} من {totalCount} إجراء</span>',
                 'export' => false,
                 'columns' => [
-                    ['label' => 'العقد', 'value' => fn($m) => \common\helper\FindJudicary::findJudiciaryContract($m->judiciary_id)],
-                    ['label' => 'العميل', 'value' => 'customers.name'],
-                    ['attribute' => 'judiciary_actions_id', 'label' => 'الإجراء', 'value' => 'judiciaryActions.name'],
-                    ['attribute' => 'note', 'label' => 'ملاحظات', 'format' => 'html', 'contentOptions' => ['style' => 'max-width:200px;word-wrap:break-word;direction:rtl']],
-                    ['attribute' => 'created_by', 'label' => 'المنشئ', 'value' => 'createdBy.username'],
-                    ['attribute' => 'action_date', 'label' => 'التاريخ'],
                     [
-                        'class' => 'kartik\grid\ActionColumn',
-                        'dropdown' => false,
-                        'template' => '{update}{delete}',
-                        'urlCreator' => function ($action, $m) {
-                            if ($action === 'delete') return Url::to(['judiciary/delete-customer-action', 'id' => $m->id, 'judiciary' => $m->judiciary_id]);
-                            return Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/update-followup-judicary-custamer-action', 'contractID' => $m->contract_id, 'id' => $m->id]);
+                        'label' => 'الإجراء',
+                        'format' => 'raw',
+                        'value' => function ($m) use ($natureStyles) {
+                            $def = $m->judiciaryActions;
+                            $nature = $def ? ($def->action_nature ?: 'process') : 'process';
+                            $ns = $natureStyles[$nature] ?? $natureStyles['process'];
+                            $icon = '<i class="fa ' . $ns['icon'] . '" style="color:' . $ns['color'] . ';margin-left:4px"></i>';
+                            return $icon . '<span style="font-weight:600">' . Html::encode($def ? $def->name : '#' . $m->judiciary_actions_id) . '</span>';
                         },
-                        'updateOptions' => ['role' => 'modal-remote', 'title' => 'تعديل', 'data-toggle' => 'tooltip'],
-                        'deleteOptions' => ['role' => 'modal-remote', 'title' => 'حذف', 'data-confirm' => false, 'data-method' => false, 'data-request-method' => 'post', 'data-toggle' => 'tooltip', 'data-confirm-title' => 'تأكيد الحذف', 'data-confirm-message' => 'هل أنت متأكد من حذف هذا الإجراء؟'],
+                    ],
+                    [
+                        'label' => 'الطبيعة',
+                        'format' => 'raw',
+                        'value' => function ($m) use ($natureStyles) {
+                            $def = $m->judiciaryActions;
+                            $nature = $def ? ($def->action_nature ?: 'process') : 'process';
+                            $ns = $natureStyles[$nature] ?? $natureStyles['process'];
+                            return '<span style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;background:' . $ns['bg'] . ';color:' . $ns['color'] . '">' . $ns['label'] . '</span>';
+                        },
+                        'contentOptions' => ['style' => 'white-space:nowrap'],
+                    ],
+                    ['label' => 'العميل', 'value' => 'customers.name'],
+                    [
+                        'label' => 'حالة الطلب',
+                        'format' => 'raw',
+                        'value' => function ($m) use ($statusColors, $statusLabels) {
+                            if (!$m->request_status) return '<span style="color:#CBD5E1">—</span>';
+                            $c = $statusColors[$m->request_status] ?? '#6B7280';
+                            $l = $statusLabels[$m->request_status] ?? $m->request_status;
+                            return '<span style="padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;background:' . $c . '20;color:' . $c . '">' . $l . '</span>';
+                        },
+                    ],
+                    ['attribute' => 'action_date', 'label' => 'التاريخ', 'contentOptions' => ['style' => 'white-space:nowrap']],
+                    ['attribute' => 'note', 'label' => 'ملاحظات', 'contentOptions' => ['style' => 'max-width:160px;word-wrap:break-word;direction:rtl;font-size:11px;color:#64748B']],
+                    ['attribute' => 'created_by', 'label' => 'المنشئ', 'value' => 'createdBy.username'],
+                    [
+                        'class' => 'yii\grid\ActionColumn',
+                        'contentOptions' => ['style' => 'width:50px;text-align:center;overflow:visible;position:relative'],
+                        'header' => '',
+                        'template' => '{all}',
+                        'buttons' => [
+                            'all' => function($url, $m) use ($contractIdForGrid) {
+                                $editUrl = Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/update-followup-judicary-custamer-action', 'contractID' => $contractIdForGrid, 'id' => $m->id]);
+                                $delUrl  = Url::to(['/judiciary/judiciary/delete-customer-action', 'id' => $m->id, 'judiciary' => $m->judiciary_id]);
+
+                                return '<div class="jca-act-wrap">'
+                                    . '<button type="button" class="jca-act-trigger"><i class="fa fa-ellipsis-v"></i></button>'
+                                    . '<div class="jca-act-menu">'
+                                    .   '<a href="' . $editUrl . '" role="modal-remote"><i class="fa fa-pencil text-primary"></i> تعديل</a>'
+                                    .   '<div class="jca-act-divider"></div>'
+                                    .   '<a href="' . $delUrl . '" role="modal-remote" data-request-method="post" data-confirm-title="تأكيد الحذف" data-confirm-message="هل أنت متأكد من حذف هذا الإجراء؟"><i class="fa fa-trash text-danger"></i> حذف</a>'
+                                    . '</div>'
+                                    . '</div>';
+                            },
+                        ],
                     ],
                 ],
-                'striped' => true, 'condensed' => true, 'responsive' => true,
+                'striped' => true,
+                'condensed' => true,
+                'responsive' => true,
             ]);
             ?>
         </fieldset>
+
+        <?php \yii\bootstrap\Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '', 'size' => \yii\bootstrap\Modal::SIZE_LARGE]) ?>
+        <?php \yii\bootstrap\Modal::end() ?>
+
+        <?php
+        $jcaJs = <<<'JS'
+        $(document).on('click', '.jca-act-trigger', function(e) {
+            e.stopPropagation();
+            var $wrap = $(this).closest('.jca-act-wrap');
+            var $menu = $wrap.find('.jca-act-menu');
+            var wasOpen = $wrap.hasClass('open');
+            $('.jca-act-wrap.open').removeClass('open');
+            if (!wasOpen) {
+                $wrap.addClass('open');
+                var r = this.getBoundingClientRect();
+                $menu.css({ left: r.left + 'px', top: (r.bottom + 4) + 'px' });
+            }
+        });
+        $(document).on('click', function() { $('.jca-act-wrap.open').removeClass('open'); });
+        $(document).on('click', '.jca-act-menu a', function() { $('.jca-act-wrap.open').removeClass('open'); });
+JS;
+        $this->registerJs($jcaJs);
+        ?>
     <?php endif ?>
 </div>

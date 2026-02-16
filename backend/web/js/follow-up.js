@@ -1,18 +1,36 @@
 
 $(window).on('load', function () {
-    if (is_loan == 1) {
-        alert('هذا العقد تمت تسويته');
-    }
+    // Removed settlement alert — no longer needed
 })
 $(document).on('click', '#save', function () {
-    let monthly_installment = $('#monthly_installment').val();
-    let new_installment_date = $('#new_installment_date').val();
-    let first_installment_date = $('#first_installment_date').val();
-    let contract_id = $('#contract_id').val();
-    $.post('add-new-loan', { monthly_installment: monthly_installment, new_installment_date: new_installment_date, first_installment_date: first_installment_date, contract_id: contract_id }, function (msg) {
-        $('.loan-alert').css("display", "block");
-        $('.loan-alert').text(msg);
-    })
+    // Validate dates before saving
+    if (typeof StlForm !== 'undefined' && !StlForm.validateNewDate()) {
+        $('.loan-alert').css("display", "block")
+            .removeClass('alert-success').addClass('alert-danger')
+            .text('يرجى تصحيح تاريخ القسط الجديد قبل الحفظ');
+        return;
+    }
+    var data = {
+        contract_id:            $('#contract_id').val(),
+        monthly_installment:    $('#monthly_installment').val(),
+        first_installment_date: $('#first_installment_date').val(),
+        new_installment_date:   $('#new_installment_date').val(),
+        settlement_type:        $('#stl_settlement_type').val() || 'monthly',
+        total_debt:             $('#stl_total_debt').val(),
+        first_payment:          $('#stl_first_payment').val(),
+        installments_count:     $('#stl_installments_count').val(),
+        remaining_debt:         $('#stl_remaining_debt').val(),
+        notes:                  $('#stl_notes').val()
+    };
+    $.post(typeof OCP_URLS !== 'undefined' ? OCP_URLS.addNewLoan : 'add-new-loan', data, function (msg) {
+        $('.loan-alert').css("display", "block").text(msg);
+        if (msg.indexOf('بنجاح') > -1) {
+            $('.loan-alert').removeClass('alert-danger').addClass('alert-success');
+            setTimeout(function(){ location.reload(); }, 1200);
+        } else {
+            $('.loan-alert').removeClass('alert-success').addClass('alert-danger');
+        }
+    });
 })
 $(document).on('click', '#closeModel', function () {
     location.reload(true);

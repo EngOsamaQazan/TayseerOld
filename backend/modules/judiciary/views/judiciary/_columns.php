@@ -5,7 +5,6 @@
 use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
-use yii\bootstrap\ButtonDropdown;
 
 return [
     /* # */
@@ -62,11 +61,17 @@ return [
         'value' => 'lawyer.name',
     ],
 
-    /* رقم القضية */
+    /* رقم القضية - السنة */
     [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'judiciary_number',
         'label' => 'رقم القضية',
+        'format' => 'raw',
+        'value' => function ($m) {
+            $num = $m->judiciary_number ?: '—';
+            $year = $m->year ?: '';
+            return $year ? "<span style='font-family:monospace;font-weight:600'>{$num}-{$year}</span>" : "<span style='font-family:monospace'>{$num}</span>";
+        },
         'contentOptions' => ['style' => 'font-family:monospace'],
     ],
 
@@ -89,27 +94,30 @@ return [
     /* الإجراءات */
     [
         'class' => 'yii\grid\ActionColumn',
-        'contentOptions' => ['style' => 'width:90px;text-align:center'],
-        'header' => 'إجراءات',
+        'contentOptions' => ['style' => 'width:50px;text-align:center;overflow:visible;position:relative'],
+        'header' => '',
         'template' => '{all}',
         'buttons' => [
-            'all' => fn($url, $m) => ButtonDropdown::widget([
-                'encodeLabel' => false,
-                'label' => '<i class="fa fa-cogs"></i>',
-                'dropdown' => [
-                    'encodeLabels' => false,
-                    'items' => [
-                        ['label' => '<i class="fa fa-pencil text-primary"></i> تعديل', 'url' => ['update', 'id' => $m->id, 'contract_id' => $m->contract_id]],
-                        ['label' => '<i class="fa fa-print text-info"></i> طباعة', 'url' => ['print-case', 'id' => $m->id]],
-                        ['label' => '<i class="fa fa-comments text-success"></i> المتابعة', 'url' => ['/followUp/follow-up/index', 'contract_id' => $m->contract_id]],
-                        '<li class="divider"></li>',
-                        ['label' => '<i class="fa fa-trash text-danger"></i> حذف', 'url' => ['delete', 'id' => $m->id], 'linkOptions' => ['data' => ['method' => 'post', 'confirm' => 'هل أنت متأكد من حذف هذه القضية؟']]],
-                    ],
-                    'options' => ['class' => 'dropdown-menu-right'],
-                ],
-                'options' => ['class' => 'btn-default btn-xs'],
-                'split' => false,
-            ]),
+            'all' => function($url, $m) {
+                $addActionUrl = Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $m->contract_id]);
+                $editUrl  = Url::to(['update', 'id' => $m->id, 'contract_id' => $m->contract_id]);
+                $printUrl = Url::to(['print-case', 'id' => $m->id]);
+                $followUrl = Url::to(['/followUp/follow-up/index', 'contract_id' => $m->contract_id]);
+                $delUrl   = Url::to(['delete', 'id' => $m->id]);
+
+                return '<div class="jud-act-wrap">'
+                    . '<button type="button" class="jud-act-trigger"><i class="fa fa-ellipsis-v"></i></button>'
+                    . '<div class="jud-act-menu">'
+                    .   '<a href="' . $addActionUrl . '" role="modal-remote"><i class="fa fa-plus text-success"></i> إضافة إجراء</a>'
+                    .   '<div class="jud-act-divider"></div>'
+                    .   '<a href="' . $editUrl . '"><i class="fa fa-pencil text-primary"></i> تعديل</a>'
+                    .   '<a href="' . $printUrl . '"><i class="fa fa-print text-info"></i> طباعة</a>'
+                    .   '<a href="' . $followUrl . '"><i class="fa fa-comments text-success"></i> المتابعة</a>'
+                    .   '<div class="jud-act-divider"></div>'
+                    .   '<a href="' . $delUrl . '" data-method="post" data-confirm="هل أنت متأكد من حذف هذه القضية؟"><i class="fa fa-trash text-danger"></i> حذف</a>'
+                    . '</div>'
+                    . '</div>';
+            },
         ],
     ],
 ];
