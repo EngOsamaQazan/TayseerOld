@@ -22,6 +22,7 @@ use backend\modules\financialTransaction\models\FinancialTransactionSearch;
 use backend\modules\financialTransaction\helpers\BankStatementAnalyzer;
 use backend\modules\contracts\models\Contracts;
 use backend\modules\companyBanks\models\CompanyBanks;
+use common\helper\Permissions;
 
 class FinancialTransactionController extends Controller
 {
@@ -35,40 +36,46 @@ class FinancialTransactionController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     ['actions' => ['login', 'error'], 'allow' => true],
-                    /* ═══ عرض — يكفي صلاحية "الحركات المالية" ═══ */
+                    /* ═══ عرض ═══ */
                     [
                         'actions' => ['index', 'view', 'find-notes'],
                         'allow'   => true,
-                        'roles'   => ['الحركات المالية'],
+                        'roles'   => [Permissions::FIN_VIEW],
                     ],
-                    /* ═══ تعديل — إضافة وتحديث ═══ */
+                    /* ═══ إضافة ═══ */
+                    [
+                        'actions' => ['create'],
+                        'allow'   => true,
+                        'roles'   => [Permissions::FIN_CREATE],
+                    ],
+                    /* ═══ تعديل ═══ */
                     [
                         'actions' => [
-                            'create', 'update',
+                            'update',
                             'update-category', 'update-type', 'update-type-income',
                             'contract', 'update-document', 'update-company',
                             'save-notes',
                         ],
                         'allow' => true,
-                        'roles' => ['الحركات المالية: تعديل'],
+                        'roles' => [Permissions::FIN_EDIT],
                     ],
                     /* ═══ حذف ═══ */
                     [
                         'actions' => ['delete', 'bulk-delete', 'undo-last-import'],
                         'allow'   => true,
-                        'roles'   => ['الحركات المالية: حذف'],
+                        'roles'   => [Permissions::FIN_DELETE],
                     ],
                     /* ═══ استيراد ═══ */
                     [
                         'actions' => ['import-file'],
                         'allow'   => true,
-                        'roles'   => ['الحركات المالية: استيراد'],
+                        'roles'   => [Permissions::FIN_IMPORT],
                     ],
                     /* ═══ ترحيل ═══ */
                     [
                         'actions' => ['transfer-data', 'transfer-data-to-expenses'],
                         'allow'   => true,
-                        'roles'   => ['الحركات المالية: ترحيل'],
+                        'roles'   => [Permissions::FIN_TRANSFER],
                     ],
                 ],
             ],

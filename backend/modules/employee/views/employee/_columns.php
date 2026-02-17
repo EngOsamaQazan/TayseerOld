@@ -1,5 +1,6 @@
 <?php
 use yii\helpers\Url;
+use common\helper\Permissions;
 
 return [
     [
@@ -137,6 +138,11 @@ return [
         'urlCreator' => function($action, $model, $key, $index) { 
                 return Url::to([$action,'id'=>$key]);
         },
+        'visibleButtons' => [
+            'view' => true,
+            'update' => Permissions::can(Permissions::EMP_UPDATE),
+            'delete' => Permissions::can(Permissions::EMP_DELETE),
+        ],
         'viewOptions'=>['title'=>'View','data-toggle'=>'tooltip'],
         'updateOptions'=>['title'=>'Update', 'data-toggle'=>'tooltip'],
         'deleteOptions'=>['title'=>'Delete',

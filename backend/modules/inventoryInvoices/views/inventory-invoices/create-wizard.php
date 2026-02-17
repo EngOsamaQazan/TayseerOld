@@ -17,7 +17,7 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
 $activeBranches = isset($activeBranches) ? $activeBranches : [];
 $branchList = [];
 foreach ($activeBranches as $loc) {
-    $branchList[$loc->id] = $loc->location;
+    $branchList[$loc->id] = $loc->locations_name;
 }
 $suppliersList = isset($suppliersList) ? $suppliersList : [];
 $companiesList = isset($companiesList) ? $companiesList : [];
@@ -38,6 +38,13 @@ $companiesList = isset($companiesList) ? $companiesList : [];
 
 <div class="inv-wizard-page" style="max-width:920px; margin:0 auto;">
     <h2 style="margin-bottom:20px"><i class="fa fa-file-text-o"></i> <?= Html::encode($this->title) ?></h2>
+
+    <?php foreach (Yii::$app->session->getAllFlashes() as $type => $message): ?>
+    <div class="alert alert-<?= $type === 'error' ? 'danger' : Html::encode($type) ?>" style="margin-bottom:16px;">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <?= $message ?>
+    </div>
+    <?php endforeach ?>
 
     <?= Html::beginForm(Url::to(['create-wizard']), 'post', ['id' => 'wizard-form']) ?>
     <?= Html::hiddenInput(Yii::$app->request->csrfParam, Yii::$app->request->getCsrfToken()) ?>
@@ -82,18 +89,18 @@ $companiesList = isset($companiesList) ? $companiesList : [];
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group required">
-                        <label class="control-label">الفرع <span class="text-danger">*</span></label>
+                        <label class="control-label">موقع التخزين</label>
                         <?= Html::dropDownList('branch_id', null, $branchList, [
                             'id' => 'wizard-branch-id',
                             'class' => 'form-control',
-                            'prompt' => '-- اختر الفرع --',
+                            'prompt' => '-- اختر موقع التخزين --',
                             'style' => 'max-width:100%',
                         ]) ?>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group required">
-                        <label class="control-label">المورد <span class="text-danger">*</span></label>
+                        <label class="control-label">المورد</label>
                         <?= Html::dropDownList('suppliers_id', null, $suppliersList, [
                             'id' => 'wizard-suppliers-id',
                             'class' => 'form-control',
@@ -105,12 +112,12 @@ $companiesList = isset($companiesList) ? $companiesList : [];
             </div>
             <div class="row">
                 <div class="col-md-4">
-                    <div class="form-group">
-                        <label>الشركة</label>
+                    <div class="form-group required">
+                        <label class="control-label">الشركة</label>
                         <?= Html::dropDownList('company_id', null, $companiesList, [
                             'id' => 'wizard-company-id',
                             'class' => 'form-control',
-                            'prompt' => '-- اختياري --',
+                            'prompt' => '-- اختر الشركة --',
                             'style' => 'max-width:100%',
                         ]) ?>
                     </div>
@@ -153,10 +160,15 @@ $companiesList = isset($companiesList) ? $companiesList : [];
             <div id="wizard-step4-summary"></div>
         </div>
 
-        <div class="wizard-actions" style="margin-top:24px; display:flex; gap:12px;">
-            <button type="button" class="btn btn-default" id="wizard-prev" style="display:none">السابق</button>
-            <button type="button" class="btn btn-primary" id="wizard-next">التالي</button>
-            <button type="submit" class="btn btn-success" id="wizard-submit" style="display:none">إنهاء وإرسال</button>
+        <div class="wizard-actions" style="margin-top:24px; display:flex; justify-content:space-between; align-items:center;">
+            <button type="button" class="btn btn-warning btn-sm" id="wizard-reset" title="تفريغ جميع البيانات والبدء من جديد">
+                <i class="fa fa-eraser"></i> إعادة تعيين
+            </button>
+            <div style="display:flex; gap:12px; align-items:center;">
+                <button type="button" class="btn btn-default" id="wizard-prev" style="display:none">السابق</button>
+                <button type="button" class="btn btn-primary" id="wizard-next">التالي</button>
+                <button type="submit" class="btn btn-success" id="wizard-submit" style="display:none">إنهاء وإرسال</button>
+            </div>
         </div>
     </div>
     <?= Html::endForm() ?>
@@ -166,9 +178,91 @@ $companiesList = isset($companiesList) ? $companiesList : [];
 $searchUrl = Url::to(['/inventoryItems/inventory-items/search-items']);
 $csrfToken = Yii::$app->request->getCsrfToken();
 $js = <<<JS
+var STORAGE_KEY = 'inv_wizard_data';
 var selectedItems = [];
 var currentStep = 1;
 var totalSteps = 4;
+
+/* ═══════════════════════════════════════════════════════════
+ *  حفظ واسترجاع البيانات من sessionStorage
+ * ═══════════════════════════════════════════════════════════ */
+function saveWizardState() {
+    var step2Data = {};
+    $('#wizard-step2-tbody tr').each(function(){
+        var idx = $(this).data('index');
+        step2Data[idx] = {
+            qty:   $(this).find('.line-qty').val(),
+            price: $(this).find('.line-price').val()
+        };
+    });
+    var serialsData = {};
+    $('.wizard-serial-ta').each(function(){
+        serialsData[$(this).data('index')] = $(this).val();
+    });
+    var state = {
+        selectedItems: selectedItems,
+        currentStep:   currentStep,
+        branch_id:     $('#wizard-branch-id').val(),
+        suppliers_id:  $('#wizard-suppliers-id').val(),
+        company_id:    $('#wizard-company-id').val(),
+        type:          $('#wizard-type').val(),
+        date:          $('#wizard-date').val(),
+        notes:         $('#wizard-notes').val(),
+        step2Data:     step2Data,
+        serialsData:   serialsData
+    };
+    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+function restoreWizardState() {
+    try {
+        var raw = sessionStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        var state = JSON.parse(raw);
+        if (!state || !state.selectedItems || state.selectedItems.length === 0) return false;
+
+        selectedItems = state.selectedItems;
+        renderSelected();
+
+        if (state.branch_id)    $('#wizard-branch-id').val(state.branch_id);
+        if (state.suppliers_id) $('#wizard-suppliers-id').val(state.suppliers_id);
+        if (state.company_id)   $('#wizard-company-id').val(state.company_id);
+        if (state.type)         $('#wizard-type').val(state.type);
+        if (state.date)         $('#wizard-date').val(state.date);
+        if (state.notes)        $('#wizard-notes').val(state.notes);
+
+        if (state.step2Data) {
+            $('#wizard-step2-tbody tr').each(function(){
+                var idx = $(this).data('index');
+                var d = state.step2Data[idx];
+                if (d) {
+                    $(this).find('.line-qty').val(d.qty);
+                    $(this).find('.line-price').val(d.price);
+                }
+            });
+        }
+
+        if (state.serialsData) {
+            buildStep3Body();
+            $('.wizard-serial-ta').each(function(){
+                var idx = $(this).data('index');
+                if (state.serialsData[idx]) {
+                    $(this).val(state.serialsData[idx]);
+                }
+            });
+        }
+
+        var restoreStep = state.currentStep || 1;
+        if (restoreStep > 1) goStep(restoreStep);
+        return true;
+    } catch(e) { return false; }
+}
+
+function clearWizardState() {
+    try { sessionStorage.removeItem(STORAGE_KEY); } catch(e) {}
+}
+
+/* ═══════════════════════════════════════════════════════════ */
 
 function renderSelected() {
     var html = '';
@@ -191,6 +285,7 @@ function renderSelected() {
         $('#wizard-step2-tbody').append(row);
     });
     buildStep4Summary();
+    saveWizardState();
 }
 function buildStep4Summary() {
     var rows = [];
@@ -246,7 +341,22 @@ $(document).on('click', '.wizard-remove-item', function(){
     renderSelected();
 });
 
+/* حفظ تلقائي عند تغيير أي حقل في الخطوة 2 */
+$(document).on('change input', '#wizard-branch-id, #wizard-suppliers-id, #wizard-company-id, #wizard-type, #wizard-date, #wizard-notes', function(){
+    saveWizardState();
+});
+$(document).on('change input', '.line-qty, .line-price', function(){
+    saveWizardState();
+});
+$(document).on('input', '.wizard-serial-ta', function(){
+    saveWizardState();
+});
+
 function buildStep3Body() {
+    var savedSerials = {};
+    $('.wizard-serial-ta').each(function(){
+        savedSerials[$(this).data('index')] = $(this).val();
+    });
     var html = '';
     $('#wizard-step2-tbody tr').each(function(){
         var idx = $(this).data('index');
@@ -254,9 +364,10 @@ function buildStep3Body() {
         if (!it) return;
         var qty = parseInt($(this).find('.line-qty').val(), 10) || 0;
         if (qty < 1) return;
+        var prev = savedSerials[idx] || '';
         html += '<div class="form-group">';
         html += '<label class="control-label">'+ (it.name || it.text) +' <span class="text-danger">(بالضبط '+qty+' رقم تسلسلي — لا أقل ولا أكثر)</span></label>';
-        html += '<textarea name="Serials['+idx+']" class="form-control wizard-serial-ta" data-index="'+idx+'" data-required-qty="'+qty+'" rows="'+Math.min(Math.max(qty,2),8)+'" placeholder="أدخل رقماً تسلسلياً في كل سطر - سطر واحد لكل قطعة" style="direction:ltr;font-family:monospace"></textarea>';
+        html += '<textarea name="Serials['+idx+']" class="form-control wizard-serial-ta" data-index="'+idx+'" data-required-qty="'+qty+'" rows="'+Math.min(Math.max(qty,2),8)+'" placeholder="أدخل رقماً تسلسلياً في كل سطر - سطر واحد لكل قطعة" style="direction:ltr;font-family:monospace">'+ prev +'</textarea>';
         html += '</div>';
     });
     $('#wizard-step3-body').html(html);
@@ -278,6 +389,8 @@ function validateSerials() {
 
 $('#wizard-tabs a').on('click', function(e){ e.preventDefault(); var step = $(this).data('step'); if (step) goStep(parseInt(step,10)); });
 function goStep(n){
+    /* إزالة رسائل الخطأ/النجاح القديمة عند التنقل بين الخطوات */
+    $('.inv-wizard-page > .alert').remove();
     if (n === 2 && selectedItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل في الخطوة 1.'); return; }
     if (n === 3) buildStep3Body();
     if (n === 4) {
@@ -294,15 +407,40 @@ function goStep(n){
     $('#wizard-prev').toggle(n > 1);
     $('#wizard-next').toggle(n < totalSteps);
     $('#wizard-submit').toggle(n === totalSteps);
+    saveWizardState();
 }
 $('#wizard-prev').on('click', function(){ goStep(currentStep - 1); });
 $('#wizard-next').on('click', function(){ goStep(currentStep + 1); });
 
+/* زر إعادة التعيين */
+$('#wizard-reset').on('click', function(){
+    if (!confirm('هل أنت متأكد من إعادة تعيين جميع البيانات؟ سيتم تفريغ كل الحقول والأصناف المختارة.')) return;
+    clearWizardState();
+    selectedItems = [];
+    currentStep = 1;
+    $('#wizard-selected-items').empty();
+    $('#wizard-no-items').show();
+    $('#wizard-step2-tbody').empty();
+    $('#wizard-step3-body').empty();
+    $('#wizard-step4-summary').empty();
+    $('#wizard-search-item').val('');
+    $('#wizard-search-results').hide().empty();
+    $('#wizard-branch-id').val('');
+    $('#wizard-suppliers-id').val('');
+    $('#wizard-company-id').val('');
+    $('#wizard-type').val('cash');
+    $('#wizard-date').val(new Date().toISOString().slice(0,10));
+    $('#wizard-notes').val('');
+    goStep(1);
+});
+
 $('#wizard-form').on('submit', function(){
     var branchId = $('#wizard-branch-id').val();
     var supplierId = $('#wizard-suppliers-id').val();
-    if (!branchId) { alert('يرجى اختيار الفرع.'); return false; }
+    var companyId = $('#wizard-company-id').val();
+    if (!branchId) { alert('يرجى اختيار موقع التخزين.'); return false; }
     if (!supplierId) { alert('يرجى اختيار المورد.'); return false; }
+    if (!companyId) { alert('يرجى اختيار الشركة.'); return false; }
     var ok = true;
     $('#wizard-step2-tbody .line-qty, #wizard-step2-tbody .line-price').each(function(){
         var v = parseFloat($(this).val());
@@ -314,8 +452,12 @@ $('#wizard-form').on('submit', function(){
         alert('عدد الأرقام التسلسلية يجب أن يساوي الكمية بالضبط لكل صنف (لا أقل ولا أكثر).');
         return false;
     }
+    clearWizardState();
     return true;
 });
+
+/* استعادة الحالة المحفوظة عند تحميل الصفحة */
+restoreWizardState();
 JS;
 $this->registerJs($js);
 

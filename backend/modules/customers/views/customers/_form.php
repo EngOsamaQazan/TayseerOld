@@ -11,6 +11,7 @@ use kartik\date\DatePicker;
 use kartik\select2\Select2;
 use borales\extensions\phoneInput\PhoneInput;
 use backend\widgets\ImageManagerInputWidget;
+use common\helper\Permissions;
 
 /* جلب القوائم المنسدلة من الكاش - دفعة واحدة */
 $cache = Yii::$app->cache;
@@ -247,12 +248,17 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
 
     <!-- زر الحفظ -->
     <?php if (!Yii::$app->request->isAjax): ?>
+        <?php
+        $canSubmit = $isNew ? Permissions::can(Permissions::CUST_CREATE) : Permissions::can(Permissions::CUST_UPDATE);
+        ?>
+        <?php if ($canSubmit): ?>
         <div class="jadal-form-actions">
             <?= Html::submitButton(
                 $isNew ? '<i class="fa fa-plus"></i> حفظ العميل' : '<i class="fa fa-save"></i> حفظ التعديلات',
                 ['class' => $isNew ? 'btn btn-success btn-lg' : 'btn btn-primary btn-lg']
             ) ?>
         </div>
+        <?php endif ?>
     <?php endif ?>
 
     <?php ActiveForm::end() ?>

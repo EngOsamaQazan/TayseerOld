@@ -24,6 +24,7 @@ use yii\helpers\ArrayHelper;
 use backend\modules\contracts\models\Contracts;
 use backend\modules\notification\models\Notification;
 use common\components\customersInformation;
+use common\helper\Permissions;
 
 /**
  * FollowUpController implements the CRUD actions for FollowUp model.
@@ -44,11 +45,41 @@ class FollowUpController extends Controller
                         'actions' => ['login', 'error', 'verify-statement'],
                         'allow' => true,
                     ],
+                    ['actions' => ['logout'], 'allow' => true, 'roles' => ['@']],
                     [
-                        'actions' => ['logout', 'index', 'create', 'delete', 'send-sms', 'view', 'update', 'find-next-contract', 'add-new-loan', 'printer', 'clearance', 'change-status', 'custamer-info',
-                        'panel', 'save-follow-up', 'create-task', 'move-task', 'ai-feedback', 'get-timeline', 'update-judiciary-check', 'customer-image'],
+                        'actions' => ['index', 'view', 'panel', 'find-next-contract',
+                            'printer', 'clearance', 'custamer-info', 'get-timeline', 'customer-image'],
                         'allow' => true,
                         'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::FOLLOWUP_VIEW);
+                        },
+                    ],
+                    [
+                        'actions' => ['create', 'save-follow-up', 'create-task',
+                            'send-sms', 'add-new-loan'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::FOLLOWUP_CREATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['update', 'change-status', 'move-task',
+                            'ai-feedback', 'update-judiciary-check'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::FOLLOWUP_UPDATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['delete'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::FOLLOWUP_DELETE);
+                        },
                     ],
                 ],
             ],

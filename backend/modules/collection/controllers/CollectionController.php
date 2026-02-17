@@ -15,6 +15,7 @@ use yii\helpers\Html;
 use common\helper\LoanContract;
 use \backend\modules\loanScheduling\models\LoanScheduling;
 use \backend\modules\contracts\model\Contracts;
+use common\helper\Permissions;
 
 /**
  * CollectionController implements the CRUD actions for Collection model.
@@ -34,10 +35,38 @@ class CollectionController extends Controller
                         'actions' => ['login', 'error'],
                         'allow' => true,
                     ],
+                    ['actions' => ['logout'], 'allow' => true, 'roles' => ['@']],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'find-custamers', 'update-amount', 'view'],
+                        'actions' => ['index', 'view'],
                         'allow' => true,
                         'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::COLL_VIEW);
+                        },
+                    ],
+                    [
+                        'actions' => ['create', 'find-custamers'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::COLL_CREATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['update', 'update-amount'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::COLL_UPDATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['delete', 'bulk-delete'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::COLL_DELETE);
+                        },
                     ],
                 ],
             ],

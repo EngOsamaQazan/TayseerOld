@@ -8,6 +8,7 @@ use yii\web\NotFoundHttpException;
 use yii\web\Response;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
+use common\helper\Permissions;
 use yii\helpers\ArrayHelper;
 use yii\data\ActiveDataProvider;
 use yii\data\SqlDataProvider;
@@ -35,9 +36,23 @@ class DiwanController extends Controller
                         'actions' => ['login', 'error'],
                         'allow' => true,
                     ],
+                    /* ═══ عرض ═══ */
                     [
+                        'actions' => ['index', 'view', 'transactions', 'receipt', 'search', 'document-history', 'quick-search', 'reports'],
                         'allow' => true,
-                        'roles' => ['@'],
+                        'roles' => [Permissions::DIWAN_VIEW],
+                    ],
+                    /* ═══ إضافة ═══ */
+                    [
+                        'actions' => ['create'],
+                        'allow' => true,
+                        'roles' => [Permissions::DIWAN_CREATE],
+                    ],
+                    /* ═══ حذف ═══ */
+                    [
+                        'actions' => ['delete'],
+                        'allow' => true,
+                        'roles' => [Permissions::DIWAN_DELETE],
                     ],
                 ],
             ],

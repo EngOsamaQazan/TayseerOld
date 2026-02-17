@@ -18,6 +18,7 @@ use backend\modules\leaveRequest\models\LeaveRequest;
 use backend\modules\leavePolicy\models\LeavePolicy;
 use yii\filters\AccessControl;
 use yii\web\UploadedFile;
+use common\helper\Permissions;
 
 
 /**
@@ -40,7 +41,39 @@ class EmployeeController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'remove-file', 'view', 'is_read','employee-leave-policy'],
+                        'actions' => ['index', 'view', 'is_read'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::EMP_VIEW);
+                        },
+                    ],
+                    [
+                        'actions' => ['create'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::EMP_CREATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['update', 'employee-leave-policy', 'remove-file'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::EMP_UPDATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['delete'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::EMP_DELETE);
+                        },
+                    ],
+                    [
+                        'actions' => ['logout'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],

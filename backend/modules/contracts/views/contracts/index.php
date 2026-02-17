@@ -79,9 +79,11 @@ $end   = $begin + count($models) - 1;
             <span class="ct-count" aria-label="إجمالي العقود"><?= number_format($dataCount) ?></span>
         </div>
         <div class="ct-hdr-actions">
+            <?php if (Permissions::can(Permissions::CONT_CREATE)): ?>
             <a href="<?= Url::to(['create']) ?>" class="ct-btn ct-btn-primary" aria-label="إضافة عقد جديد">
                 <i class="fa fa-plus"></i> <span class="ct-hide-xs">إضافة عقد</span>
             </a>
+            <?php endif ?>
             <button class="ct-btn ct-btn-outline ct-hide-sm" id="ctExportBtn" title="تصدير CSV">
                 <i class="fa fa-download"></i> <span class="ct-hide-xs">تصدير</span>
             </button>
@@ -229,9 +231,11 @@ $end   = $begin + count($models) - 1;
                                     <i class="fa fa-ellipsis-v"></i>
                                 </button>
                                 <div class="ct-act-menu" role="menu">
+                                    <?php if (Permissions::can(Permissions::CONT_UPDATE)): ?>
                                     <a href="<?= Url::to(['update', 'id' => $m->id]) ?>" role="menuitem">
                                         <i class="fa fa-pencil text-primary"></i> تعديل
                                     </a>
+                                    <?php endif ?>
                                     <a href="<?= Url::to(['print-preview', 'id' => $m->id]) ?>" target="_blank" role="menuitem">
                                         <i class="fa fa-print text-info"></i> طباعة
                                     </a>
@@ -252,12 +256,14 @@ $end   = $begin + count($models) - 1;
                                     <?php endif ?>
                                     <?php if ($isManager): ?>
                                         <div class="ct-act-divider"></div>
+                                        <?php if (Permissions::can(Permissions::CONT_UPDATE)): ?>
                                         <a href="#" class="yeas-finish" data-url="<?= Url::to(['finish', 'id' => $m->id]) ?>" role="menuitem">
                                             <i class="fa fa-check-circle text-success"></i> إنهاء العقد
                                         </a>
                                         <a href="#" class="yeas-cancel" data-url="<?= Url::to(['cancel', 'id' => $m->id]) ?>" role="menuitem">
                                             <i class="fa fa-ban text-danger"></i> إلغاء العقد
                                         </a>
+                                        <?php endif ?>
                                     <?php endif ?>
                                 </div>
                             </div>

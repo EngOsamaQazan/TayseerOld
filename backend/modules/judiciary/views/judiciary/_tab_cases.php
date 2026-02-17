@@ -6,6 +6,7 @@ use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\widgets\Pjax;
 use kartik\grid\GridView;
+use common\helper\Permissions;
 ?>
 
 <?= $this->render('_search', ['model' => $searchModel]) ?>
@@ -25,8 +26,10 @@ use kartik\grid\GridView;
         'toolbar' => [
             [
                 'content' =>
-                    Html::a('<i class="fa fa-bolt"></i> إدخال مجمّع', ['batch-actions'], ['class' => 'btn btn-warning', 'style' => 'font-weight:600']) .
-                    Html::a('<i class="fa fa-plus"></i> إضافة إجراء', ['/judiciaryCustomersActions/judiciary-customers-actions/create'], ['class' => 'btn btn-success', 'role' => 'modal-remote']) .
+                    (Permissions::can(Permissions::JUD_CREATE)
+                        ? Html::a('<i class="fa fa-bolt"></i> إدخال مجمّع', ['batch-actions'], ['class' => 'btn btn-warning', 'style' => 'font-weight:600']) .
+                          Html::a('<i class="fa fa-plus"></i> إضافة إجراء', ['/judiciaryCustomersActions/judiciary-customers-actions/create'], ['class' => 'btn btn-success', 'role' => 'modal-remote'])
+                        : '') .
                     Html::a('<i class="fa fa-refresh"></i>', [''], ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'تحديث']) .
                     '{toggleData}{export}'
             ],

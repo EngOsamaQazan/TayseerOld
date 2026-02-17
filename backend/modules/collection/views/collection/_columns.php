@@ -1,6 +1,7 @@
 <?php
 
 use yii\helpers\Url;
+use common\helper\Permissions;
 
 return [
 
@@ -49,13 +50,16 @@ return [
         'class' => 'kartik\grid\ActionColumn',
         'dropdown' => false,
         'vAlign' => 'middle',
+        'template' => (Permissions::can(Permissions::COLL_VIEW) ? '{view}' : '')
+            . (Permissions::can(Permissions::COLL_UPDATE) ? '{update}' : '')
+            . (Permissions::can(Permissions::COLL_DELETE) ? '{delete}' : ''),
         'urlCreator' => function ($action, $model, $key, $index) {
             return Url::to([$action, 'id' => $key]);
         },
         'viewOptions' => ['title' => 'View', 'data-toggle' => 'tooltip'],
         'updateOptions' => ['title' => 'Update', 'data-toggle' => 'tooltip'],
         'deleteOptions' => ['title' => 'Delete',
-            'data-confirm' => false, 'data-method' => false,// for overide yii data api
+            'data-confirm' => false, 'data-method' => false,
             'data-request-method' => 'post',
             'data-toggle' => 'tooltip',
             'data-confirm-title' => 'Are you sure?',

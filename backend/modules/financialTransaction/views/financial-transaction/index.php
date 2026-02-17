@@ -34,10 +34,12 @@ $canExport    = Yii::$app->user->can(Permissions::FINANCIAL_TRANSACTION_TO_EXPOR
  * لأن الـ dump الأصلي (namaa_jadal.sql) لا يحتوي على الصلاحيات المفصّلة.
  */
 $baseFin  = Permissions::FINANCIAL_TRANSACTION; // 'الحركات المالية'
-$canFinEdit     = Yii::$app->user->can(Permissions::FIN_EDIT)     || Yii::$app->user->can($baseFin);
-$canFinImport   = Yii::$app->user->can(Permissions::FIN_IMPORT)   || Yii::$app->user->can($baseFin);
-$canFinTransfer = Yii::$app->user->can(Permissions::FIN_TRANSFER) || Yii::$app->user->can($baseFin);
-$canFinDelete   = Yii::$app->user->can(Permissions::FIN_DELETE)   || Yii::$app->user->can($baseFin);
+$canFinView     = Permissions::can(Permissions::FIN_VIEW)     || Yii::$app->user->can($baseFin);
+$canFinCreate   = Permissions::can(Permissions::FIN_CREATE)   || Yii::$app->user->can($baseFin);
+$canFinEdit     = Permissions::can(Permissions::FIN_EDIT)     || Yii::$app->user->can($baseFin);
+$canFinImport   = Permissions::can(Permissions::FIN_IMPORT)   || Yii::$app->user->can($baseFin);
+$canFinTransfer = Permissions::can(Permissions::FIN_TRANSFER) || Yii::$app->user->can($baseFin);
+$canFinDelete   = Permissions::can(Permissions::FIN_DELETE)   || Yii::$app->user->can($baseFin);
 $typeIncome   = FinancialTransaction::TYPE_INCOME;
 $typeOutcome  = FinancialTransaction::TYPE_OUTCOME;
 $custPayments = FinancialTransaction::CUSTOMER_PAYMENTS;
@@ -115,7 +117,7 @@ $dataProvider->query->with(['company']);
          ║  2. شريط الأدوات — Actions & Buttons         ║
          ╚═══════════════════════════════════════════════╝ -->
     <section class="fin-actions" aria-label="إجراءات">
-        <?php if ($canFinEdit): ?>
+        <?php if ($canFinCreate): ?>
         <div class="fin-act-group">
             <?= Html::a('<i class="fa fa-plus"></i> <span>حركة جديدة</span>', ['create'], [
                 'class' => 'fin-btn fin-btn--add', 'title' => 'إضافة حركة مالية جديدة',
@@ -309,8 +311,12 @@ $dataProvider->query->with(['company']);
                                 <?php if (!empty($m->bank_description)): ?>
                                 <button type="button" class="fin-act fin-act--notes js-notes-btn" data-id="<?= $m->id ?>" data-toggle="modal" data-target="#notesModal" title="ملاحظات"><i class="fa fa-sticky-note-o"></i></button>
                                 <?php endif ?>
+                                <?php if ($canFinEdit): ?>
                                 <?= Html::a('<i class="fa fa-pencil"></i>', ['update', 'id' => $m->id], ['class' => 'fin-act fin-act--edit', 'title' => 'تعديل']) ?>
+                                <?php endif ?>
+                                <?php if ($canFinDelete): ?>
                                 <?= Html::a('<i class="fa fa-trash-o"></i>', ['delete', 'id' => $m->id], ['class' => 'fin-act fin-act--del', 'title' => 'حذف', 'data' => ['method' => 'post', 'confirm' => 'هل أنت متأكد من حذف هذه الحركة؟']]) ?>
+                                <?php endif ?>
                             </div>
                         </td>
                     </tr>
@@ -351,8 +357,12 @@ $dataProvider->query->with(['company']);
                     <?php endif ?>
                 </div>
                 <div class="fin-card-foot">
+                    <?php if ($canFinEdit): ?>
                     <?= Html::a('<i class="fa fa-pencil"></i> تعديل', ['update', 'id' => $m->id], ['class' => 'fin-card-btn']) ?>
+                    <?php endif ?>
+                    <?php if ($canFinDelete): ?>
                     <?= Html::a('<i class="fa fa-trash-o"></i> حذف', ['delete', 'id' => $m->id], ['class' => 'fin-card-btn fin-card-btn--del', 'data' => ['method' => 'post', 'confirm' => 'هل أنت متأكد؟']]) ?>
+                    <?php endif ?>
                 </div>
             </div>
             <?php endforeach ?>

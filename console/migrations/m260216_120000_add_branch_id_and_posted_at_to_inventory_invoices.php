@@ -20,7 +20,7 @@ class m260216_120000_add_branch_id_and_posted_at_to_inventory_invoices extends M
                 'fk_inventory_invoices_branch_id',
                 $table,
                 'branch_id',
-                '{{%location}}',
+                '{{%inventory_stock_locations}}',
                 'id',
                 'SET NULL',
                 'RESTRICT'

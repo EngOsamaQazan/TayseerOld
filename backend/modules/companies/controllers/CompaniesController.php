@@ -22,6 +22,8 @@ use yii\helpers\Html;
 use yii\web\UploadedFile;
 use yii\helpers\FileHelper;
 use yii2tech\ar\softdelete\SoftDeleteBehavior;
+use yii\filters\AccessControl;
+use common\helper\Permissions;
 
 /**
  * CompaniesController implements the CRUD actions for Companies model.
@@ -34,6 +36,43 @@ class CompaniesController extends Controller
     public function behaviors()
     {
         return [
+            'access' => [
+                'class' => AccessControl::className(),
+                'rules' => [
+                    [
+                        'actions' => ['index', 'view', 'get-items'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function ($rule, $action) {
+                            return Permissions::can(Permissions::COMP_VIEW);
+                        },
+                    ],
+                    [
+                        'actions' => ['create'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function ($rule, $action) {
+                            return Permissions::can(Permissions::COMP_CREATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['update'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function ($rule, $action) {
+                            return Permissions::can(Permissions::COMP_UPDATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['delete', 'bulk-delete'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function ($rule, $action) {
+                            return Permissions::can(Permissions::COMP_DELETE);
+                        },
+                    ],
+                ],
+            ],
             'verbs' => [
                 'class' => VerbFilter::className(),
                 'actions' => [

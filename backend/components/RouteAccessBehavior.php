@@ -9,9 +9,11 @@ use yii\web\ForbiddenHttpException;
 use common\helper\Permissions;
 
 /**
- * سلوك التحقق من صلاحية الوصول حسب المسار
- * ─────────────────────────────────────────────
- * يمنع فتح أي شاشة عبر الرابط المباشر إذا كان المستخدم لا يملك الصلاحية المطلوبة.
+ * سلوك التحقق من صلاحية الوصول حسب المسار والإجراء
+ * ─────────────────────────────────────────────────────
+ * طبقتان من الحماية:
+ *   1) مستوى المتحكم (Controller) — يجب أن يملك المستخدم أي صلاحية من صلاحيات الوحدة
+ *   2) مستوى الإجراء (Action) — يجب أن يملك صلاحية CRUD المحددة (مشاهدة/إضافة/تعديل/حذف)
  * يُربط بالتطبيق في backend\config\main.php كـ 'as routeAccess'.
  */
 class RouteAccessBehavior extends Behavior
@@ -56,6 +58,39 @@ class RouteAccessBehavior extends Behavior
     }
 
     /**
+     * استخراج اسم الإجراء (action) من pathInfo (مثلاً customers/customers/create → create)
+     */
+    protected static function getActionFromPath($pathInfo)
+    {
+        $path = trim($pathInfo ?? '', '/');
+        if ($path === '') {
+            return 'index';
+        }
+        $parts = explode('/', $path);
+        if (count($parts) >= 2) {
+            return array_pop($parts);
+        }
+        return 'index';
+    }
+
+    /**
+     * حل المسار المختصر إلى المسار الكامل عبر urlManager.
+     * مثلاً: inventoryInvoices/view/1 → inventoryInvoices/inventory-invoices/view
+     */
+    protected static function resolveRoute($rawPathInfo)
+    {
+        try {
+            $result = Yii::$app->urlManager->parseRequest(Yii::$app->request);
+            if ($result !== false) {
+                return $result[0]; // المسار الكامل (route)
+            }
+        } catch (\Exception $e) {
+            // في حال فشل التحليل نستخدم المسار الخام
+        }
+        return $rawPathInfo;
+    }
+
+    /**
      * التحقق من صلاحية الوصول للمسار الحالي
      * @param \yii\base\Event $event
      * @throws ForbiddenHttpException
@@ -69,28 +104,40 @@ class RouteAccessBehavior extends Behavior
             return;
         }
 
-        $pathInfo = trim(Yii::$app->request->pathInfo ?? '', '/');
-        $controllerId = self::getControllerUniqueIdFromPath($pathInfo);
+        $rawPathInfo = trim(Yii::$app->request->pathInfo ?? '', '/');
 
         foreach (self::$publicRoutes as $public) {
             $p = trim($public, '/');
-            if ($pathInfo === $p || $pathInfo === '' && $p === 'site' || strpos($pathInfo . '/', $p . '/') === 0) {
+            if ($rawPathInfo === $p || $rawPathInfo === '' && $p === 'site' || strpos($rawPathInfo . '/', $p . '/') === 0) {
                 return;
             }
         }
 
+        /* حل المسار المختصر (مثل inventoryInvoices/view/1) إلى الكامل (inventoryInvoices/inventory-invoices/view) */
+        $resolvedRoute = self::resolveRoute($rawPathInfo);
+        $controllerId = self::getControllerUniqueIdFromPath($resolvedRoute);
+
+        /* ── الطبقة 1: فحص مستوى المتحكم (الوحدة) ── */
         $permissions = Permissions::getRequiredPermissionsForRoute($controllerId);
         if ($permissions === null) {
-            // منع افتراضي: أي مسار غير مدرج في الخريطة أو في القائمة العامة = ممنوع
             throw new ForbiddenHttpException(Yii::t('yii', 'You are not allowed to perform this action.'));
         }
-        // مصفوفة فارغة = لا يشترط أي صلاحية (مثلاً نظام الحضور والانصراف متاح للكل)
         if ($permissions === []) {
             return;
         }
 
         if (!Permissions::hasAnyPermission($permissions)) {
             throw new ForbiddenHttpException(Yii::t('yii', 'You are not allowed to perform this action.'));
+        }
+
+        /* ── الطبقة 2: فحص مستوى الإجراء (CRUD) ── */
+        $actionId = self::getActionFromPath($resolvedRoute);
+        $actionPerm = Permissions::getActionPermission($controllerId, $actionId);
+        if ($actionPerm !== null) {
+            $permsToCheck = is_array($actionPerm) ? $actionPerm : [$actionPerm];
+            if (!Permissions::hasAnyPermission($permsToCheck)) {
+                throw new ForbiddenHttpException(Yii::t('yii', 'You are not allowed to perform this action.'));
+            }
         }
     }
 }

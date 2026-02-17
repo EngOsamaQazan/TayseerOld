@@ -70,7 +70,7 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
 <div class="inv-page">
 
     <section class="fin-actions" aria-label="إجراءات" style="margin-bottom: 14px">
-        <?php if (Yii::$app->user->can(Permissions::INVENTORY_ITEMS)): ?>
+        <?php if (Permissions::can(Permissions::INVITEM_CREATE)): ?>
         <div class="fin-act-group">
             <?= Html::a('<i class="fa fa-plus"></i> <span>صنف جديد</span>', ['create'], [
                 'class' => 'fin-btn fin-btn--add', 'title' => 'إضافة صنف جديد', 'role' => 'modal-remote',

@@ -9,6 +9,7 @@
 
 use yii\helpers\Html;
 use yii\helpers\Url;
+use common\helper\Permissions;
 
 /** @var yii\web\View $this */
 /** @var common\models\User $user */
@@ -142,13 +143,17 @@ if (!empty($user->job_title)) {
         </div>
         <div class="hr-profile-actions">
             <?php if ($extended): ?>
+                <?php if (Permissions::can(Permissions::EMP_UPDATE)): ?>
                 <?= Html::a('<i class="fa fa-pencil"></i> تعديل', ['update', 'id' => $extended->id], [
                     'class' => 'btn hr-btn-primary btn-sm',
                 ]) ?>
+                <?php endif ?>
             <?php else: ?>
+                <?php if (Permissions::can(Permissions::EMP_CREATE)): ?>
                 <?= Html::a('<i class="fa fa-plus"></i> إنشاء ملف موسع', ['create', 'user_id' => $user->id], [
                     'class' => 'btn hr-btn-primary btn-sm',
                 ]) ?>
+                <?php endif ?>
             <?php endif ?>
         </div>
     </div>
@@ -219,7 +224,9 @@ if (!empty($user->job_title)) {
                     <div class="hr-empty-state">
                         <i class="fa fa-info-circle"></i>
                         <p>لا توجد بيانات موسعة لهذا الموظف بعد.</p>
+                        <?php if (Permissions::can(Permissions::EMP_CREATE)): ?>
                         <?= Html::a('<i class="fa fa-plus"></i> إنشاء ملف موسع', ['create', 'user_id' => $user->id], ['class' => 'btn hr-btn-primary btn-sm']) ?>
+                        <?php endif ?>
                     </div>
                 <?php else: ?>
                     <div class="hr-info-grid">

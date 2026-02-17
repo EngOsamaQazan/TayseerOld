@@ -71,11 +71,11 @@ if ($filterFrom && $filterTo) {
     $periodText = 'حتى ' . $filterTo;
 }
 
-$u = Yii::$app->user;
-$baseExp   = Permissions::EXPENSES; // الصلاحية الأساسية كـ fallback
-$canEdit   = $u->can(Permissions::EXP_EDIT)   || $u->can($baseExp);
-$canDelete = $u->can(Permissions::EXP_DELETE) || $u->can($baseExp);
-$canRevert = $u->can(Permissions::EXP_REVERT) || $u->can($baseExp);
+$baseExp    = Permissions::EXPENSES; // الصلاحية الأساسية كـ fallback
+$canCreate  = Permissions::can(Permissions::EXP_CREATE) || Yii::$app->user->can($baseExp);
+$canEdit    = Permissions::can(Permissions::EXP_EDIT)   || Yii::$app->user->can($baseExp);
+$canDelete  = Permissions::can(Permissions::EXP_DELETE) || Yii::$app->user->can($baseExp);
+$canRevert  = Permissions::can(Permissions::EXP_REVERT) || Yii::$app->user->can($baseExp);
 
 /* ═══ هل تم تحديد فترة زمنية؟ ═══ */
 $hasDateFilter = !empty($searchModel->date_from);
@@ -129,7 +129,7 @@ $hasDateFilter = !empty($searchModel->date_from);
          ║  2. شريط الأدوات                              ║
          ╚═══════════════════════════════════════════════╝ -->
     <section class="fin-actions" aria-label="إجراءات">
-        <?php if ($canEdit): ?>
+        <?php if ($canCreate): ?>
         <div class="fin-act-group">
             <?= Html::a('<i class="fa fa-plus"></i> <span>مصروف جديد</span>', ['create'], [
                 'class' => 'fin-btn fin-btn--add', 'title' => 'إضافة مصروف جديد',

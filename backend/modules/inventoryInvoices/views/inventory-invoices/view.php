@@ -3,6 +3,7 @@
 use yii\widgets\DetailView;
 use yii\helpers\Html;
 use yii\helpers\Url;
+use common\helper\Permissions;
 
 /* @var $this yii\web\View */
 /* @var $model backend\modules\inventoryInvoices\models\InventoryInvoices */
@@ -13,28 +14,30 @@ use yii\helpers\Url;
     <div class="invoice-actions" style="margin-bottom:16px;">
         <?php
         $user = Yii::$app->user->identity;
-        $isBranchSalesForThis = $user && (int)$user->location === (int)$model->branch_id;
-        if ($model->status === \backend\modules\inventoryInvoices\models\InventoryInvoices::STATUS_PENDING_RECEPTION && $isBranchSalesForThis):
-            echo Html::a('موافقة استلام (الفرع)', ['approve-reception', 'id' => $model->id], [
-                'class' => 'btn btn-success',
-                'data-method' => 'post',
-                'data-confirm' => 'تأكيد الموافقة على استلام الفاتورة؟',
-            ]);
-            echo ' ' . Html::a('رفض استلام', ['reject-reception', 'id' => $model->id], [
-                'class' => 'btn btn-warning',
-            ]);
-        endif;
-        if ($model->status === \backend\modules\inventoryInvoices\models\InventoryInvoices::STATUS_PENDING_MANAGER):
-            echo ' ' . Html::a('موافقة المدير', ['approve-manager', 'id' => $model->id], [
-                'class' => 'btn btn-primary',
-                'data-method' => 'post',
-                'data-confirm' => 'تأكيد الموافقة النهائية وترحيل الفاتورة إلى المخزون؟',
-            ]);
-            echo ' ' . Html::a('رفض المدير', ['reject-manager', 'id' => $model->id], [
-                'class' => 'btn btn-danger',
-                'data-method' => 'post',
-                'data-confirm' => 'تأكيد رفض الفاتورة؟',
-            ]);
+        $isBranchSalesForThis = $user && $user->hasCategory('sales_employee');
+        if (Permissions::can(Permissions::INVINV_APPROVE)):
+            if ($model->status === \backend\modules\inventoryInvoices\models\InventoryInvoices::STATUS_PENDING_RECEPTION && $isBranchSalesForThis):
+                echo Html::a('موافقة استلام (الفرع)', ['approve-reception', 'id' => $model->id], [
+                    'class' => 'btn btn-success',
+                    'data-method' => 'post',
+                    'data-confirm' => 'تأكيد الموافقة على استلام الفاتورة؟',
+                ]);
+                echo ' ' . Html::a('رفض استلام', ['reject-reception', 'id' => $model->id], [
+                    'class' => 'btn btn-warning',
+                ]);
+            endif;
+            if ($model->status === \backend\modules\inventoryInvoices\models\InventoryInvoices::STATUS_PENDING_MANAGER):
+                echo ' ' . Html::a('موافقة المدير', ['approve-manager', 'id' => $model->id], [
+                    'class' => 'btn btn-primary',
+                    'data-method' => 'post',
+                    'data-confirm' => 'تأكيد الموافقة النهائية وترحيل الفاتورة إلى المخزون؟',
+                ]);
+                echo ' ' . Html::a('رفض المدير', ['reject-manager', 'id' => $model->id], [
+                    'class' => 'btn btn-danger',
+                    'data-method' => 'post',
+                    'data-confirm' => 'تأكيد رفض الفاتورة؟',
+                ]);
+            endif;
         endif;
         ?>
     </div>
@@ -46,7 +49,7 @@ use yii\helpers\Url;
             'id',
             'invoice_number',
             ['attribute' => 'status', 'value' => $model->getStatusList()[$model->status] ?? $model->status],
-            ['attribute' => 'branch_id', 'value' => $model->branch ? $model->branch->location : null],
+            ['attribute' => 'branch_id', 'label' => 'موقع التخزين', 'value' => $model->stockLocation ? $model->stockLocation->locations_name : '—'],
             'company_id',
             'total_amount',
             'discount_amount',

@@ -3,6 +3,7 @@
 use yii\helpers\Html;
 use yii\widgets\DetailView;
 use johnitvn\ajaxcrud\CrudAsset;
+use common\helper\Permissions;
 
 /* @var $this yii\web\View */
 /* @var $modelView common\models\FollowUp */

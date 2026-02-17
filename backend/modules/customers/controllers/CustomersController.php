@@ -20,6 +20,7 @@ use backend\modules\customers\models\CustomersDocument;
 use yii\web\UploadedFile;
 use yii\filters\AccessControl;
 use backend\modules\customers\components\RiskEngine;
+use common\helper\Permissions;
 
 /**
  * Default controller for the `reports` module
@@ -40,7 +41,39 @@ class CustomersController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'view', 'update', 'create', 'create-summary', 'delete', 'update-contact', 'customer-data', 'search-customers', 'calculate-risk', 'check-duplicate'],
+                        'actions' => ['index', 'view', 'create-summary', 'customer-data', 'search-customers'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function ($rule, $action) {
+                            return Permissions::can(Permissions::CUST_VIEW);
+                        },
+                    ],
+                    [
+                        'actions' => ['create', 'calculate-risk', 'check-duplicate'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function ($rule, $action) {
+                            return Permissions::can(Permissions::CUST_CREATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['update', 'update-contact'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function ($rule, $action) {
+                            return Permissions::can(Permissions::CUST_UPDATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['delete', 'bulkdelete'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function ($rule, $action) {
+                            return Permissions::can(Permissions::CUST_DELETE);
+                        },
+                    ],
+                    [
+                        'actions' => ['logout'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],

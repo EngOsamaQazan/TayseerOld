@@ -9,6 +9,7 @@ use backend\modules\judiciary\models\JudiciarySearch;
 use backend\modules\followUp\models\FollowUp;
 use backend\modules\followUp\models\FollowUpSearch;
 use yii\filters\AccessControl;
+use common\helper\Permissions;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -36,11 +37,20 @@ class ReportsController extends Controller
                         'actions' => ['login', 'error'],
                         'allow' => true,
                     ],
+                    /* ═══ عرض التقارير ═══ */
                     [
-                        'actions' => ['customers-judiciary-actions', 'logout', 'judiciary-index', 'index', 'index2', 'update', 'create', 'due-installment', 'month-installments', 'delete', 'monthly-installmentBeer-user', 'monthly-installment', 'total-customer-payments-index', 'total-judiciary-customer-payments-index'],
+                        'actions' => [
+                            'customers-judiciary-actions', 'judiciary-index',
+                            'index', 'index2',
+                            'due-installment', 'month-installments', 'this-month-installments',
+                            'monthly-installmentBeer-user', 'monthly-installment',
+                            'total-customer-payments-index', 'total-judiciary-customer-payments-index',
+                        ],
                         'allow' => true,
-                        'roles' => ['@'],
+                        'roles' => [Permissions::REP_VIEW],
                     ],
+                    /* ═══ تسجيل خروج ═══ */
+                    ['actions' => ['logout'], 'allow' => true, 'roles' => ['@']],
                 ],
             ],
             'verbs' => [

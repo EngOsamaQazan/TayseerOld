@@ -5,8 +5,14 @@
 
 use yii\helpers\Html;
 use yii\helpers\Url;
+use common\helper\Permissions;
 
 $this->title = 'قسم الديوان';
+
+$baseDiwan    = Permissions::DIWAN;
+$canDiwanView   = Permissions::can(Permissions::DIWAN_VIEW)   || Yii::$app->user->can($baseDiwan);
+$canDiwanCreate = Permissions::can(Permissions::DIWAN_CREATE) || Yii::$app->user->can($baseDiwan);
+$canDiwanDelete = Permissions::can(Permissions::DIWAN_DELETE) || Yii::$app->user->can($baseDiwan);
 ?>
 
 <?= $this->render('@app/views/layouts/_diwan-tabs', ['activeTab' => 'dashboard']) ?>

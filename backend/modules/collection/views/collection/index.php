@@ -6,6 +6,7 @@ use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset;
 use johnitvn\ajaxcrud\BulkButtonWidget;
+use common\helper\Permissions;
 
 /* @var $this yii\web\View */
 /* @var $searchModel common\models\CollectionSearch */

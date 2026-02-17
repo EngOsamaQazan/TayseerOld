@@ -2,6 +2,7 @@
 use yii\helpers\Url;
 use yii\helpers\Html;
 use backend\modules\inventoryInvoices\models\InventoryInvoices;
+use common\helper\Permissions;
 
 return [
     [
@@ -17,6 +18,15 @@ return [
         'format' => 'raw',
         'value' => function ($model) {
             return '<strong style="color:#0369a1">#' . $model->id . '</strong>';
+        },
+    ],
+    [
+        'class' => '\kartik\grid\DataColumn',
+        'attribute' => 'branch_id',
+        'label' => 'موقع التخزين',
+        'vAlign' => 'middle',
+        'value' => function ($model) {
+            return $model->stockLocation ? $model->stockLocation->locations_name : '—';
         },
     ],
     [
@@ -89,6 +99,11 @@ return [
         'urlCreator' => function ($action, $model, $key, $index) {
             return Url::to([$action, 'id' => $key]);
         },
+        'visibleButtons' => [
+            'view' => true,
+            'update' => Permissions::can(Permissions::INVINV_UPDATE),
+            'delete' => Permissions::can(Permissions::INVINV_DELETE),
+        ],
         'viewOptions' => ['title' => 'عرض', 'data-toggle' => 'tooltip', 'class' => 'btn btn-xs btn-default', 'role' => 'modal-remote'],
         'updateOptions' => ['title' => 'تعديل', 'data-toggle' => 'tooltip', 'class' => 'btn btn-xs btn-info'],
         'deleteOptions' => [

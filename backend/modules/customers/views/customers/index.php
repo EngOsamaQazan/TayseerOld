@@ -8,6 +8,7 @@ use yii\helpers\Html;
 use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset;
+use common\helper\Permissions;
 
 CrudAsset::register($this);
 $this->title = 'العملاء';
@@ -85,15 +86,17 @@ $this->registerCss('
             'toolbar' => [
                 [
                     'content' =>
-                        Html::a('<i class="fa fa-plus"></i> إضافة عميل', ['create'], [
-                            'class' => 'btn btn-success',
-                        ]) .
+                        (Permissions::can(Permissions::CUST_CREATE) ?
+                            Html::a('<i class="fa fa-plus"></i> إضافة عميل', ['create'], [
+                                'class' => 'btn btn-success',
+                            ]) : '') .
                         Html::a('<i class="fa fa-refresh"></i>', [''], [
                             'data-pjax' => 1,
                             'class' => 'btn btn-default',
                             'title' => 'تحديث',
                         ]) .
-                        '{toggleData}{export}'
+                        '{toggleData}' .
+                        (Permissions::can(Permissions::CUST_EXPORT) ? '{export}' : '')
                 ],
             ],
             'striped' => true,

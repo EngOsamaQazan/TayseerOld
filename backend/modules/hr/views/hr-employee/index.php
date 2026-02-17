@@ -12,6 +12,7 @@ use yii\helpers\Url;
 use kartik\grid\GridView;
 use yii\bootstrap\Modal;
 use yii\widgets\Pjax;
+use common\helper\Permissions;
 
 /** @var yii\web\View $this */
 /** @var yii\data\ActiveDataProvider $dataProvider */
@@ -61,6 +62,7 @@ $employmentTypeMap = [
             <span class="hr-page-subtitle">إدارة بيانات الموظفين ومتابعة حالاتهم</span>
         </div>
         <div class="hr-page-header-left">
+            <?php if (Permissions::can(Permissions::EMP_CREATE)): ?>
             <?= Html::a(
                 '<i class="fa fa-plus"></i> إضافة موظف جديد',
                 $createUrl,
@@ -69,6 +71,7 @@ $employmentTypeMap = [
                     'id' => 'btn-create-employee',
                 ]
             ) ?>
+            <?php endif ?>
             <?= Html::a(
                 '<i class="fa fa-file-excel-o"></i> تصدير',
                 $exportUrl,
@@ -305,8 +308,10 @@ $employmentTypeMap = [
                         );
                     },
                     'update' => function ($url, $model) {
+                        if (!Permissions::can(Permissions::EMP_UPDATE)) return '';
                         $extendedId = $model['extended_id'] ?? null;
                         if (!$extendedId) {
+                            if (!Permissions::can(Permissions::EMP_CREATE)) return '';
                             return Html::a(
                                 '<i class="fa fa-plus-circle"></i>',
                                 Url::to(['create', 'user_id' => $model['id']]),
@@ -328,6 +333,7 @@ $employmentTypeMap = [
                         );
                     },
                     'delete' => function ($url, $model) {
+                        if (!Permissions::can(Permissions::EMP_DELETE)) return '';
                         $extendedId = $model['extended_id'] ?? null;
                         if (!$extendedId) return '';
                         return Html::a(

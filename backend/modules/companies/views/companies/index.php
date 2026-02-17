@@ -6,6 +6,7 @@ use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset;
 use johnitvn\ajaxcrud\BulkButtonWidget;
+use common\helper\Permissions;
 
 /* @var $this yii\web\View */
 /* @var $searchModel backend\modules\companies\models\CompaniesSearch */
@@ -27,8 +28,9 @@ CrudAsset::register($this);
             'summary' => '',
             'toolbar' => [
                 ['content' =>
-                    Html::a('<i class="glyphicon glyphicon-plus"></i>', ['create'],
-                        ['title' => 'Create new Companies', 'class' => 'btn btn-default']) .
+                    (Permissions::can(Permissions::COMP_CREATE) ?
+                        Html::a('<i class="glyphicon glyphicon-plus"></i>', ['create'],
+                            ['title' => 'Create new Companies', 'class' => 'btn btn-default']) : '') .
                     Html::a('<i class="glyphicon glyphicon-repeat"></i>', [''],
                         ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'Reset Grid']) .
                     '{toggleData}' .

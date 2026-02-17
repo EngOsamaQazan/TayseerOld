@@ -167,7 +167,7 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
 
     <!-- ═══ أزرار سريعة ═══ -->
     <div class="inv-quick">
-        <?php if (Yii::$app->user->can(Permissions::INVENTORY_INVOICES)): ?>
+        <?php if (Permissions::can(Permissions::INVINV_CREATE)): ?>
         <a href="<?= Url::to(['/inventoryInvoices/inventory-invoices/create-wizard']) ?>" class="inv-quick-btn inv-qb--purchase" style="background:#5b21b6; border-color:#5b21b6">
             <i class="fa fa-file-text-o"></i> فاتورة توريد جديدة (معالج)
         </a>
@@ -175,12 +175,12 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
             <i class="fa fa-shopping-cart"></i> أمر شراء جديد
         </a>
         <?php endif ?>
-        <?php if (Yii::$app->user->can(Permissions::INVENTORY_ITEMS)): ?>
+        <?php if (Permissions::can(Permissions::INVITEM_CREATE)): ?>
         <a href="<?= Url::to(['create']) ?>" class="inv-quick-btn inv-qb--item" role="modal-remote">
             <i class="fa fa-plus"></i> إضافة صنف
         </a>
         <?php endif ?>
-        <?php if (Yii::$app->user->can(Permissions::INVENTORY_ITEMS) || Yii::$app->user->can(Permissions::INVENTORY_ITEMS_QUANTITY)): ?>
+        <?php if (Permissions::can(Permissions::INVITEM_VIEW) || Yii::$app->user->can(Permissions::INVENTORY_ITEMS_QUANTITY)): ?>
         <a href="<?= Url::to(['movements']) ?>" class="inv-quick-btn inv-qb--adjust">
             <i class="fa fa-exchange"></i> حركات المخزون
         </a>
@@ -258,7 +258,7 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
         </div>
 
         <!-- آخر أوامر الشراء (لمن يملك صلاحية فواتير المخزون) -->
-        <?php if (Yii::$app->user->can(Permissions::INVENTORY_INVOICES)): ?>
+        <?php if (Permissions::can(Permissions::INVINV_VIEW)): ?>
         <div class="inv-panel" style="grid-column: 1 / -1">
             <div class="inv-panel-head">
                 <i class="fa fa-shopping-cart" style="color:var(--inv-purple)"></i>

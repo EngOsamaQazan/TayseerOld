@@ -6,6 +6,7 @@ use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset;
 use johnitvn\ajaxcrud\BulkButtonWidget;
+use common\helper\Permissions;
 
 /* @var $this yii\web\View */
 /* @var $searchModel backend\models\EmployeeSearch */
@@ -26,8 +27,9 @@ CrudAsset::register($this);
             'columns' => require(__DIR__ . '/_columns.php'),
             'toolbar'=> [
                 ['content'=>
-                    Html::a('<i class="glyphicon glyphicon-plus"></i>', ['create'],
-                        ['class'=>'btn btn-default']).
+                    (Permissions::can(Permissions::EMP_CREATE)
+                        ? Html::a('<i class="glyphicon glyphicon-plus"></i>', ['create'], ['class'=>'btn btn-default'])
+                        : '') .
                     Html::a('<i class="glyphicon glyphicon-repeat"></i>', [''],
                         ['data-pjax'=>1, 'class'=>'btn btn-default', 'title'=>'Reset Grid']).
                     '{toggleData}'.

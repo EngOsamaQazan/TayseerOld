@@ -13,6 +13,7 @@ use kartik\date\DatePicker;
 use kartik\select2\Select2;
 use borales\extensions\phoneInput\PhoneInput;
 use backend\widgets\ImageManagerInputWidget;
+use common\helper\Permissions;
 
 /* Register assets */
 $this->registerCssFile('@web/css/smart-onboarding.css', ['depends' => [\yii\web\JqueryAsset::class]]);
@@ -628,7 +629,9 @@ if (!$isNew) {
                 <!-- أزرار الحفظ — وضع التعديل -->
                 <div class="so-fieldset" style="background:#f0fdf4; border-color:#bbf7d0">
                     <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
-                        <?= Html::submitButton('<i class="fa fa-save"></i> حفظ التعديلات', ['class' => 'so-btn so-btn-success', 'style' => 'font-size:15px; padding:12px 28px']) ?>
+                        <?php if (Permissions::can(Permissions::CUST_UPDATE)): ?>
+                            <?= Html::submitButton('<i class="fa fa-save"></i> حفظ التعديلات', ['class' => 'so-btn so-btn-success', 'style' => 'font-size:15px; padding:12px 28px']) ?>
+                        <?php endif ?>
                         <a href="<?= Url::to(['view', 'id' => $model->id]) ?>" class="so-btn so-btn-outline" style="font-size:13px"><i class="fa fa-eye"></i> عرض الملف</a>
                     </div>
                 </div>

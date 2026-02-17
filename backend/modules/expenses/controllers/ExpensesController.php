@@ -7,6 +7,7 @@ use Yii;
 use backend\modules\expenses\models\Expenses;
 use backend\modules\expenses\models\ExpensesSearch;
 use yii\filters\AccessControl;
+use common\helper\Permissions;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -28,29 +29,35 @@ class ExpensesController extends Controller
                 'class' => AccessControl::className(),
                 'rules' => [
                     ['actions' => ['login', 'error'], 'allow' => true],
-                    /* ═══ عرض — يكفي صلاحية "المصاريف" ═══ */
+                    /* ═══ عرض ═══ */
                     [
                         'actions' => ['index', 'view'],
                         'allow'   => true,
-                        'roles'   => ['المصاريف'],
+                        'roles'   => [Permissions::EXP_VIEW],
                     ],
-                    /* ═══ تعديل — إضافة وتحديث ═══ */
+                    /* ═══ إضافة ═══ */
                     [
-                        'actions' => ['create', 'update'],
+                        'actions' => ['create'],
                         'allow'   => true,
-                        'roles'   => ['المصاريف: تعديل'],
+                        'roles'   => [Permissions::EXP_CREATE],
+                    ],
+                    /* ═══ تعديل ═══ */
+                    [
+                        'actions' => ['update'],
+                        'allow'   => true,
+                        'roles'   => [Permissions::EXP_EDIT],
                     ],
                     /* ═══ حذف ═══ */
                     [
                         'actions' => ['delete', 'bulk-delete'],
                         'allow'   => true,
-                        'roles'   => ['المصاريف: حذف'],
+                        'roles'   => [Permissions::EXP_DELETE],
                     ],
                     /* ═══ إرجاع للحركات المالية ═══ */
                     [
                         'actions' => ['back-to-financial-transaction'],
                         'allow'   => true,
-                        'roles'   => ['المصاريف: ارجاع'],
+                        'roles'   => [Permissions::EXP_REVERT],
                     ],
                     /* ═══ تسجيل خروج ═══ */
                     ['actions' => ['logout'], 'allow' => true, 'roles' => ['@']],

@@ -19,6 +19,7 @@ use \yii\web\Response;
 use \backend\modules\followUpReport\models\FollowUpReport;
 use yii\helpers\Html;
 use backend\modules\contractInstallment\models\ContractInstallment;
+use common\helper\Permissions;
 
 /**
  * JudiciaryController implements the CRUD actions for Judiciary model.
@@ -40,7 +41,49 @@ class JudiciaryController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['add-print-case', 'print-case', 'logout', 'index', 'update', 'create', 'delete', 'view', 'customer-action', 'delete-customer-action', 'report', 'cases-report', 'cases-report-data', 'export-cases-report', 'print-cases-report', 'refresh-persistence-cache', 'batch-create', 'batch-print', 'tab-cases', 'tab-actions', 'tab-persistence', 'tab-legal', 'batch-actions', 'batch-parse', 'batch-execute'],
+                        'actions' => [
+                            'index', 'view', 'report',
+                            'cases-report', 'cases-report-data', 'export-cases-report',
+                            'print-cases-report', 'print-case', 'add-print-case',
+                            'refresh-persistence-cache',
+                            'tab-cases', 'tab-actions', 'tab-persistence', 'tab-legal',
+                        ],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::JUD_VIEW);
+                        },
+                    ],
+                    [
+                        'actions' => [
+                            'create', 'batch-create', 'batch-print',
+                            'customer-action',
+                            'batch-actions', 'batch-parse', 'batch-execute',
+                        ],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::JUD_CREATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['update'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::JUD_UPDATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['delete', 'delete-customer-action'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::JUD_DELETE);
+                        },
+                    ],
+                    [
+                        'actions' => ['logout'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],

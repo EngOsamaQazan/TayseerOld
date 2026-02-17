@@ -5,6 +5,7 @@ use yii\helpers\Url;
 use yii\helpers\Json;
 use yii\bootstrap\Modal;
 use johnitvn\ajaxcrud\CrudAsset;
+use common\helper\Permissions;
 
 CrudAsset::register($this);
 
@@ -248,6 +249,7 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
             <?php // ═══ LEFT COLUMN (Main) ═══ ?>
             <div>
                 <?php // ACTION CENTER ?>
+                <?php if (Permissions::can(Permissions::FOLLOWUP_CREATE) || Permissions::can(Permissions::FOLLOWUP_UPDATE)): ?>
                 <div class="ocp-section">
                     <div class="ocp-action-center">
                         <div class="ocp-action-center__title">
@@ -355,6 +357,7 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                         </div>
                     </div>
                 </div>
+                <?php endif ?>
 
                 <?php // TABS: Timeline / Kanban / Financial / Phones / Payments / Settlements / Judiciary ?>
                 <div class="ocp-section">

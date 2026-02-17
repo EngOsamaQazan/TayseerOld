@@ -5,6 +5,7 @@
  */
 use yii\helpers\Html;
 use yii\helpers\Url;
+use common\helper\Permissions;
 
 $this->title = 'تم إضافة العميل بنجاح';
 $this->params['breadcrumbs'][] = ['label' => 'العملاء', 'url' => ['index']];
@@ -79,7 +80,9 @@ $this->registerCssFile('@web/css/smart-onboarding.css', ['depends' => [\yii\web\
 
         <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; justify-content: center;">
             <?= Html::a('<i class="fa fa-file-text-o"></i> إنشاء عقد جديد', ['/contracts/contracts/create', 'id' => $model->id], ['class' => 'so-btn so-btn-success', 'style' => 'padding: 12px 24px; font-size: 16px;']) ?>
-            <?= Html::a('<i class="fa fa-pencil"></i> تعديل العميل', ['update', 'id' => $model->id], ['class' => 'so-btn so-btn-outline']) ?>
+            <?php if (Permissions::can(Permissions::CUST_UPDATE)): ?>
+                <?= Html::a('<i class="fa fa-pencil"></i> تعديل العميل', ['update', 'id' => $model->id], ['class' => 'so-btn so-btn-outline']) ?>
+            <?php endif ?>
             <?= Html::a('<i class="fa fa-eye"></i> عرض التفاصيل', ['view', 'id' => $model->id], ['class' => 'so-btn so-btn-outline', 'role' => 'modal-remote']) ?>
         </div>
     </div>

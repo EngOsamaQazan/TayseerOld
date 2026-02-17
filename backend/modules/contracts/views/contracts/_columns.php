@@ -154,14 +154,16 @@ return [
         'template' => '{all}',
         'buttons' => [
             'all' => function ($url, $m, $key) use ($isManager) {
-                $items = [
-                    ['label' => '<i class="fa fa-pencil text-primary"></i> تعديل', 'url' => ['update', 'id' => $key]],
-                    ['label' => '<i class="fa fa-print text-info"></i> طباعة العقد والكمبيالات', 'url' => ['print-preview', 'id' => $key]],
-                    '<li class="divider"></li>',
-                    ['label' => '<i class="fa fa-money text-success"></i> الدفعات', 'url' => ['/contractInstallment/contract-installment/index', 'contract_id' => $key]],
-                    ['label' => '<i class="fa fa-comments text-primary"></i> المتابعة', 'url' => ['/followUp/follow-up/index', 'contract_id' => $key]],
-                    ['label' => '<i class="fa fa-calendar text-info"></i> جدولة', 'url' => ['/loanScheduling/loan-scheduling/create', 'contract_id' => $key]],
-                ];
+                $items = [];
+
+                if (Permissions::can(Permissions::CONT_UPDATE)) {
+                    $items[] = ['label' => '<i class="fa fa-pencil text-primary"></i> تعديل', 'url' => ['update', 'id' => $key]];
+                }
+                $items[] = ['label' => '<i class="fa fa-print text-info"></i> طباعة العقد والكمبيالات', 'url' => ['print-preview', 'id' => $key]];
+                $items[] = '<li class="divider"></li>';
+                $items[] = ['label' => '<i class="fa fa-money text-success"></i> الدفعات', 'url' => ['/contractInstallment/contract-installment/index', 'contract_id' => $key]];
+                $items[] = ['label' => '<i class="fa fa-comments text-primary"></i> المتابعة', 'url' => ['/followUp/follow-up/index', 'contract_id' => $key]];
+                $items[] = ['label' => '<i class="fa fa-calendar text-info"></i> جدولة', 'url' => ['/loanScheduling/loan-scheduling/create', 'contract_id' => $key]];
 
                 if ($m->status === 'judiciary') {
                     $items[] = ['label' => '<i class="fa fa-gavel text-danger"></i> تحصيل', 'url' => ['/collection/collection/create', 'contract_id' => $key]];
@@ -169,8 +171,16 @@ return [
 
                 if ($isManager) {
                     $items[] = '<li class="divider"></li>';
-                    $items[] = ['label' => '<i class="fa fa-check-circle text-success"></i> إنهاء', 'url' => '#', 'linkOptions' => ['class' => 'yeas-finish', 'data-url' => Url::to(['finish', 'id' => $key])]];
-                    $items[] = ['label' => '<i class="fa fa-ban text-danger"></i> إلغاء', 'url' => '#', 'linkOptions' => ['class' => 'yeas-cancel', 'data-url' => Url::to(['cancel', 'id' => $key])]];
+                    if (Permissions::can(Permissions::CONT_UPDATE)) {
+                        $items[] = ['label' => '<i class="fa fa-check-circle text-success"></i> إنهاء', 'url' => '#', 'linkOptions' => ['class' => 'yeas-finish', 'data-url' => Url::to(['finish', 'id' => $key])]];
+                        $items[] = ['label' => '<i class="fa fa-ban text-danger"></i> إلغاء', 'url' => '#', 'linkOptions' => ['class' => 'yeas-cancel', 'data-url' => Url::to(['cancel', 'id' => $key])]];
+                    }
+                    if (Permissions::can(Permissions::CONT_DELETE)) {
+                        $items[] = ['label' => '<i class="fa fa-trash text-danger"></i> حذف', 'url' => ['delete', 'id' => $key], 'linkOptions' => [
+                            'data-confirm' => 'هل أنت متأكد من حذف هذا العقد؟',
+                            'data-method' => 'post',
+                        ]];
+                    }
                 }
 
                 return ButtonDropdown::widget([

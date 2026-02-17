@@ -5,6 +5,7 @@
 use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
+use common\helper\Permissions;
 
 return [
     /* # */
@@ -105,17 +106,24 @@ return [
                 $followUrl = Url::to(['/followUp/follow-up/index', 'contract_id' => $m->contract_id]);
                 $delUrl   = Url::to(['delete', 'id' => $m->id]);
 
+                $menu = '';
+                if (Permissions::can(Permissions::JUD_CREATE)) {
+                    $menu .= '<a href="' . $addActionUrl . '" role="modal-remote"><i class="fa fa-plus text-success"></i> إضافة إجراء</a>';
+                    $menu .= '<div class="jud-act-divider"></div>';
+                }
+                if (Permissions::can(Permissions::JUD_UPDATE)) {
+                    $menu .= '<a href="' . $editUrl . '"><i class="fa fa-pencil text-primary"></i> تعديل</a>';
+                }
+                $menu .= '<a href="' . $printUrl . '"><i class="fa fa-print text-info"></i> طباعة</a>';
+                $menu .= '<a href="' . $followUrl . '"><i class="fa fa-comments text-success"></i> المتابعة</a>';
+                if (Permissions::can(Permissions::JUD_DELETE)) {
+                    $menu .= '<div class="jud-act-divider"></div>';
+                    $menu .= '<a href="' . $delUrl . '" data-method="post" data-confirm="هل أنت متأكد من حذف هذه القضية؟"><i class="fa fa-trash text-danger"></i> حذف</a>';
+                }
+
                 return '<div class="jud-act-wrap">'
                     . '<button type="button" class="jud-act-trigger"><i class="fa fa-ellipsis-v"></i></button>'
-                    . '<div class="jud-act-menu">'
-                    .   '<a href="' . $addActionUrl . '" role="modal-remote"><i class="fa fa-plus text-success"></i> إضافة إجراء</a>'
-                    .   '<div class="jud-act-divider"></div>'
-                    .   '<a href="' . $editUrl . '"><i class="fa fa-pencil text-primary"></i> تعديل</a>'
-                    .   '<a href="' . $printUrl . '"><i class="fa fa-print text-info"></i> طباعة</a>'
-                    .   '<a href="' . $followUrl . '"><i class="fa fa-comments text-success"></i> المتابعة</a>'
-                    .   '<div class="jud-act-divider"></div>'
-                    .   '<a href="' . $delUrl . '" data-method="post" data-confirm="هل أنت متأكد من حذف هذه القضية؟"><i class="fa fa-trash text-danger"></i> حذف</a>'
-                    . '</div>'
+                    . '<div class="jud-act-menu">' . $menu . '</div>'
                     . '</div>';
             },
         ],

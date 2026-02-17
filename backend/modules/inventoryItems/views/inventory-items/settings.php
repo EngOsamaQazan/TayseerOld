@@ -76,66 +76,38 @@ $csrfToken = Yii::$app->request->csrfToken;
         <div class="st-card">
             <div class="st-card-head">
                 <i class="fa fa-truck" style="color:#0369a1"></i> الموردين
-                <span class="st-count"><?= count($suppliers) + count($vendorUsers ?? []) ?></span>
+                <span class="st-count"><?= count($suppliers) ?></span>
             </div>
             <div class="st-card-body" id="suppliers-list">
-                <?php if (empty($suppliers) && empty($vendorUsers)): ?>
+                <?php if (empty($suppliers)): ?>
                     <div class="st-empty"><i class="fa fa-truck"></i><br>لا يوجد موردين</div>
                 <?php else: ?>
-
-                    <?php if (!empty($vendorUsers)): ?>
-                    <div class="st-section-label">
-                        <i class="fa fa-user-circle"></i> موردين مسجلين كمستخدمين في النظام
-                    </div>
-                    <?php foreach ($vendorUsers as $vu): 
-                        $fullName = trim(implode(' ', array_filter([$vu['name'] ?? '', $vu['middle_name'] ?? '', $vu['last_name'] ?? ''])));
-                        $username = $vu['username'] ?? '—';
-                        if ($fullName !== '' && strpos($fullName, '@') === false) {
-                            $displayName = $fullName;
-                        } elseif (strpos($username, '@') !== false) {
-                            $displayName = 'الاسم غير محدد (' . $username . ')';
-                        } else {
-                            $displayName = $username;
-                        }
-                    ?>
-                    <div class="st-row">
-                        <div class="st-row-icon" style="background:#dcfce7;color:#166534"><i class="fa fa-user-circle"></i></div>
-                        <div style="flex:1">
-                            <div class="st-row-name">
-                                <?= Html::encode($displayName) ?>
-                                <span class="st-badge st-badge-user"><i class="fa fa-check-circle"></i> مستخدم نظام</span>
-                            </div>
-                            <div class="st-row-meta">
-                                <?= !empty($vu['mobile']) ? Html::encode($vu['mobile']) : '' ?>
-                                <?= !empty($vu['email']) ? ((!empty($vu['mobile']) ? ' · ' : '') . Html::encode($vu['email'])) : '' ?>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endforeach ?>
-                    <?php endif ?>
-
-                    <?php if (!empty($suppliers)): ?>
-                    <div class="st-section-label">
-                        <i class="fa fa-truck"></i> موردين خارجيين (غير مسجلين بالنظام)
-                    </div>
                     <?php foreach ($suppliers as $s): ?>
                     <div class="st-row st-row-supplier" data-supplier-id="<?= (int)$s->id ?>" data-supplier-name="<?= Html::encode($s->name) ?>">
+                        <?php if ($s->isSystemUser): ?>
+                        <div class="st-row-icon" style="background:#dcfce7;color:#166534"><i class="fa fa-user-circle"></i></div>
+                        <?php else: ?>
                         <div class="st-row-icon" style="background:#e0f2fe;color:#0369a1"><i class="fa fa-truck"></i></div>
+                        <?php endif ?>
                         <div style="flex:1">
                             <div class="st-row-name">
                                 <?= Html::encode($s->name) ?>
+                                <?php if ($s->isSystemUser): ?>
+                                <span class="st-badge st-badge-user"><i class="fa fa-check-circle"></i> مستخدم نظام</span>
+                                <?php else: ?>
                                 <span class="st-badge st-badge-ext"><i class="fa fa-external-link"></i> مورد خارجي</span>
+                                <?php endif ?>
                             </div>
                             <div class="st-row-meta">
                                 <?= Html::encode($s->phone_number) ?>
                                 <?= $s->adress ? ' · ' . Html::encode($s->adress) : '' ?>
                             </div>
                         </div>
+                        <?php if (!$s->isSystemUser): ?>
                         <button type="button" class="st-btn-delete-supplier" title="حذف المورد" data-id="<?= (int)$s->id ?>"><i class="fa fa-trash-o"></i></button>
+                        <?php endif ?>
                     </div>
                     <?php endforeach ?>
-                    <?php endif ?>
-
                 <?php endif ?>
             </div>
             <div class="st-add">
@@ -187,26 +159,18 @@ $csrfToken = Yii::$app->request->csrfToken;
                 <div class="form-group" id="transfer-supplier-form-group">
                     <label>نقل الفواتير والأصناف والحركات إلى المورد:</label>
                     <div id="transfer-to-supplier-list" class="transfer-supplier-list">
-                        <?php
-                        $fullName = '';
-                        foreach ($vendorUsers as $vu):
-                            $fullName = trim(implode(' ', array_filter([$vu['name'] ?? '', $vu['middle_name'] ?? '', $vu['last_name'] ?? ''])));
-                            if ($fullName === '' || strpos($fullName, '@') !== false) $fullName = $vu['username'] ?? '—';
-                            if (strpos($fullName, '@') !== false) $fullName = 'الاسم غير محدد (' . ($vu['username'] ?? '') . ')';
-                        ?>
-                        <button type="button" class="btn btn-default btn-block transfer-supplier-option transfer-option-user" data-user-id="<?= (int)$vu['id'] ?>" data-name="<?= Html::encode($fullName) ?>" style="text-align: right; margin-bottom: 6px;">
-                            <i class="fa fa-user-circle" style="margin-left:6px;color:#166534"></i><?= Html::encode($fullName) ?> <span class="st-badge st-badge-user" style="font-size:10px"><i class="fa fa-check-circle"></i> مستخدم</span>
-                        </button>
-                        <?php endforeach ?>
                         <?php foreach ($suppliers as $s): ?>
                         <button type="button" class="btn btn-default btn-block transfer-supplier-option transfer-option-supplier" data-id="<?= (int)$s->id ?>" data-name="<?= Html::encode($s->name) ?>" style="text-align: right; margin-bottom: 6px;">
+                            <?php if ($s->isSystemUser): ?>
+                            <i class="fa fa-user-circle" style="margin-left:6px;color:#166534"></i><?= Html::encode($s->name) ?> <span class="st-badge st-badge-user" style="font-size:10px"><i class="fa fa-check-circle"></i> مستخدم</span>
+                            <?php else: ?>
                             <i class="fa fa-truck" style="margin-left:6px;color:#0369a1"></i><?= Html::encode($s->name) ?> <span class="st-badge st-badge-ext" style="font-size:10px">خارجي</span>
+                            <?php endif ?>
                         </button>
                         <?php endforeach ?>
                     </div>
                     <p id="transfer-no-other-supplier" class="text-warning" style="display:none; margin-top:8px;">لا يوجد موردون آخرون. أضف مورداً من الأسفل ثم أعد محاولة النقل.</p>
                     <input type="hidden" id="transfer-to-supplier" value="">
-                    <input type="hidden" id="transfer-to-user" value="">
                 </div>
             </div>
             <div class="modal-footer">
@@ -282,22 +246,15 @@ $(document).on('click', '.st-btn-delete-supplier', function(){
 $(document).on('click', '.transfer-supplier-option', function(){
     $('.transfer-supplier-option').removeClass('selected');
     $(this).addClass('selected');
-    if ($(this).data('user-id')) {
-        $('#transfer-to-user').val($(this).data('user-id'));
-        $('#transfer-to-supplier').val('');
-    } else {
-        $('#transfer-to-supplier').val($(this).data('id'));
-        $('#transfer-to-user').val('');
-    }
+    $('#transfer-to-supplier').val($(this).data('id'));
 });
 $('#btn-transfer-then-delete').on('click', function(){
     var toId = $('#transfer-to-supplier').val();
-    var toUserId = $('#transfer-to-user').val();
-    if ((!toId && !toUserId) || !deleteSupplierId) { alert('اختر المورد المستهدف (انقر على اسم المورد أو المستخدم)'); return; }
-    if (toId && parseInt(toId) === parseInt(deleteSupplierId)) { alert('اختر مورداً مختلفاً عن المورد المراد حذفه'); return; }
+    if (!toId || !deleteSupplierId) { alert('اختر المورد المستهدف (انقر على اسم المورد)'); return; }
+    if (parseInt(toId) === parseInt(deleteSupplierId)) { alert('اختر مورداً مختلفاً عن المورد المراد حذفه'); return; }
     var btn = $(this);
     btn.prop('disabled', true);
-    $.post('$transferSupplierUrl', { from_id: deleteSupplierId, to_id: toId || '', to_user_id: toUserId || '', _csrf: '$csrfToken' }, function(resp){
+    $.post('$transferSupplierUrl', { from_id: deleteSupplierId, to_id: toId, _csrf: '$csrfToken' }, function(resp){
         if (resp.success) {
             $('#modal-transfer-supplier').modal('hide');
             location.reload();

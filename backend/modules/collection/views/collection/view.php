@@ -7,6 +7,7 @@ use yii\data\ActiveDataProvider;
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
+use common\helper\Permissions;
 
 /* @var $this yii\web\View */
 /* @var $model common\models\Collection */

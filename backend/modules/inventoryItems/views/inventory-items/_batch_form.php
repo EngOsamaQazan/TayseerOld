@@ -1,12 +1,18 @@
 <?php
 /**
  * نموذج إضافة مجموعة أصناف دفعة واحدة
+ * الحقول: اسم الصنف (إلزامي)، الباركود، التصنيف (اختيار من القائمة + إضافة جديد)
  */
 use yii\helpers\Html;
-use yii\helpers\ArrayHelper;
-use backend\modules\inventorySuppliers\models\InventorySuppliers;
+use backend\modules\inventoryItems\models\InventoryItems;
 
-$suppliers = ArrayHelper::map(InventorySuppliers::find()->andWhere(['is_deleted' => 0])->all(), 'id', 'name');
+$existingCategories = InventoryItems::find()
+    ->select('category')
+    ->distinct()
+    ->andWhere(['not', ['category' => null]])
+    ->andWhere(['!=', 'category', ''])
+    ->orderBy(['category' => SORT_ASC])
+    ->column();
 ?>
 
 <style>
@@ -27,66 +33,82 @@ $suppliers = ArrayHelper::map(InventorySuppliers::find()->andWhere(['is_deleted'
 </style>
 
 <div class="batch-form-wrap">
-    <form id="batchItemsForm" method="post">
-        <input type="hidden" name="<?= Yii::$app->request->csrfParam ?>" value="<?= Yii::$app->request->csrfToken ?>">
-        
-        <div id="batchRows">
-            <?php for ($i = 0; $i < 3; $i++): ?>
-            <div class="batch-row" data-idx="<?= $i ?>">
-                <div class="bf-num"><?= $i + 1 ?></div>
-                <div class="bf-col" style="flex:2">
-                    <?php if ($i === 0): ?><label>اسم الصنف *</label><?php endif ?>
-                    <input type="text" name="items[<?= $i ?>][item_name]" placeholder="اسم الصنف" required>
-                </div>
-                <div class="bf-col">
-                    <?php if ($i === 0): ?><label>الباركود</label><?php endif ?>
-                    <input type="text" name="items[<?= $i ?>][item_barcode]" placeholder="الباركود" style="direction:ltr;font-family:monospace">
-                </div>
-                <div class="bf-col">
-                    <?php if ($i === 0): ?><label>الرقم التسلسلي</label><?php endif ?>
-                    <input type="text" name="items[<?= $i ?>][serial_number]" placeholder="الرقم التسلسلي" style="direction:ltr;font-family:monospace">
-                </div>
-                <div class="bf-col">
-                    <?php if ($i === 0): ?><label>التصنيف</label><?php endif ?>
-                    <input type="text" name="items[<?= $i ?>][category]" placeholder="التصنيف">
-                </div>
-                <div class="bf-col">
-                    <?php if ($i === 0): ?><label>سعر الوحدة</label><?php endif ?>
-                    <input type="number" name="items[<?= $i ?>][unit_price]" placeholder="0.00" step="0.01" style="direction:ltr">
-                </div>
-                <div class="bf-col">
-                    <?php if ($i === 0): ?><label>المورد</label><?php endif ?>
-                    <select name="items[<?= $i ?>][supplier_id]">
-                        <option value="">— المورد —</option>
-                        <?php foreach ($suppliers as $sid => $sname): ?>
-                            <option value="<?= $sid ?>"><?= Html::encode($sname) ?></option>
-                        <?php endforeach ?>
-                    </select>
-                </div>
-                <div class="bf-remove">
-                    <?php if ($i > 0): ?>
-                    <button type="button" onclick="removeBatchRow(this)" title="حذف"><i class="fa fa-times"></i></button>
-                    <?php endif ?>
-                </div>
+    <form id="batchItemsForm" action="<?= \yii\helpers\Url::to(['batch-create']) ?>" method="post">
+    <input type="hidden" name="<?= Yii::$app->request->csrfParam ?>" value="<?= Yii::$app->request->csrfToken ?>">
+    <div id="batchRows">
+        <?php for ($i = 0; $i < 3; $i++): ?>
+        <div class="batch-row" data-idx="<?= $i ?>">
+            <div class="bf-num"><?= $i + 1 ?></div>
+            <div class="bf-col" style="flex:2">
+                <?php if ($i === 0): ?><label>اسم الصنف *</label><?php endif ?>
+                <input type="text" name="items[<?= $i ?>][item_name]" placeholder="اسم الصنف" required>
             </div>
-            <?php endfor ?>
+            <div class="bf-col">
+                <?php if ($i === 0): ?><label>الباركود</label><?php endif ?>
+                <input type="text" name="items[<?= $i ?>][item_barcode]" placeholder="الباركود" style="direction:ltr;font-family:monospace">
+            </div>
+            <div class="bf-col">
+                <?php if ($i === 0): ?><label>التصنيف</label><?php endif ?>
+                <select name="items[<?= $i ?>][category]" class="batch-cat-select">
+                    <option value="">— التصنيف —</option>
+                    <?php foreach ($existingCategories as $cat): ?>
+                        <option value="<?= Html::encode($cat) ?>"><?= Html::encode($cat) ?></option>
+                    <?php endforeach ?>
+                    <option value="__new__" style="font-weight:700; color:#0369a1;">＋ تصنيف جديد...</option>
+                </select>
+            </div>
+            <div class="bf-remove">
+                <?php if ($i > 0): ?>
+                <button type="button" onclick="removeBatchRow(this)" title="حذف"><i class="fa fa-times"></i></button>
+                <?php endif ?>
+            </div>
         </div>
+        <?php endfor ?>
+    </div>
 
-        <div class="bf-actions">
-            <button type="button" class="bf-add-btn" onclick="addBatchRow()"><i class="fa fa-plus"></i> إضافة سطر</button>
-        </div>
-        <p class="bf-hint"><i class="fa fa-info-circle"></i> أضف أسطراً بحسب الحاجة — الحقل المطلوب هو "اسم الصنف" فقط.</p>
+    <div class="bf-actions">
+        <button type="button" class="bf-add-btn" onclick="addBatchRow()"><i class="fa fa-plus"></i> إضافة سطر</button>
+    </div>
+    <p class="bf-hint"><i class="fa fa-info-circle"></i> أضف أسطراً بحسب الحاجة — الحقل المطلوب هو "اسم الصنف" فقط.</p>
     </form>
 </div>
 
 <script>
 var batchIdx = 3;
-var suppliersHtml = <?= json_encode(
-    '<option value="">— المورد —</option>' .
-    implode('', array_map(function($id, $name) {
-        return '<option value="' . $id . '">' . Html::encode($name) . '</option>';
-    }, array_keys($suppliers), $suppliers))
+var categoriesHtml = <?= json_encode(
+    '<option value="">— التصنيف —</option>' .
+    implode('', array_map(function($cat) {
+        return '<option value="' . Html::encode($cat) . '">' . Html::encode($cat) . '</option>';
+    }, $existingCategories)) .
+    '<option value="__new__" style="font-weight:700; color:#0369a1;">＋ تصنيف جديد...</option>'
 ) ?>;
+
+function handleBatchCatChange(sel) {
+    if (sel.value === '__new__') {
+        var newCat = prompt('أدخل اسم التصنيف الجديد (مثال: أجهزة خلوية، أجهزة كهربائية، أثاث):');
+        if (newCat && newCat.trim()) {
+            newCat = newCat.trim();
+            var opt = document.createElement('option');
+            opt.value = newCat;
+            opt.textContent = newCat;
+            opt.selected = true;
+            var newOpt = sel.querySelector('option[value="__new__"]');
+            sel.insertBefore(opt, newOpt);
+            categoriesHtml = categoriesHtml.replace(
+                '<option value="__new__"',
+                '<option value="' + newCat.replace(/"/g, '&quot;') + '">' + newCat.replace(/</g, '&lt;') + '</option><option value="__new__"'
+            );
+        } else {
+            sel.value = '';
+        }
+    }
+}
+
+document.addEventListener('change', function(e) {
+    if (e.target && e.target.classList.contains('batch-cat-select')) {
+        handleBatchCatChange(e.target);
+    }
+});
 
 function addBatchRow() {
     var i = batchIdx++;
@@ -94,10 +116,7 @@ function addBatchRow() {
         '<div class="bf-num">' + (i + 1) + '</div>' +
         '<div class="bf-col" style="flex:2"><input type="text" name="items[' + i + '][item_name]" placeholder="اسم الصنف" required></div>' +
         '<div class="bf-col"><input type="text" name="items[' + i + '][item_barcode]" placeholder="الباركود" style="direction:ltr;font-family:monospace"></div>' +
-        '<div class="bf-col"><input type="text" name="items[' + i + '][serial_number]" placeholder="الرقم التسلسلي" style="direction:ltr;font-family:monospace"></div>' +
-        '<div class="bf-col"><input type="text" name="items[' + i + '][category]" placeholder="التصنيف"></div>' +
-        '<div class="bf-col"><input type="number" name="items[' + i + '][unit_price]" placeholder="0.00" step="0.01" style="direction:ltr"></div>' +
-        '<div class="bf-col"><select name="items[' + i + '][supplier_id]">' + suppliersHtml + '</select></div>' +
+        '<div class="bf-col"><select name="items[' + i + '][category]" class="batch-cat-select">' + categoriesHtml + '</select></div>' +
         '<div class="bf-remove"><button type="button" onclick="removeBatchRow(this)" title="حذف"><i class="fa fa-times"></i></button></div>' +
     '</div>';
     document.getElementById('batchRows').insertAdjacentHTML('beforeend', html);

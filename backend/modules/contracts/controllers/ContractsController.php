@@ -26,6 +26,7 @@ use backend\modules\contractDocumentFile\models\ContractDocumentFile;
 use backend\modules\notification\models\Notification;
 use backend\modules\companies\models\Companies;
 use backend\modules\contracts\models\PromissoryNote;
+use common\helper\Permissions;
 
 class ContractsController extends Controller
 {
@@ -36,19 +37,42 @@ class ContractsController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     ['actions' => ['login', 'error'], 'allow' => true],
+                    ['actions' => ['logout'], 'allow' => true, 'roles' => ['@']],
                     [
-                        'actions' => [
-                            'logout', 'index', 'update', 'create', 'delete',
-                            'is-connect', 'is-not-connect',
-                            'print-first-page', 'print-second-page', 'print-preview',
-                            'finish', 'finish-contract', 'cancel', 'cancel-contract',
-                            'legal-department', 'to-legal-department', 'return-to-continue',
-                            'view', 'index-legal-department', 'convert-to-manager',
-                            'is-read', 'chang-follow-up',
-                            'lookup-serial',
-                        ],
+                        'actions' => ['index', 'view', 'index-legal-department', 'legal-department',
+                            'print-preview', 'print-first-page', 'print-second-page'],
                         'allow' => true,
                         'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::CONT_VIEW);
+                        },
+                    ],
+                    [
+                        'actions' => ['create'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::CONT_CREATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['update', 'finish', 'finish-contract', 'cancel', 'cancel-contract',
+                            'return-to-continue', 'to-legal-department', 'convert-to-manager',
+                            'is-read', 'chang-follow-up', 'is-connect', 'is-not-connect',
+                            'lookup-serial'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::CONT_UPDATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['delete', 'bulkdelete'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::CONT_DELETE);
+                        },
                     ],
                 ],
             ],

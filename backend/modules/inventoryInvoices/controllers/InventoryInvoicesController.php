@@ -18,6 +18,7 @@ use backend\modules\itemsInventoryInvoices\models\ItemsInventoryInvoices;
 use backend\modules\inventoryItems\models\StockMovement;
 use backend\modules\inventoryItems\models\InventorySerialNumber;
 use backend\modules\location\models\Location;
+use backend\modules\inventoryStockLocations\models\InventoryStockLocations;
 use backend\modules\notification\models\Notification;
 use common\models\Model;
 use yii\filters\AccessControl;
@@ -30,6 +31,7 @@ use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use backend\modules\inventorySuppliers\models\InventorySuppliers;
 use backend\modules\companies\models\Companies;
+use common\helper\Permissions;
 
 class InventoryInvoicesController extends Controller
 {
@@ -42,7 +44,47 @@ class InventoryInvoicesController extends Controller
                 'rules' => [
                     ['actions' => ['login', 'error'], 'allow' => true],
                     [
-                        'actions' => ['logout', 'index', 'view', 'create', 'create-wizard', 'update', 'delete', 'bulk-delete', 'approve-reception', 'reject-reception', 'approve-manager', 'reject-manager'],
+                        'actions' => ['index', 'view'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::INVINV_VIEW);
+                        },
+                    ],
+                    [
+                        'actions' => ['create', 'create-wizard'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::INVINV_CREATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['update'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::INVINV_UPDATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['delete', 'bulk-delete'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::INVINV_DELETE);
+                        },
+                    ],
+                    [
+                        'actions' => ['approve-reception', 'reject-reception', 'approve-manager', 'reject-manager'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::INVINV_APPROVE);
+                        },
+                    ],
+                    [
+                        'actions' => ['logout'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -65,10 +107,6 @@ class InventoryInvoicesController extends Controller
     public function actionIndex()
     {
         $params = Yii::$app->request->queryParams;
-        $user = Yii::$app->user->identity;
-        if ($user && $user->hasCategory('sales_employee') && isset($user->location) && $user->location) {
-            $params['InventoryInvoicesSearch']['branch_id'] = $user->location;
-        }
         $searchModel = new InventoryInvoicesSearch();
         $dataProvider = $searchModel->search($params);
         $isVendor = $this->isVendorUser();
@@ -86,19 +124,26 @@ class InventoryInvoicesController extends Controller
     public function actionCreateWizard()
     {
         $activeBranches = $this->getActiveBranches();
-        $suppliersList = ArrayHelper::map(InventorySuppliers::find()->orderBy(['name' => SORT_ASC])->all(), 'id', 'name');
+        $allSuppliers = InventorySuppliers::find()->orderBy(['name' => SORT_ASC])->all();
+        $suppliersList = [];
+        foreach ($allSuppliers as $sup) {
+            $suppliersList[$sup->id] = $sup->name . ($sup->isSystemUser ? ' ✓' : '');
+        }
         $companiesList = ArrayHelper::map(Companies::find()->orderBy(['name' => SORT_ASC])->all(), 'id', 'name');
         $request = Yii::$app->request;
 
         if ($request->isPost) {
             $branchId = (int) $request->post('branch_id');
             $suppliersId = (int) ($request->post('suppliers_id') ?: 0);
+            $companyId = (int) ($request->post('company_id') ?: 0);
             $rawItems = $request->post('ItemsInventoryInvoices', []);
 
             if ($branchId <= 0) {
-                Yii::$app->session->setFlash('error', 'يرجى اختيار الفرع.');
+                Yii::$app->session->setFlash('error', 'يرجى اختيار موقع التخزين.');
             } elseif ($suppliersId <= 0) {
                 Yii::$app->session->setFlash('error', 'يرجى اختيار المورد.');
+            } elseif ($companyId <= 0) {
+                Yii::$app->session->setFlash('error', 'يرجى اختيار الشركة.');
             } else {
                 $lineItems = [];
                 foreach ($rawItems as $row) {
@@ -135,11 +180,10 @@ class InventoryInvoicesController extends Controller
                     $invoice->branch_id = $branchId;
                     $invoice->status = InventoryInvoices::STATUS_PENDING_RECEPTION;
                     $invoice->suppliers_id = $suppliersId;
-                    $invoice->company_id = (int) ($request->post('company_id') ?: 0);
+                    $invoice->company_id = $companyId;
                     $invoice->type = (int) ($request->post('type') ?: InventoryInvoices::TYPE_CASH);
                     $invoice->date = $request->post('date') ?: date('Y-m-d');
                     $invoice->invoice_notes = trim((string) $request->post('invoice_notes', ''));
-                    if ($invoice->company_id <= 0) $invoice->company_id = null;
 
                     $transaction = Yii::$app->db->beginTransaction();
                     try {
@@ -197,12 +241,12 @@ class InventoryInvoicesController extends Controller
 
                         $recipientId = $this->getBranchSalesUserId($invoice->branch_id);
                         if ($recipientId && Yii::$app->has('notifications')) {
-                            $branchName = $invoice->branch && $invoice->branch->location ? $invoice->branch->location : '';
+                            $locName = $invoice->stockLocation ? $invoice->stockLocation->locations_name : '';
                             $href = \yii\helpers\Url::to(['/inventoryInvoices/inventory-invoices/view', 'id' => $invoice->id]);
                             Yii::$app->notifications->add(
                                 $href,
                                 Notification::INVOICE_PENDING_RECEPTION,
-                                'فاتورة توريد جديدة #' . $invoice->id . ' بانتظار الاستلام - فرع: ' . $branchName,
+                                'فاتورة توريد جديدة #' . $invoice->id . ' بانتظار الاستلام - موقع: ' . $locName,
                                 '',
                                 Yii::$app->user->id,
                                 $recipientId
@@ -268,13 +312,12 @@ class InventoryInvoicesController extends Controller
     }
 
     /**
-     * Active branches for wizard dropdown.
+     * مواقع التخزين النشطة لقائمة الويزارد المنسدلة.
      */
     protected function getActiveBranches()
     {
-        return Location::find()
-            ->where(['status' => 'active'])
-            ->orderBy(['location' => SORT_ASC])
+        return InventoryStockLocations::find()
+            ->orderBy(['locations_name' => SORT_ASC])
             ->all();
     }
 
@@ -543,8 +586,8 @@ class InventoryInvoicesController extends Controller
     {
         $invoice = $this->findModel($id);
         $user = Yii::$app->user->identity;
-        if (!$user || (int) $invoice->branch_id !== (int) $user->location) {
-            throw new ForbiddenHttpException('غير مصرح لك بالموافقة على فاتورة هذا الفرع.');
+        if (!$user || !$user->hasCategory('sales_employee')) {
+            throw new ForbiddenHttpException('غير مصرح لك بالموافقة على هذه الفاتورة.');
         }
         if ($invoice->status !== InventoryInvoices::STATUS_PENDING_RECEPTION) {
             Yii::$app->session->setFlash('error', 'الفاتورة ليست بانتظار الاستلام.');
@@ -556,12 +599,12 @@ class InventoryInvoicesController extends Controller
         if ($invoice->save(false)) {
             $managerId = $this->getSystemManagerUserId();
             if ($managerId && Yii::$app->has('notifications')) {
-                $branchName = $invoice->branch_id && $invoice->branch ? $invoice->branch->location : '';
+                $locName = $invoice->stockLocation ? $invoice->stockLocation->locations_name : '';
                 $href = \yii\helpers\Url::to(['/inventoryInvoices/inventory-invoices/view', 'id' => $invoice->id]);
                 Yii::$app->notifications->add(
                     $href,
                     Notification::INVOICE_PENDING_MANAGER,
-                    'فاتورة توريد بانتظار موافقة المدير - فرع: ' . $branchName,
+                    'فاتورة توريد بانتظار موافقة المدير - موقع: ' . $locName,
                     '',
                     Yii::$app->user->id,
                     $managerId
@@ -581,8 +624,8 @@ class InventoryInvoicesController extends Controller
     {
         $invoice = $this->findModel($id);
         $user = Yii::$app->user->identity;
-        if (!$user || (int) $invoice->branch_id !== (int) $user->location) {
-            throw new ForbiddenHttpException('غير مصرح لك برفض فاتورة هذا الفرع.');
+        if (!$user || !$user->hasCategory('sales_employee')) {
+            throw new ForbiddenHttpException('غير مصرح لك برفض هذه الفاتورة.');
         }
         if ($invoice->status !== InventoryInvoices::STATUS_PENDING_RECEPTION) {
             Yii::$app->session->setFlash('error', 'الفاتورة ليست بانتظار الاستلام.');
@@ -674,7 +717,7 @@ class InventoryInvoicesController extends Controller
                 $qtyRecord->quantity      = $lineItem->number;
                 $qtyRecord->company_id    = $invoice->company_id;
                 $qtyRecord->suppliers_id  = $invoice->suppliers_id ?: 0;
-                $qtyRecord->locations_id  = 0;
+                $qtyRecord->locations_id  = $invoice->branch_id ?: 0;
                 $qtyRecord->save(false);
             }
         } elseif ($operation === 'subtract') {

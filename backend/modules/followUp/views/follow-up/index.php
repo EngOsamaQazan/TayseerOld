@@ -8,6 +8,7 @@ use yii\helpers\Html;
 use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset;
+use common\helper\Permissions;
 
 CrudAsset::register($this);
 $this->title = 'متابعة العقد #' . $contract_id;
@@ -21,6 +22,7 @@ $isLegalOrJudiciary = in_array($contractStatus, ['judiciary', 'legal_department'
 <div class="follow-up-index">
 
     <!-- ═══ نموذج المتابعة ═══ -->
+    <?php if (Permissions::can(Permissions::FOLLOWUP_CREATE)): ?>
     <div class="box box-primary">
         <div class="box-header with-border">
             <h3 class="box-title"><i class="fa fa-comments"></i> إضافة متابعة جديدة</h3>
@@ -34,6 +36,7 @@ $isLegalOrJudiciary = in_array($contractStatus, ['judiciary', 'legal_department'
             ]) ?>
         </div>
     </div>
+    <?php endif ?>
 
     <!-- ═══ جدول المتابعات السابقة ═══ -->
     <div class="box box-primary">
@@ -56,8 +59,12 @@ $isLegalOrJudiciary = in_array($contractStatus, ['judiciary', 'legal_department'
                         'header' => 'إجراءات',
                         'template' => '{view}{update}',
                         'buttons' => [
-                            'view' => fn($url, $m) => Html::a('<i class="fa fa-eye"></i>', ['view', 'id' => $m->id, 'contract_id' => $m->contract_id], ['class' => 'btn btn-info btn-xs', 'data-pjax' => '0']),
+                            'view' => function ($url, $m) {
+                                if (!Permissions::can(Permissions::FOLLOWUP_VIEW)) return '';
+                                return Html::a('<i class="fa fa-eye"></i>', ['view', 'id' => $m->id, 'contract_id' => $m->contract_id], ['class' => 'btn btn-info btn-xs', 'data-pjax' => '0']);
+                            },
                             'update' => function ($url, $m) {
+                                if (!Permissions::can(Permissions::FOLLOWUP_UPDATE)) return '';
                                 $created = new DateTime($m->date_time);
                                 $now = new DateTime();
                                 if ($m->created_by == Yii::$app->user->id && $created->diff($now)->days < 1) {

@@ -46,6 +46,7 @@ class UserCategoryMap extends ActiveRecord
         $db = Yii::$app->db;
         $db->createCommand()->delete('os_user_category_map', ['user_id' => $userId])->execute();
 
+        $hasVendor = false;
         foreach ($categoryIds as $catId) {
             $catId = (int)$catId;
             if ($catId <= 0) continue;
@@ -54,6 +55,16 @@ class UserCategoryMap extends ActiveRecord
                 'category_id' => $catId,
                 'assigned_by' => $assignedBy,
             ])->execute();
+
+            $cat = UserCategory::findOne($catId);
+            if ($cat && $cat->slug === 'vendor') {
+                $hasVendor = true;
+            }
+        }
+
+        /* توحيد الموردين: إنشاء/ربط سجل مورد تلقائياً عند تصنيف المستخدم كمورد */
+        if ($hasVendor) {
+            \backend\modules\inventorySuppliers\models\InventorySuppliers::ensureSupplierForUser($userId);
         }
     }
 }

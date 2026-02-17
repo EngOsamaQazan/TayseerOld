@@ -7,8 +7,12 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use kartik\grid\GridView;
 use backend\modules\diwan\models\DiwanTransaction;
+use common\helper\Permissions;
 
 $this->title = 'قسم الديوان';
+
+$baseDiwan      = Permissions::DIWAN;
+$canDiwanDelete = Permissions::can(Permissions::DIWAN_DELETE) || Yii::$app->user->can($baseDiwan);
 ?>
 
 <?= $this->render('@app/views/layouts/_diwan-tabs', ['activeTab' => 'transactions']) ?>
@@ -100,7 +104,7 @@ $this->title = 'قسم الديوان';
             [
                 'class' => 'kartik\grid\ActionColumn',
                 'header' => '',
-                'template' => '{view} {receipt} {delete}',
+                'template' => $canDiwanDelete ? '{view} {receipt} {delete}' : '{view} {receipt}',
                 'buttons' => [
                     'view' => function ($url, $m) {
                         return Html::a('<i class="fa fa-eye"></i>', ['view', 'id' => $m->id], [

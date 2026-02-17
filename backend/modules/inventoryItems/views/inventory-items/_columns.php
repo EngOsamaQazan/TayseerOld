@@ -2,6 +2,7 @@
 use yii\helpers\Url;
 use yii\helpers\Html;
 use backend\modules\inventoryItems\models\InventoryItems;
+use common\helper\Permissions;
 
 return [
     [
@@ -108,12 +109,19 @@ return [
         'buttons' => [
             'approve' => function ($url, $model) {
                 if ($model->status !== 'pending') return '';
+                if (!Permissions::can(Permissions::INVITEM_UPDATE)) return '';
                 return '<button class="inv-approve-btn" data-id="' . $model->id . '" title="اعتماد"><i class="fa fa-check"></i> اعتماد</button>';
             },
             'reject' => function ($url, $model) {
                 if ($model->status !== 'pending') return '';
+                if (!Permissions::can(Permissions::INVITEM_UPDATE)) return '';
                 return '<button class="inv-reject-btn" data-id="' . $model->id . '" title="رفض"><i class="fa fa-times"></i> رفض</button>';
             },
+        ],
+        'visibleButtons' => [
+            'view' => true,
+            'update' => Permissions::can(Permissions::INVITEM_UPDATE),
+            'delete' => Permissions::can(Permissions::INVITEM_DELETE),
         ],
         'viewOptions' => ['title' => 'عرض', 'data-toggle' => 'tooltip', 'class' => 'btn btn-xs btn-default', 'role' => 'modal-remote'],
         'updateOptions' => ['title' => 'تعديل', 'data-toggle' => 'tooltip', 'class' => 'btn btn-xs btn-info', 'role' => 'modal-remote'],

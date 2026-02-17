@@ -5,6 +5,7 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\DetailView;
+use common\helper\Permissions;
 
 $this->title = 'العقد #' . $model->id;
 $customerNames = implode('، ', ArrayHelper::map($model->customers, 'id', 'name'));

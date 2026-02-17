@@ -3,8 +3,17 @@
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use yii\helpers\ArrayHelper;
-use backend\modules\inventorySuppliers\models\InventorySuppliers;
+use backend\modules\inventoryItems\models\InventoryItems;
 
+$existingCategories = InventoryItems::find()
+    ->select('category')
+    ->distinct()
+    ->andWhere(['not', ['category' => null]])
+    ->andWhere(['!=', 'category', ''])
+    ->orderBy(['category' => SORT_ASC])
+    ->column();
+$categoryList = array_combine($existingCategories, $existingCategories);
+$categoryList['__new__'] = '＋ إضافة تصنيف جديد...';
 ?>
 
 <div class="inventory-items-form" style="padding:10px">
@@ -30,39 +39,13 @@ use backend\modules\inventorySuppliers\models\InventorySuppliers;
 
     <div class="row">
         <div class="col-lg-6 col-md-6">
-            <?= $form->field($model, 'serial_number')->textInput([
-                'maxlength' => true,
-                'placeholder' => 'الرقم التسلسلي للجهاز',
-                'style' => 'direction:ltr; font-family:monospace',
-            ])->label('الرقم التسلسلي') ?>
-        </div>
-        <div class="col-lg-6 col-md-6">
-            <?= $form->field($model, 'category')->textInput([
-                'maxlength' => true,
-                'placeholder' => 'مثال: هواتف، لابتوبات، إكسسوارات',
+            <?= $form->field($model, 'category')->dropDownList($categoryList, [
+                'prompt' => '— اختر التصنيف —',
+                'id' => 'item-category-select',
+                'options' => ['__new__' => ['style' => 'font-weight:700; color:#0369a1; border-top:1px solid #e2e8f0;']],
             ])->label('التصنيف') ?>
         </div>
-    </div>
-
-    <div class="row">
         <div class="col-lg-6 col-md-6">
-            <?= $form->field($model, 'unit_price')->textInput([
-                'type' => 'number',
-                'step' => '0.01',
-                'placeholder' => '0.00',
-                'style' => 'direction:ltr',
-            ])->label('سعر الوحدة') ?>
-        </div>
-        <div class="col-lg-6 col-md-6">
-            <?= $form->field($model, 'supplier_id')->dropDownList(
-                ArrayHelper::map(InventorySuppliers::find()->andWhere(['is_deleted' => 0])->all(), 'id', 'name'),
-                ['prompt' => '— اختر المورد —']
-            )->label('المورد') ?>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-lg-12">
             <?= $form->field($model, 'description')->textarea([
                 'rows' => 3,
                 'placeholder' => 'وصف إضافي عن الصنف...',
@@ -80,3 +63,30 @@ use backend\modules\inventorySuppliers\models\InventorySuppliers;
 
     <?php ActiveForm::end(); ?>
 </div>
+
+<script>
+(function(){
+    function initCategorySelect(sel) {
+        if (!sel) return;
+        sel.addEventListener('change', function() {
+            if (this.value === '__new__') {
+                var newCat = prompt('أدخل اسم التصنيف الجديد (مثال: أجهزة خلوية، أجهزة كهربائية، أثاث):');
+                if (newCat && newCat.trim()) {
+                    newCat = newCat.trim();
+                    var opt = document.createElement('option');
+                    opt.value = newCat;
+                    opt.textContent = newCat;
+                    opt.selected = true;
+                    var newOpt = this.querySelector('option[value="__new__"]');
+                    this.insertBefore(opt, newOpt);
+                } else {
+                    this.value = '';
+                }
+            }
+        });
+    }
+    var readyFn = function() { initCategorySelect(document.getElementById('item-category-select')); };
+    if (document.readyState !== 'loading') readyFn();
+    else document.addEventListener('DOMContentLoaded', readyFn);
+})();
+</script>

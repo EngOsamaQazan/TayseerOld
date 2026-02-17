@@ -8,6 +8,7 @@ use kartik\select2\Select2;
 use yii\helpers\ArrayHelper;
 use common\models\User;
 use common\components\CompanyChecked;
+use common\helper\Permissions;
 
 /* @var $this yii\web\View */
 /* @var $model backend\modules\companies\models\Companies */
@@ -93,9 +94,14 @@ use common\components\CompanyChecked;
             </div>
 
             <?php if (!Yii::$app->request->isAjax) { ?>
+                <?php
+                $canSubmit = $model->isNewRecord ? Permissions::can(Permissions::COMP_CREATE) : Permissions::can(Permissions::COMP_UPDATE);
+                ?>
+                <?php if ($canSubmit): ?>
                 <div class="form-group">
                     <?= Html::submitButton($model->isNewRecord ? Yii::t('app', 'Create') : Yii::t('app', 'Update'), ['class' => $model->isNewRecord ? 'btn btn-success' : 'btn btn-primary']) ?>
                 </div>
+                <?php endif ?>
             <?php } ?>
 
             <?php ActiveForm::end(); ?>

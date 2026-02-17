@@ -9,6 +9,7 @@
 
 use yii\helpers\Html;
 use yii\helpers\Url;
+use common\helper\Permissions;
 
 /** @var array $users */
 /** @var array $namedPermissions */
@@ -497,13 +498,24 @@ $defaultAvatar = Yii::getAlias('@web') . '/img/default-avatar.png';
                                 <button class="perm-group-toggle" data-group-toggle="<?= $gKey ?>" type="button" title="تفعيل/تعطيل الكل"></button>
                             </div>
                             <div class="perm-group-body" data-group-body="<?= $gKey ?>">
-                                <?php foreach ($g['permissions'] as $perm): ?>
-                                    <div class="perm-item" data-perm-name="<?= Html::encode($perm) ?>">
+                                <?php foreach ($g['permissions'] as $perm):
+                                    $isSub = (strpos($perm, ':') !== false);
+                                    $subClass = $isSub ? 'perm-item--sub' : 'perm-item--parent';
+                                ?>
+                                    <div class="perm-item <?= $subClass ?>" data-perm-name="<?= Html::encode($perm) ?>" <?= $isSub ? 'style="padding-right:32px;font-size:12.5px"' : '' ?>>
                                         <input type="checkbox" class="perm-check perm-perm-check"
                                                id="perm-<?= md5($perm) ?>"
                                                value="<?= Html::encode($perm) ?>"
                                                data-group="<?= $gKey ?>">
-                                        <label for="perm-<?= md5($perm) ?>"><?= Html::encode($perm) ?></label>
+                                        <label for="perm-<?= md5($perm) ?>">
+                                            <?php if ($isSub): ?>
+                                                <i class="fa fa-angle-left" style="color:#94a3b8;margin-left:4px;font-size:11px"></i>
+                                            <?php endif; ?>
+                                            <?= Html::encode($isSub ? explode(': ', $perm, 2)[1] : $perm) ?>
+                                            <?php if (!$isSub && isset(Permissions::getPermissionHierarchy()[$perm])): ?>
+                                                <span style="color:#94a3b8;font-size:11px;margin-right:4px">(الوصول الكامل)</span>
+                                            <?php endif; ?>
+                                        </label>
                                     </div>
                                 <?php endforeach ?>
                             </div>
@@ -583,12 +595,14 @@ $defaultAvatar = Yii::getAlias('@web') . '/img/default-avatar.png';
                                     </label>
                                 </div>
                                 <div style="padding:8px 14px">
-                                    <?php foreach ($g['permissions'] as $perm): ?>
-                                        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;cursor:pointer;margin:0"
+                                    <?php foreach ($g['permissions'] as $perm):
+                                        $isSub = (strpos($perm, ':') !== false);
+                                    ?>
+                                        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:<?= $isSub ? '12' : '13' ?>px;cursor:pointer;margin:0;<?= $isSub ? 'padding-right:20px;' : 'font-weight:500;' ?>"
                                                data-role-perm-name="<?= Html::encode($perm) ?>">
                                             <input type="checkbox" class="role-perm-check" value="<?= Html::encode($perm) ?>"
                                                    data-rgroup="<?= $gKey ?>">
-                                            <?= Html::encode($perm) ?>
+                                            <?= Html::encode($isSub ? '↳ ' . explode(': ', $perm, 2)[1] : $perm) ?>
                                         </label>
                                     <?php endforeach ?>
                                 </div>

@@ -86,7 +86,7 @@ class InventoryInvoices extends \yii\db\ActiveRecord
             'updated_at'       => 'آخر تحديث',
             'created_by'       => 'أنشئ بواسطة',
             'last_updated_by'  => 'آخر تعديل بواسطة',
-            'branch_id'        => 'الفرع',
+            'branch_id'        => 'موقع التخزين',
             'posted_at'        => 'تاريخ الترحيل',
         ];
     }
@@ -132,9 +132,20 @@ class InventoryInvoices extends \yii\db\ActiveRecord
         return $this->hasOne(\common\models\User::class, ['id' => 'approved_by']);
     }
 
+    /**
+     * علاقة موقع التخزين — branch_id يشير إلى os_inventory_stock_locations
+     */
+    public function getStockLocation()
+    {
+        return $this->hasOne(\backend\modules\inventoryStockLocations\models\InventoryStockLocations::class, ['id' => 'branch_id']);
+    }
+
+    /**
+     * Alias للتوافق مع الكود القديم
+     */
     public function getBranch()
     {
-        return $this->hasOne(\backend\modules\location\models\Location::class, ['id' => 'branch_id']);
+        return $this->getStockLocation();
     }
 
     /* ── مساعدات ── */

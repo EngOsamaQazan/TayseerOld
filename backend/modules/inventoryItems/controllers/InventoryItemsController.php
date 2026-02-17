@@ -27,7 +27,8 @@ use yii\web\Response;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\data\ActiveDataProvider;
-use yii\db\Query;
+use common\helper\Permissions;
+
 
 class InventoryItemsController extends Controller
 {
@@ -40,16 +41,53 @@ class InventoryItemsController extends Controller
                     ['actions' => ['login', 'error'], 'allow' => true],
                     [
                         'actions' => [
-                            'logout', 'index', 'items', 'update', 'create', 'delete', 'view',
-                            'item-query', 'bulk-delete', 'batch-create',
-                            'approve', 'reject', 'bulk-approve', 'bulk-reject',
-                            'movements', 'settings',
+                            'index', 'items', 'view', 'movements', 'settings',
+                            'search-items', 'item-query',
+                            'serial-numbers', 'serial-view',
+                        ],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::INVITEM_VIEW);
+                        },
+                    ],
+                    [
+                        'actions' => [
+                            'create', 'batch-create',
                             'quick-add-item', 'quick-add-supplier', 'quick-add-location',
-                            'search-items', 'adjustment',
-                            'serial-numbers', 'serial-create', 'serial-update', 'serial-view',
-                            'serial-delete', 'serial-change-status', 'serial-bulk-delete',
+                            'serial-create',
+                        ],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::INVITEM_CREATE);
+                        },
+                    ],
+                    [
+                        'actions' => [
+                            'update', 'approve', 'reject', 'bulk-approve', 'bulk-reject',
+                            'adjustment', 'serial-update', 'serial-change-status',
+                        ],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::INVITEM_UPDATE);
+                        },
+                    ],
+                    [
+                        'actions' => [
+                            'delete', 'bulk-delete',
+                            'serial-delete', 'serial-bulk-delete',
                             'delete-supplier', 'transfer-supplier-data',
                         ],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::INVITEM_DELETE);
+                        },
+                    ],
+                    [
+                        'actions' => ['logout'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -178,28 +216,13 @@ class InventoryItemsController extends Controller
      * ═══════════════════════════════════════════════════════════ */
     public function actionSettings()
     {
-        $suppliers = InventorySuppliers::find()->all();
+        /* جدول واحد موحّد — يشمل موردين خارجيين ومستخدمي نظام (user_id IS NOT NULL) */
+        $suppliers = InventorySuppliers::find()->orderBy(['user_id' => SORT_DESC, 'name' => SORT_ASC])->all();
         $locations = InventoryStockLocations::find()->all();
-
-        // جلب المستخدمين المصنفين كموردين من نظام فئات المستخدمين
-        $vendorUsers = [];
-        try {
-            $vendorUsers = (new Query())
-                ->select(['u.id', 'u.name', 'u.middle_name', 'u.last_name', 'u.username', 'u.mobile', 'u.email'])
-                ->from('{{%user}} u')
-                ->innerJoin('{{%user_category_map}} ucm', 'ucm.user_id = u.id')
-                ->innerJoin('{{%user_categories}} uc', 'uc.id = ucm.category_id')
-                ->where(['uc.slug' => 'vendor', 'uc.is_active' => 1])
-                ->andWhere(['not', ['u.confirmed_at' => null]])
-                ->all();
-        } catch (\Exception $e) {
-            Yii::warning('فشل جلب موردي المستخدمين: ' . $e->getMessage(), __METHOD__);
-        }
 
         return $this->render('settings', [
             'suppliers' => $suppliers,
             'locations' => $locations,
-            'vendorUsers' => $vendorUsers,
         ]);
     }
 
@@ -289,16 +312,14 @@ class InventoryItemsController extends Controller
 
             foreach ($items as $idx => $row) {
                 $name = trim($row['item_name'] ?? '');
-                $barcode = trim($row['item_barcode'] ?? '');
                 if ($name === '') continue;
+
+                $barcode = trim($row['item_barcode'] ?? '');
 
                 $model = new InventoryItems();
                 $model->item_name = $name;
-                $model->item_barcode = $barcode ?: null;
-                $model->serial_number = trim($row['serial_number'] ?? '') ?: null;
+                $model->item_barcode = $barcode ?: ('ITM-' . time() . '-' . $idx);
                 $model->category = trim($row['category'] ?? '') ?: null;
-                $model->unit_price = $row['unit_price'] ?? null;
-                $model->supplier_id = $row['supplier_id'] ?? null;
                 $model->description = trim($row['description'] ?? '') ?: null;
                 $model->status = $status;
 

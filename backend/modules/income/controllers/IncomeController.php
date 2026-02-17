@@ -14,6 +14,7 @@ use \yii\web\Response;
 use yii\helpers\Html;
 use yii\data\ActiveDataProvider;
 use yii\filters\AccessControl;
+use common\helper\Permissions;
 
 /**
  * IncomeController implements the CRUD actions for Installment model.
@@ -32,29 +33,35 @@ class IncomeController extends Controller
                 'class' => AccessControl::className(),
                 'rules' => [
                     ['actions' => ['login', 'error'], 'allow' => true],
-                    /* ═══ عرض — يكفي صلاحية "الدخل" ═══ */
+                    /* ═══ عرض ═══ */
                     [
                         'actions' => ['income-list', 'index', 'view'],
                         'allow'   => true,
-                        'roles'   => ['الدخل'],
+                        'roles'   => [Permissions::INC_VIEW],
                     ],
-                    /* ═══ تعديل — إضافة وتحديث ═══ */
+                    /* ═══ إضافة ═══ */
                     [
-                        'actions' => ['create', 'update', 'update-income'],
+                        'actions' => ['create'],
                         'allow'   => true,
-                        'roles'   => ['الدخل: تعديل'],
+                        'roles'   => [Permissions::INC_CREATE],
+                    ],
+                    /* ═══ تعديل ═══ */
+                    [
+                        'actions' => ['update', 'update-income'],
+                        'allow'   => true,
+                        'roles'   => [Permissions::INC_EDIT],
                     ],
                     /* ═══ حذف ═══ */
                     [
                         'actions' => ['delete', 'bulkdelete'],
                         'allow'   => true,
-                        'roles'   => ['الدخل: حذف'],
+                        'roles'   => [Permissions::INC_DELETE],
                     ],
                     /* ═══ إرجاع للحركات المالية ═══ */
                     [
                         'actions' => ['back-to-financial-transaction'],
                         'allow'   => true,
-                        'roles'   => ['الدخل: ارجاع'],
+                        'roles'   => [Permissions::INC_REVERT],
                     ],
                     /* ═══ تسجيل خروج ═══ */
                     ['actions' => ['logout'], 'allow' => true, 'roles' => ['@']],

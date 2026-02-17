@@ -41,6 +41,38 @@ class HrEmployeeController extends Controller
                         'allow' => true,
                     ],
                     [
+                        'actions' => ['index', 'view', 'export', 'statement'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::EMP_VIEW);
+                        },
+                    ],
+                    [
+                        'actions' => ['create'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::EMP_CREATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['update', 'toggle-status'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::EMP_UPDATE);
+                        },
+                    ],
+                    [
+                        'actions' => ['delete'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::can(Permissions::EMP_DELETE);
+                        },
+                    ],
+                    [
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {

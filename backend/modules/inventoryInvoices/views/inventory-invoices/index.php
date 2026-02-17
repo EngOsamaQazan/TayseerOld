@@ -29,7 +29,7 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
 
 <div class="inv-page">
     <section class="fin-actions" aria-label="إجراءات" style="margin-bottom:16px">
-        <?php if (Yii::$app->user->can(Permissions::INVENTORY_INVOICES)): ?>
+        <?php if (Permissions::can(Permissions::INVINV_CREATE)): ?>
         <div class="fin-act-group">
             <?= Html::a('<i class="fa fa-plus"></i> <span>أمر شراء جديد</span>', ['create'], [
                 'class' => 'fin-btn fin-btn--add', 'title' => 'إنشاء أمر شراء جديد',
@@ -37,7 +37,7 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
         </div>
         <div class="fin-act-group">
             <?= Html::a('<i class="fa fa-file-text-o"></i> <span>إنشاء فاتورة توريد (معالج)</span>', ['create-wizard'], [
-                'class' => 'fin-btn fin-btn--add', 'title' => 'معالج فاتورة توريد — اختيار الفرع وإرسال للاستلام',
+                'class' => 'fin-btn fin-btn--add', 'title' => 'معالج فاتورة توريد — اختيار موقع التخزين وإرسال للاستلام',
             ]) ?>
         </div>
         <?php endif ?>

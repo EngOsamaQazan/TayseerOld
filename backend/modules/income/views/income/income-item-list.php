@@ -19,10 +19,11 @@ $this->title = 'الإدارة المالية';
 $this->params['breadcrumbs'][] = $this->title;
 
 /* ═══ صلاحيات (مع fallback للصلاحية الأساسية) ═══ */
-$baseInc      = Permissions::INCOME;
-$canIncEdit   = Yii::$app->user->can(Permissions::INC_EDIT)   || Yii::$app->user->can($baseInc);
-$canIncDelete = Yii::$app->user->can(Permissions::INC_DELETE) || Yii::$app->user->can($baseInc);
-$canIncRevert = Yii::$app->user->can(Permissions::INC_REVERT) || Yii::$app->user->can($baseInc);
+$baseInc       = Permissions::INCOME;
+$canIncCreate  = Permissions::can(Permissions::INC_CREATE) || Yii::$app->user->can($baseInc);
+$canIncEdit    = Permissions::can(Permissions::INC_EDIT)   || Yii::$app->user->can($baseInc);
+$canIncDelete  = Permissions::can(Permissions::INC_DELETE) || Yii::$app->user->can($baseInc);
+$canIncRevert  = Permissions::can(Permissions::INC_REVERT) || Yii::$app->user->can($baseInc);
 
 /* ═══ بيانات مرجعية (كاش) ═══ */
 $cache = Yii::$app->cache;
@@ -130,7 +131,7 @@ $hasDateFilter = !empty($searchModel->date_from) || !empty($searchModel->_by);
          ║  2. شريط الأدوات                              ║
          ╚═══════════════════════════════════════════════╝ -->
     <section class="fin-actions" aria-label="إجراءات">
-        <?php if ($canIncEdit): ?>
+        <?php if ($canIncCreate): ?>
         <div class="fin-act-group">
             <?= Html::a('<i class="fa fa-plus"></i> <span>دفعة جديدة</span>', ['create'], [
                 'class' => 'fin-btn fin-btn--add', 'title' => 'إضافة دفعة جديدة',
@@ -255,8 +256,12 @@ $hasDateFilter = !empty($searchModel->date_from) || !empty($searchModel->_by);
                     <?php endif ?>
                 </div>
                 <div class="fin-card-foot">
+                    <?php if ($canIncEdit): ?>
                     <?= Html::a('<i class="fa fa-pencil"></i> تعديل', ['update-income', 'id' => $m->id], ['class' => 'fin-card-btn']) ?>
+                    <?php endif ?>
+                    <?php if ($canIncDelete): ?>
                     <?= Html::a('<i class="fa fa-trash-o"></i> حذف', ['delete', 'id' => $m->id], ['class' => 'fin-card-btn fin-card-btn--del', 'data' => ['method' => 'post', 'confirm' => 'هل أنت متأكد؟']]) ?>
+                    <?php endif ?>
                 </div>
             </div>
             <?php endforeach ?>

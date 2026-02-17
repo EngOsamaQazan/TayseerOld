@@ -6,6 +6,7 @@
 use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\bootstrap\ButtonDropdown;
+use common\helper\Permissions;
 
 return [
     /* رقم العميل */
@@ -22,7 +23,9 @@ return [
         'attribute' => 'name',
         'label' => 'الاسم',
         'format' => 'raw',
-        'value' => fn($m) => Html::a(Html::encode($m->name), ['update', 'id' => $m->id], ['class' => 'text-burgundy', 'style' => 'font-weight:600']),
+        'value' => fn($m) => Permissions::can(Permissions::CUST_UPDATE)
+            ? Html::a(Html::encode($m->name), ['update', 'id' => $m->id], ['class' => 'text-burgundy', 'style' => 'font-weight:600'])
+            : Html::encode($m->name),
     ],
 
     /* الهاتف */
@@ -104,15 +107,15 @@ return [
                 'label' => '<i class="fa fa-ellipsis-v"></i>',
                 'dropdown' => [
                     'encodeLabels' => false,
-                    'items' => [
-                        ['label' => '<i class="fa fa-pencil text-primary"></i> تعديل', 'url' => ['update', 'id' => $m->id]],
+                    'items' => array_filter([
+                        Permissions::can(Permissions::CUST_UPDATE) ? ['label' => '<i class="fa fa-pencil text-primary"></i> تعديل', 'url' => ['update', 'id' => $m->id]] : null,
                         ['label' => '<i class="fa fa-eye text-info"></i> عرض', 'url' => ['view', 'id' => $m->id], 'linkOptions' => ['role' => 'modal-remote']],
                         ['label' => '<i class="fa fa-file-text-o text-success"></i> إضافة عقد', 'url' => ['/contracts/contracts/create', 'id' => $m->id]],
                         '<li class="divider"></li>',
-                        ['label' => '<i class="fa fa-phone text-warning"></i> تحديث اتصال', 'url' => ['update-contact', 'id' => $m->id], 'linkOptions' => ['role' => 'modal-remote']],
-                        '<li class="divider"></li>',
-                        ['label' => '<i class="fa fa-trash text-danger"></i> حذف', 'url' => ['delete', 'id' => $m->id], 'linkOptions' => ['data' => ['method' => 'post', 'confirm' => 'هل أنت متأكد من حذف هذا العميل؟']]],
-                    ],
+                        Permissions::can(Permissions::CUST_UPDATE) ? ['label' => '<i class="fa fa-phone text-warning"></i> تحديث اتصال', 'url' => ['update-contact', 'id' => $m->id], 'linkOptions' => ['role' => 'modal-remote']] : null,
+                        Permissions::can(Permissions::CUST_DELETE) ? '<li class="divider"></li>' : null,
+                        Permissions::can(Permissions::CUST_DELETE) ? ['label' => '<i class="fa fa-trash text-danger"></i> حذف', 'url' => ['delete', 'id' => $m->id], 'linkOptions' => ['data' => ['method' => 'post', 'confirm' => 'هل أنت متأكد من حذف هذا العميل؟']]] : null,
+                    ]),
                     'options' => ['class' => 'dropdown-menu-left'],
                 ],
                 'options' => ['class' => 'btn-default btn-xs'],
