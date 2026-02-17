@@ -83,10 +83,8 @@ class JobsController extends Controller
         $model = new Jobs();
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            // Save working hours
             $this->saveWorkingHours($model);
-
-            // Update cache
+            $this->savePhonesFromPost($model);
             $this->updateJobsCache();
 
             Yii::$app->session->setFlash('success', 'تم إنشاء جهة العمل بنجاح');
@@ -108,10 +106,8 @@ class JobsController extends Controller
         $model = $this->findModel($id);
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            // Save working hours
             $this->saveWorkingHours($model);
-
-            // Update cache
+            $this->savePhonesFromPost($model);
             $this->updateJobsCache();
 
             Yii::$app->session->setFlash('success', 'تم تحديث بيانات جهة العمل بنجاح');
@@ -137,6 +133,44 @@ class JobsController extends Controller
 
         Yii::$app->session->setFlash('success', 'تم حذف جهة العمل');
         return $this->redirect(['index']);
+    }
+
+    // ========================
+    // Similar Name Search (AJAX) — duplicate detection
+    // ========================
+
+    /**
+     * Search for jobs with similar names (AJAX).
+     * Used on the create/update form to warn about duplicates.
+     * @return array
+     */
+    public function actionSearchSimilar()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $q = trim(Yii::$app->request->get('q', ''));
+        $excludeId = (int) Yii::$app->request->get('exclude', 0);
+
+        if (mb_strlen($q) < 2) {
+            return ['results' => []];
+        }
+
+        $query = Jobs::find()
+            ->select(['id', 'name', 'address_city', 'job_type'])
+            ->where(['like', 'name', $q])
+            ->andFilterWhere(['!=', 'id', $excludeId ?: null])
+            ->limit(8);
+
+        $rows = [];
+        foreach ($query->all() as $job) {
+            $rows[] = [
+                'id'   => $job->id,
+                'name' => $job->name,
+                'city' => $job->address_city ?: '',
+                'type' => $job->jobType ? $job->jobType->name : '',
+            ];
+        }
+
+        return ['results' => $rows];
     }
 
     // ========================
@@ -253,6 +287,33 @@ class JobsController extends Controller
             $hour->is_closed = !empty($dayData['is_closed']) ? 1 : 0;
             $hour->notes = $dayData['notes'] ?? null;
             $hour->save();
+        }
+    }
+
+    // ========================
+    // Save inline phones from form
+    // ========================
+
+    /**
+     * Save phone rows submitted from the create/update form.
+     * POST key: Phones[0][phone_number], Phones[0][employee_name], etc.
+     */
+    protected function savePhonesFromPost($model)
+    {
+        $phonesData = Yii::$app->request->post('Phones', []);
+        if (empty($phonesData)) return;
+
+        foreach ($phonesData as $row) {
+            $number = trim($row['phone_number'] ?? '');
+            if ($number === '') continue;
+
+            $phone = new JobsPhone();
+            $phone->job_id = $model->id;
+            $phone->phone_number = $number;
+            $phone->phone_type = $row['phone_type'] ?? 'office';
+            $phone->employee_name = trim($row['employee_name'] ?? '') ?: null;
+            $phone->employee_position = trim($row['employee_position'] ?? '') ?: null;
+            $phone->save(false);
         }
     }
 

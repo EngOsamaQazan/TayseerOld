@@ -27,7 +27,7 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
 .po-type--mixed { background: #e0f2fe; color: #0369a1; }
 </style>
 
-<div class="inv-page">
+<div class="inv-page fin-page">
     <section class="fin-actions" aria-label="إجراءات" style="margin-bottom:16px">
         <?php if (Permissions::can(Permissions::INVINV_CREATE)): ?>
         <div class="fin-act-group">
