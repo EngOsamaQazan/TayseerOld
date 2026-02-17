@@ -18,6 +18,7 @@ return [
             'class' => 'yii\console\controllers\FixtureController',
             'namespace' => 'common\fixtures',
         ],
+        'app-user' => 'console\controllers\UserController',
     ],
     'components' => [
         'log' => [

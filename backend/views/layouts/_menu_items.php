@@ -12,11 +12,6 @@ use common\helper\Permissions;
 
 $mainMenuItems = [
 
-    // ═══════════════════════════════════════
-    //  لوحة التحكم
-    // ═══════════════════════════════════════
-    ['label' => 'لوحة التحكم', 'icon' => 'tachometer', 'url' => ['/site/index']],
-
     ['label' => 'العمليات', 'options' => ['class' => 'header']],
 
     // ─── 1. العملاء ───
@@ -44,6 +39,7 @@ $mainMenuItems = [
     [
         'label' => 'الموارد البشرية',
         'icon'  => 'id-card',
+        'privilege' => [Permissions::EMPLOYEE, Permissions::JOBS, Permissions::HOLIDAYS, Permissions::LEAVE_POLICY, Permissions::LEAVE_TYPES, Permissions::WORKDAYS, Permissions::LEAVE_REQUEST, Permissions::EMPLOYEE_NOTIFICATIONS],
         'items' => [
             ['label' => 'لوحة تحكم HR',      'icon' => 'tachometer',        'url' => ['/hr/hr-dashboard/index']],
             ['label' => 'سجل الموظفين',      'icon' => 'users',             'url' => ['/hr/hr-employee/index']],
@@ -52,7 +48,7 @@ $mainMenuItems = [
             ['label' => 'مسيرات الرواتب',    'icon' => 'money',             'url' => ['/hr/hr-payroll/index']],
             ['label' => 'السلف والقروض',     'icon' => 'credit-card',       'url' => ['/hr/hr-loan/index']],
             ['label' => 'تقييمات الأداء',     'icon' => 'star-half-o',       'url' => ['/hr/hr-evaluation/index']],
-            ['label' => 'المهام الميدانية',   'icon' => 'map-marker',        'url' => ['/hr/hr-field/index']],
+            ['label' => 'نظام الحضور والانصراف', 'icon' => 'map-marker', 'url' => ['/hr/hr-field/index']],
             ['label' => 'إدارة الإجازات',    'icon' => 'calendar-check-o',  'url' => ['/hr/hr-leave/index']],
             ['label' => 'تقارير HR',         'icon' => 'bar-chart',         'url' => ['/hr/hr-report/index']],
         ],
@@ -60,6 +56,7 @@ $mainMenuItems = [
 
     // ─── 8. إدارة المخزون ───
     ['label' => 'إدارة المخزون', 'icon' => 'cubes', 'url' => ['/inventoryItems/inventory-items/index'], 'privilege' => [Permissions::INVENTORY_ITEMS, Permissions::INVENTORY_INVOICES, Permissions::INVENTORY_SUPPLIERS, Permissions::INVENTORY_STOCK_LOCATIONS, Permissions::INVENTORY_ITEMS_QUANTITY, Permissions::INVENTORY_IEMS_QUERY]],
+    ['label' => 'فاتورة توريد جديدة (معالج)', 'icon' => 'file-text-o', 'url' => ['/inventoryInvoices/inventory-invoices/create-wizard'], 'privilege' => Permissions::INVENTORY_INVOICES],
 
     // ─── 9. المستثمرين ───
     ['label' => 'المستثمرين', 'icon' => 'building', 'url' => ['/companies/companies/index'], 'privilege' => Permissions::COMPAINES],
@@ -67,16 +64,22 @@ $mainMenuItems = [
     // ─── 10. قسم الديوان ───
     ['label' => 'قسم الديوان', 'icon' => 'archive', 'url' => ['/diwan/diwan/index'], 'privilege' => [Permissions::DIWAN, Permissions::DIWAN_REPORTS]],
 
-    // ─── 11. التقييم ───
-    ['label' => 'التقييم', 'icon' => 'star-half-o', 'url' => ['/determination'], 'privilege' => Permissions::DETERMINATION],
+    // ─── 11. التقييم (الموديول غير مفعّل حالياً؛ الرابط يوجّه للوحة التحكم لتجنّب 404) ───
+    ['label' => 'التقييم', 'icon' => 'star-half-o', 'url' => ['/site/index'], 'privilege' => Permissions::DETERMINATION],
 
     ['label' => 'الإدارة والإعدادات', 'options' => ['class' => 'header']],
+
+    // ─── لوحة التحكم — ملخص أعمال الشركة (صلاحية مستقلة) ───
+    ['label' => 'لوحة التحكم', 'icon' => 'tachometer', 'url' => ['/site/index'], 'privilege' => Permissions::DASHBOARD],
 
     // ─── 12. إدارة الصلاحيات ───
     ['label' => 'إدارة الصلاحيات', 'icon' => 'shield', 'url' => ['/permissions-management'], 'privilege' => [Permissions::PERMISSION, Permissions::ROLE, Permissions::ASSIGNMENT]],
 
+    // ─── أدوات المستخدم (فحص حساب، إصلاح، تعيين كلمة مرور) ───
+    ['label' => 'أدوات المستخدم', 'icon' => 'user-circle', 'url' => ['/user-tools/index'], 'privilege' => Permissions::USER_TOOLS],
+
     // ─── 13. إعدادات النظام (تبويب واحد → صفحة موحّدة) ───
-    ['label' => 'إعدادات النظام', 'icon' => 'cogs', 'url' => ['/site/system-settings']],
+    ['label' => 'إعدادات النظام', 'icon' => 'cogs', 'url' => ['/site/system-settings'], 'privilege' => Permissions::getSettingsPermissions()],
 
     // ─── تسجيل الدخول (للزوار) ───
     ['label' => 'تسجيل الدخول', 'url' => ['site/login'], 'visible' => Yii::$app->user->isGuest],

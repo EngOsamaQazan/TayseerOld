@@ -29,6 +29,8 @@ class Notification extends \yii\db\ActiveRecord
     const IS_NOT_HIDDEN = 'No';
     const SYSTEM_SENDER = 0;
     const GENERAL = 1;
+    const INVOICE_PENDING_RECEPTION = 1001;
+    const INVOICE_PENDING_MANAGER = 1003;
 
     public static function tableName()
     {

@@ -76,12 +76,16 @@ $statusInfo = $statusMap[$user->employee_status ?? ''] ?? ['label' => $user->emp
 $departmentName = '—';
 $designationName = '—';
 if (!empty($user->department)) {
-    $dept = Yii::$app->db->createCommand("SELECT name FROM {{%department}} WHERE id = :id", [':id' => $user->department])->queryScalar();
-    if ($dept) $departmentName = $dept;
+    try {
+        $dept = Yii::$app->db->createCommand("SELECT title FROM {{%department}} WHERE id = :id", [':id' => $user->department])->queryScalar();
+        if ($dept) $departmentName = $dept;
+    } catch (\Exception $e) {}
 }
 if (!empty($user->job_title)) {
-    $desig = Yii::$app->db->createCommand("SELECT name FROM {{%designation}} WHERE id = :id", [':id' => $user->job_title])->queryScalar();
-    if ($desig) $designationName = $desig;
+    try {
+        $desig = Yii::$app->db->createCommand("SELECT title FROM {{%designation}} WHERE id = :id", [':id' => $user->job_title])->queryScalar();
+        if ($desig) $designationName = $desig;
+    } catch (\Exception $e) {}
 }
 ?>
 

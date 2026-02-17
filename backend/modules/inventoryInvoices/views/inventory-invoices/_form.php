@@ -57,11 +57,20 @@ $quickAddSupplierUrl = Url::to(['/inventoryItems/inventory-items/quick-add-suppl
             </div>
         </div>
         <div class="row">
-            <div class="col-lg-12">
+            <div class="col-lg-8">
                 <?= $form->field($model, 'invoice_notes')->textarea([
                     'rows' => 2,
                     'placeholder' => 'ملاحظات إضافية على أمر الشراء...',
                 ])->label('ملاحظات') ?>
+            </div>
+            <div class="col-lg-4">
+                <?= $form->field($model, 'discount_amount')->textInput([
+                    'type' => 'number',
+                    'step' => '0.01',
+                    'min' => 0,
+                    'placeholder' => '0',
+                    'style' => 'direction:ltr',
+                ])->label('الخصم (مبلغ)') ?>
             </div>
         </div>
     </div>

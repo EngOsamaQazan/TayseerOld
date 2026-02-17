@@ -4,6 +4,7 @@
  */
 use yii\helpers\Url;
 use yii\helpers\Html;
+use common\helper\Permissions;
 
 $this->title = 'إدارة المخزون';
 $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['depends' => ['yii\web\YiiAsset']]);
@@ -166,15 +167,24 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
 
     <!-- ═══ أزرار سريعة ═══ -->
     <div class="inv-quick">
+        <?php if (Yii::$app->user->can(Permissions::INVENTORY_INVOICES)): ?>
+        <a href="<?= Url::to(['/inventoryInvoices/inventory-invoices/create-wizard']) ?>" class="inv-quick-btn inv-qb--purchase" style="background:#5b21b6; border-color:#5b21b6">
+            <i class="fa fa-file-text-o"></i> فاتورة توريد جديدة (معالج)
+        </a>
         <a href="<?= Url::to(['/inventoryInvoices/inventory-invoices/create']) ?>" class="inv-quick-btn inv-qb--purchase">
             <i class="fa fa-shopping-cart"></i> أمر شراء جديد
         </a>
+        <?php endif ?>
+        <?php if (Yii::$app->user->can(Permissions::INVENTORY_ITEMS)): ?>
         <a href="<?= Url::to(['create']) ?>" class="inv-quick-btn inv-qb--item" role="modal-remote">
             <i class="fa fa-plus"></i> إضافة صنف
         </a>
+        <?php endif ?>
+        <?php if (Yii::$app->user->can(Permissions::INVENTORY_ITEMS) || Yii::$app->user->can(Permissions::INVENTORY_ITEMS_QUANTITY)): ?>
         <a href="<?= Url::to(['movements']) ?>" class="inv-quick-btn inv-qb--adjust">
             <i class="fa fa-exchange"></i> حركات المخزون
         </a>
+        <?php endif ?>
     </div>
 
     <!-- ═══ اللوحات ═══ -->
@@ -247,7 +257,8 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
             </div>
         </div>
 
-        <!-- آخر أوامر الشراء -->
+        <!-- آخر أوامر الشراء (لمن يملك صلاحية فواتير المخزون) -->
+        <?php if (Yii::$app->user->can(Permissions::INVENTORY_INVOICES)): ?>
         <div class="inv-panel" style="grid-column: 1 / -1">
             <div class="inv-panel-head">
                 <i class="fa fa-shopping-cart" style="color:var(--inv-purple)"></i>
@@ -280,6 +291,7 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
                 <?php endif ?>
             </div>
         </div>
+        <?php endif ?>
     </div>
 
 </div>

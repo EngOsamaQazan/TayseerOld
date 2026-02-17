@@ -12,14 +12,19 @@ use backend\modules\inventoryInvoices\models\InventoryInvoices;
  */
 class InventoryInvoicesSearch extends InventoryInvoices
 {
+    /** @var int|null for filter only (may not exist on table until migration) */
+    public $branch_id;
+    /** @var string|null for filter only */
+    public $status;
+
     /**
      * @inheritdoc
      */
     public function rules()
     {
         return [
-            [['id', 'inventory_items_id', 'company_id', 'type', 'suppliers_id', 'created_at', 'updated_at', 'created_by', 'last_updated_by', 'is_deleted'], 'integer'],
-            [['date'], 'safe'],
+            [['id', 'inventory_items_id', 'company_id', 'type', 'suppliers_id', 'created_at', 'updated_at', 'created_by', 'last_updated_by', 'is_deleted', 'branch_id'], 'integer'],
+            [['date', 'status'], 'safe'],
         ];
     }
 
@@ -50,15 +55,18 @@ class InventoryInvoicesSearch extends InventoryInvoices
         $this->load($params);
 
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
             return $dataProvider;
         }
 
-        $query->andFilterWhere([
-            'id' => $this->id,
-
-        ])->where(['is_deleted'=>0]);
+        $filter = ['id' => $this->id];
+        $schema = $query->modelClass::getTableSchema();
+        if ($schema && $schema->getColumn('branch_id')) {
+            $filter['branch_id'] = $this->branch_id;
+        }
+        if ($schema && $schema->getColumn('status')) {
+            $filter['status'] = $this->status;
+        }
+        $query->andFilterWhere($filter)->andWhere(['is_deleted' => 0]);
 
         return $dataProvider;
     }

@@ -3,6 +3,7 @@
 namespace backend\modules\employee\models;
 
 use Yii;
+use common\models\User;
 
 /**
  * This is the model class for table "os_employee_files".

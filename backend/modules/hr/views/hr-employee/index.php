@@ -352,6 +352,40 @@ $employmentTypeMap = [
 
 </div><!-- /.hr-page -->
 
+<?php if ($suspendedCount > 0): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var table = document.querySelector('#hr-employees-grid table.hr-grid-table tbody');
+    if (!table) return;
+    var rows = table.querySelectorAll('tr');
+    var activeCount = <?= $activeCount ?>;
+    var suspendedCount = <?= $suspendedCount ?>;
+
+    // إدراج صف فاصل بعد آخر مستخدم نشط
+    if (activeCount > 0 && activeCount < rows.length) {
+        var sepRow = document.createElement('tr');
+        sepRow.className = 'hr-suspended-separator';
+        var sepCell = document.createElement('td');
+        sepCell.colSpan = rows[0].cells.length;
+        sepCell.innerHTML = '<div style="display:flex;align-items:center;gap:12px;padding:6px 0">'
+            + '<div style="flex:1;height:1px;background:linear-gradient(to left,transparent,#fca5a5,transparent)"></div>'
+            + '<span style="font-size:12px;font-weight:700;color:#991b1b;background:#fee2e2;padding:4px 14px;border-radius:20px;white-space:nowrap">'
+            + '<i class="fa fa-ban"></i> معطّلون (' + suspendedCount + ')</span>'
+            + '<div style="flex:1;height:1px;background:linear-gradient(to right,transparent,#fca5a5,transparent)"></div></div>';
+        sepRow.appendChild(sepCell);
+        rows[activeCount].parentNode.insertBefore(sepRow, rows[activeCount]);
+    }
+
+    // تطبيق style على صفوف المعطلين
+    var allRows = table.querySelectorAll('tr:not(.hr-suspended-separator)');
+    for (var i = activeCount; i < allRows.length; i++) {
+        allRows[i].style.opacity = '0.55';
+        allRows[i].style.background = '#fff8f8';
+    }
+});
+</script>
+<?php endif; ?>
+
 
 <!-- ══════════════════════════════════════════════════════
      مودال AJAX للعرض والتعديل

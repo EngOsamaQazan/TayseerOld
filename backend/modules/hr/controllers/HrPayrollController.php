@@ -21,9 +21,11 @@ use backend\modules\hr\models\HrLoan;
 use backend\modules\hr\models\HrPayrollAdjustment;
 use backend\modules\hr\models\HrAnnualIncrement;
 use common\models\User;
+use common\helper\Permissions;
 
 /**
  * HrPayrollController — Payroll management
+ * يتطلب أحد صلاحيات الموارد البشرية.
  */
 class HrPayrollController extends Controller
 {
@@ -43,6 +45,9 @@ class HrPayrollController extends Controller
                     [
                         'allow' => true,
                         'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::hasAnyPermission(Permissions::getHrPermissions());
+                        },
                     ],
                 ],
             ],

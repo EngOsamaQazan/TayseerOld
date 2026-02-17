@@ -266,6 +266,19 @@ return [
 
     ],
     'components' => [
+        'i18n' => [
+            'translations' => [
+                'app*' => [
+                    'class' => 'yii\i18n\PhpMessageSource',
+                    'basePath' => '@common/messages',
+                ],
+                'user*' => [
+                    'class' => 'yii\i18n\PhpMessageSource',
+                    'basePath' => '@backend/modules/dektrium/user/messages',
+                    'sourceLanguage' => 'en',
+                ],
+            ],
+        ],
         'customersInformation' => [
             'class' => 'common\components\customersInformation'
         ],
@@ -612,5 +625,8 @@ return [
      'site/*',
      ]
      ],*/
+    'as routeAccess' => [
+        'class' => 'backend\components\RouteAccessBehavior',
+    ],
     'params' => $params,
 ];

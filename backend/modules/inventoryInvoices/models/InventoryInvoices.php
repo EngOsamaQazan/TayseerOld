@@ -17,10 +17,12 @@ class InventoryInvoices extends \yii\db\ActiveRecord
     const TYPE_MIXED   = 2;
 
     /* حالات الفاتورة */
-    const STATUS_DRAFT    = 'draft';
-    const STATUS_PENDING  = 'pending';
-    const STATUS_APPROVED = 'approved';
-    const STATUS_REJECTED = 'rejected';
+    const STATUS_DRAFT = 'draft';
+    const STATUS_PENDING_RECEPTION = 'pending_reception';
+    const STATUS_APPROVED_SALES = 'approved_sales';   // للاستخدام كقيمة في سجل التدقيق فقط (log entry)
+    const STATUS_PENDING_MANAGER = 'pending_manager';
+    const STATUS_APPROVED_FINAL = 'approved_final';
+    const STATUS_REJECTED_MANAGER = 'rejected_manager';
 
     public static function tableName()
     {
@@ -51,15 +53,16 @@ class InventoryInvoices extends \yii\db\ActiveRecord
     {
         return [
             [['suppliers_id'], 'required'],
-            [['inventory_items_id', 'company_id', 'type', 'suppliers_id', 'created_at', 'updated_at', 'created_by', 'last_updated_by', 'is_deleted', 'approved_by', 'approved_at'], 'integer'],
-            [['total_amount'], 'number'],
-            [['date'], 'safe'],
+            [['inventory_items_id', 'company_id', 'type', 'suppliers_id', 'created_at', 'updated_at', 'created_by', 'last_updated_by', 'is_deleted', 'approved_by', 'approved_at', 'branch_id'], 'integer'],
+            [['total_amount', 'discount_amount'], 'number'],
+            [['date', 'posted_at'], 'safe'],
             [['invoice_number'], 'string', 'max' => 50],
             [['rejection_reason'], 'string', 'max' => 500],
             [['invoice_notes'], 'string'],
-            [['status'], 'in', 'range' => [self::STATUS_DRAFT, self::STATUS_PENDING, self::STATUS_APPROVED, self::STATUS_REJECTED]],
-            [['status'], 'default', 'value' => self::STATUS_APPROVED],
-            [['invoice_number', 'invoice_notes', 'rejection_reason', 'company_id', 'type'], 'safe'],
+            [['status'], 'in', 'range' => [self::STATUS_DRAFT, self::STATUS_PENDING_RECEPTION, self::STATUS_APPROVED_SALES, self::STATUS_PENDING_MANAGER, self::STATUS_APPROVED_FINAL, self::STATUS_REJECTED_MANAGER]],
+            [['status'], 'default', 'value' => self::STATUS_DRAFT],
+            [['discount_amount'], 'default', 'value' => 0],
+            [['invoice_number', 'invoice_notes', 'rejection_reason', 'company_id', 'type', 'branch_id', 'discount_amount'], 'safe'],
         ];
     }
 
@@ -70,6 +73,7 @@ class InventoryInvoices extends \yii\db\ActiveRecord
             'invoice_number'   => 'رقم الفاتورة',
             'company_id'       => 'الشركة',
             'total_amount'     => 'المبلغ الإجمالي',
+            'discount_amount'   => 'الخصم',
             'type'             => 'طريقة الدفع',
             'suppliers_id'     => 'المورد',
             'status'           => 'الحالة',
@@ -82,6 +86,8 @@ class InventoryInvoices extends \yii\db\ActiveRecord
             'updated_at'       => 'آخر تحديث',
             'created_by'       => 'أنشئ بواسطة',
             'last_updated_by'  => 'آخر تعديل بواسطة',
+            'branch_id'        => 'الفرع',
+            'posted_at'        => 'تاريخ الترحيل',
         ];
     }
 
@@ -126,6 +132,11 @@ class InventoryInvoices extends \yii\db\ActiveRecord
         return $this->hasOne(\common\models\User::class, ['id' => 'approved_by']);
     }
 
+    public function getBranch()
+    {
+        return $this->hasOne(\backend\modules\location\models\Location::class, ['id' => 'branch_id']);
+    }
+
     /* ── مساعدات ── */
     public static function getTypeList()
     {
@@ -145,10 +156,12 @@ class InventoryInvoices extends \yii\db\ActiveRecord
     public static function getStatusList()
     {
         return [
-            self::STATUS_DRAFT    => 'مسودة',
-            self::STATUS_PENDING  => 'معلق',
-            self::STATUS_APPROVED => 'معتمد',
-            self::STATUS_REJECTED => 'مرفوض',
+            self::STATUS_DRAFT             => 'مسودة',
+            self::STATUS_PENDING_RECEPTION => 'بانتظار الاستلام',
+            self::STATUS_APPROVED_SALES    => 'موافقة الفرع (سجل)',
+            self::STATUS_PENDING_MANAGER   => 'بانتظار المدير',
+            self::STATUS_APPROVED_FINAL    => 'معتمد نهائياً',
+            self::STATUS_REJECTED_MANAGER  => 'مرفوض من المدير',
         ];
     }
 

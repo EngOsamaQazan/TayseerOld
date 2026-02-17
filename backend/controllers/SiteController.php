@@ -15,6 +15,7 @@ use yii\data\ActiveDataProvider;
 use backend\modules\customers\models\Customers;
 use common\models\Income;
 use yii\db\Query;
+use common\helper\Permissions;
 
 /**
  * Site controller — Dashboard + Auth
@@ -33,7 +34,15 @@ class SiteController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'system-settings', 'test-google-connection', 'image-manager', 'image-manager-data', 'image-reassign', 'image-manager-stats', 'image-search-customers', 'image-update-doc-type', 'image-delete'],
+                        'actions' => ['system-settings', 'test-google-connection', 'image-manager', 'image-manager-data', 'image-reassign', 'image-manager-stats', 'image-search-customers', 'image-update-doc-type', 'image-delete'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::hasAnyPermission(Permissions::getSettingsPermissions());
+                        },
+                    ],
+                    [
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -273,6 +282,15 @@ class SiteController extends Controller
             $post = Yii::$app->request->post();
             $tab = $post['settings_tab'] ?? 'google_cloud';
 
+            if ($tab === 'google_maps') {
+                $newKey = trim($post['gm_api_key'] ?? '');
+                $existingKey = SystemSettings::get('google_maps', 'api_key', '');
+                $keyToSave = $newKey !== '' ? $newKey : $existingKey;
+                SystemSettings::set('google_maps', 'api_key', $keyToSave, true, 'Google Maps API Key');
+                Yii::$app->session->setFlash('success', $keyToSave !== '' ? 'تم حفظ مفتاح Google Maps بنجاح' : 'تم مسح مفتاح Google Maps');
+                return $this->redirect(['system-settings', 'tab' => 'google_maps']);
+            }
+
             if ($tab === 'google_cloud') {
                 $data = [
                     'enabled'        => $post['gc_enabled'] ?? '0',
@@ -314,8 +332,15 @@ class SiteController extends Controller
         // Get API usage stats
         $usageStats = $this->getApiUsageStats();
 
+        // Google Maps: نقرأ من SystemSettings فقط حالة التكوين (لا نمرّر المفتاح للعرض)
+        $googleMapsKey = SystemSettings::get('google_maps', 'api_key', '');
+        $googleMaps = [
+            'configured' => $googleMapsKey !== '',
+        ];
+
         return $this->render('system-settings', [
             'googleCloud' => $displaySettings,
+            'googleMaps'  => $googleMaps,
             'usageStats'  => $usageStats,
             'activeTab'   => Yii::$app->request->get('tab', 'general'),
         ]);

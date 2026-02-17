@@ -49,6 +49,7 @@ return [
             'admins' => ['zaxx44a7@gmail.com'],
             'modelMap' => [
                 'User' => 'common\models\User',
+                'LoginForm' => 'backend\models\LoginForm',
             ],
         ],
 

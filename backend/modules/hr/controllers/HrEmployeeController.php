@@ -8,6 +8,7 @@ use yii\web\NotFoundHttpException;
 use yii\web\Response;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
+use common\helper\Permissions;
 use yii\data\ActiveDataProvider;
 use yii\data\ArrayDataProvider;
 use yii\data\SqlDataProvider;
@@ -42,6 +43,9 @@ class HrEmployeeController extends Controller
                     [
                         'allow' => true,
                         'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::hasAnyPermission(Permissions::getHrPermissions());
+                        },
                     ],
                 ],
             ],
@@ -116,9 +120,23 @@ class HrEmployeeController extends Controller
 
         $allData = $query->all();
 
+        // ترتيب: النشطين أولاً ثم المعطلين
+        $activeData = [];
+        $suspendedData = [];
+        foreach ($allData as $row) {
+            if (($row['employee_type'] ?? '') === 'Suspended') {
+                $suspendedData[] = $row;
+            } else {
+                $activeData[] = $row;
+            }
+        }
+        $sortedData = array_merge($activeData, $suspendedData);
+        $suspendedCount = count($suspendedData);
+        $activeCount = count($activeData);
+
         $dataProvider = new ArrayDataProvider([
-            'allModels' => $allData,
-            'pagination' => ['pageSize' => 20],
+            'allModels' => $sortedData,
+            'pagination' => ['pageSize' => 50],
             'key' => 'id',
         ]);
 
@@ -131,6 +149,8 @@ class HrEmployeeController extends Controller
 
         return $this->render('index', [
             'dataProvider' => $dataProvider,
+            'activeCount' => $activeCount,
+            'suspendedCount' => $suspendedCount,
             'searchName' => $searchName,
             'searchCode' => $searchCode,
             'searchDepartment' => $searchDepartment,
@@ -197,10 +217,14 @@ class HrEmployeeController extends Controller
             ->all();
 
         // العلاوات السنوية لهذا الموظف
-        $increments = HrAnnualIncrement::find()
-            ->where(['user_id' => $id, 'is_deleted' => 0])
-            ->orderBy(['increment_year' => SORT_DESC, 'id' => SORT_DESC])
-            ->all();
+        try {
+            $increments = HrAnnualIncrement::find()
+                ->where(['user_id' => $id, 'is_deleted' => 0])
+                ->orderBy(['increment_year' => SORT_DESC, 'id' => SORT_DESC])
+                ->all();
+        } catch (\Exception $e) {
+            $increments = [];
+        }
 
         $request = Yii::$app->request;
         if ($request->isAjax) {
@@ -246,29 +270,50 @@ class HrEmployeeController extends Controller
         // Ensure user category tables exist
         \backend\models\UserCategory::ensureTablesExist();
 
-        // Users without extended records
+        // Users without extended records — الفعالون فقط (نشط وغير محظور)
         $usersWithoutExtended = (new Query())
-            ->select(['u.id', 'u.username', 'u.name'])
+            ->select(['u.id', 'u.username', 'u.name', 'u.middle_name', 'u.last_name'])
             ->from('{{%user}} u')
             ->leftJoin('{{%hr_employee_extended}} ext', 'ext.user_id = u.id AND ext.is_deleted = 0')
             ->where(['ext.id' => null])
+            ->andWhere(['u.employee_type' => 'Active'])
+            ->andWhere(['u.blocked_at' => null])
+            ->andWhere(['not', ['u.confirmed_at' => null]])
             ->all();
 
+        // عرض موحّد: الاسم الكامل (username). مصدر الاسم: حقل name في os_user (من input new_user_name عند إنشاء مستخدم جديد)
         $userList = ArrayHelper::map($usersWithoutExtended, 'id', function ($row) {
-            return $row['name'] ? $row['name'] . ' (' . $row['username'] . ')' : $row['username'];
+            $fullName = trim(implode(' ', array_filter([
+                $row['name'] ?? '',
+                $row['middle_name'] ?? '',
+                $row['last_name'] ?? '',
+            ])));
+            $username = $row['username'] ?? '';
+            if ($fullName !== '' && strpos($fullName, '@') === false) {
+                return $fullName . ' (' . $username . ')';
+            }
+            if (strpos($username, '@') !== false) {
+                return 'الاسم غير محدد (' . $username . ')';
+            }
+            return $username;
         });
 
-        if ($model->load($request->post())) {
+        $isPost = $request->isPost;
+        $modelLoaded = $model->load($request->post());
 
-            $selectedCategories = $request->post('user_categories', []);
-            $isEmployee = false;
-            if (!empty($selectedCategories)) {
-                $empCat = \backend\models\UserCategory::find()->where(['slug' => 'employee', 'is_active' => 1])->one();
-                $isEmployee = $empCat && in_array($empCat->id, $selectedCategories);
-            }
+        // Determine categories and employee flag from POST regardless of model load
+        $selectedCategories = $request->post('user_categories', []);
+        $isEmployee = false;
+        if (!empty($selectedCategories)) {
+            $empCat = \backend\models\UserCategory::find()->where(['slug' => 'employee', 'is_active' => 1])->one();
+            $isEmployee = $empCat && in_array($empCat->id, $selectedCategories);
+        }
+
+        $createNewUser = (int)$request->post('create_new_user', 0);
+
+        if ($isPost && ($modelLoaded || $createNewUser)) {
 
             // ─── Mode: Create new user inline ───
-            $createNewUser = (int)$request->post('create_new_user', 0);
             if ($createNewUser) {
                 $newName     = trim($request->post('new_user_name', ''));
                 $newUsername  = trim($request->post('new_user_username', ''));
@@ -299,9 +344,23 @@ class HrEmployeeController extends Controller
                 $passwordHash = Yii::$app->security->generatePasswordHash($newPassword);
                 $authKey = Yii::$app->security->generateRandomString(32);
 
+                // تحديد نوع الدوام والمسمى الوظيفي حسب الفئة
+                $employeeStatus = $isEmployee ? 'Full_time' : 'Freelance';
+                $designationId = $isEmployee ? ($request->post('user_designation') ?: null) : null;
+
+                // تحديد نوع الدوام حسب الفئة لغير الموظفين
+                $catSlugs = $this->getCategorySlugs($selectedCategories);
+                if (!$isEmployee) {
+                    if (in_array('vendor', $catSlugs)) $employeeStatus = 'Vendor';
+                    elseif (in_array('investor', $catSlugs)) $employeeStatus = 'Investor';
+                    elseif (in_array('branch_manager', $catSlugs)) $employeeStatus = 'Full_time';
+                    else $employeeStatus = 'Freelance';
+                }
+
                 $transaction = Yii::$app->db->beginTransaction();
                 try {
-                    Yii::$app->db->createCommand()->insert('{{%user}}', [
+                    // الاسم الكامل يُخزّن في عمود name بجدول os_user (من حقل النموذج new_user_name)
+                    $userData = [
                         'username'      => $newUsername,
                         'email'         => $newEmail,
                         'password_hash' => $passwordHash,
@@ -311,18 +370,31 @@ class HrEmployeeController extends Controller
                         'confirmed_at'  => $now,
                         'created_at'    => $now,
                         'updated_at'    => $now,
+                        'created_by'    => Yii::$app->user->id,
                         'employee_type' => 'Active',
-                        'employee_status' => 'Full_time',
+                        'employee_status' => $employeeStatus,
                         'gender'        => 'Male',
                         'marital_status' => 'Single',
                         'flags'         => 0,
-                    ])->execute();
+                    ];
+                    if ($designationId) {
+                        $userData['job_title'] = (int)$designationId;
+                    }
+
+                    Yii::$app->db->createCommand()->insert('{{%user}}', $userData)->execute();
 
                     $newUserId = Yii::$app->db->getLastInsertID();
 
                     // Save user categories
                     if (!empty($selectedCategories)) {
                         \backend\models\UserCategoryMap::syncUserCategories($newUserId, $selectedCategories, Yii::$app->user->id);
+                    }
+
+                    // ربط الفرع — فقط لموظف مبيعات (فئة sales_employee)
+                    if (in_array('sales_employee', $catSlugs)) {
+                        $locId = $request->post('user_location');
+                        $locVal = ($locId !== null && $locId !== '') ? (int)$locId : null;
+                        Yii::$app->db->createCommand()->update('{{%user}}', ['location' => $locVal, 'updated_at' => $now], ['id' => $newUserId])->execute();
                     }
 
                     // Only create HrEmployeeExtended if "employee" category is selected
@@ -340,10 +412,16 @@ class HrEmployeeController extends Controller
                         if (!$model->save(false)) {
                             throw new \Exception('فشل حفظ بيانات الموظف: ' . implode(', ', $model->getFirstErrors()));
                         }
+
+                        // مزامنة البيانات المشتركة إلى os_user
+                        $this->syncEmployeeFieldsToUser($newUserId, $model, $request);
                     }
 
+                    // إسناد الصلاحيات تلقائياً
+                    $this->autoAssignPermissions($newUserId, $catSlugs, $designationId);
+
                     $transaction->commit();
-                    $msg = $isEmployee ? 'تم إنشاء المستخدم وملف الموظف بنجاح.' : 'تم إنشاء المستخدم بنجاح.';
+                    $msg = $isEmployee ? 'تم إنشاء المستخدم وملف الموظف وإسناد الصلاحيات بنجاح.' : 'تم إنشاء المستخدم وإسناد الصلاحيات بنجاح.';
                     Yii::$app->session->setFlash('success', $msg);
                     return $this->redirect($isEmployee ? ['view', 'id' => $newUserId] : ['index']);
                 } catch (\Exception $e) {
@@ -353,34 +431,56 @@ class HrEmployeeController extends Controller
                 }
             }
 
-            // ─── Mode: Select existing user ───
-            $model->created_at = time();
-            $model->updated_at = time();
-            $model->created_by = Yii::$app->user->id;
-            $model->updated_by = Yii::$app->user->id;
+            // ─── Mode: Select existing user OR non-employee with existing user ───
+            $userId = $model->user_id ?: $request->post('HrEmployeeExtended', [])['user_id'] ?? null;
+            $catSlugs = $this->getCategorySlugs($selectedCategories);
+            $designationId = $isEmployee ? ($request->post('user_designation') ?: null) : null;
 
-            if (empty($model->employee_code)) {
-                $maxCode = (new Query())->from('{{%hr_employee_extended}}')->max('id');
-                $model->employee_code = 'EMP-' . str_pad(($maxCode ?? 0) + 1, 4, '0', STR_PAD_LEFT);
+            if (!$userId && !$isEmployee) {
+                Yii::$app->session->setFlash('error', 'يجب اختيار مستخدم أو إنشاء مستخدم جديد');
+                return $this->render('create', ['model' => $model, 'userList' => $userList]);
             }
 
             $transaction = Yii::$app->db->beginTransaction();
             try {
-                if ($isEmployee) {
+                if ($isEmployee && $modelLoaded) {
+                    $model->created_at = time();
+                    $model->updated_at = time();
+                    $model->created_by = Yii::$app->user->id;
+                    $model->updated_by = Yii::$app->user->id;
+
+                    if (empty($model->employee_code)) {
+                        $maxCode = (new Query())->from('{{%hr_employee_extended}}')->max('id');
+                        $model->employee_code = 'EMP-' . str_pad(($maxCode ?? 0) + 1, 4, '0', STR_PAD_LEFT);
+                    }
+
                     if (!$model->save()) {
                         throw new \Exception('فشل حفظ بيانات الموظف: ' . implode(', ', $model->getFirstErrors()));
                     }
+                    $userId = $model->user_id;
+
+                    // مزامنة البيانات المشتركة إلى os_user
+                    $this->syncEmployeeFieldsToUser($userId, $model, $request);
                 }
 
                 // Save user categories
-                $userId = $model->user_id;
                 if ($userId && !empty($selectedCategories)) {
                     \backend\models\UserCategoryMap::syncUserCategories($userId, $selectedCategories, Yii::$app->user->id);
                 }
 
+                // ربط الفرع — فقط لموظف مبيعات (فئة sales_employee)
+                if ($userId) {
+                    $this->syncUserLocation($userId, $request, $catSlugs);
+                }
+
+                // إسناد الصلاحيات تلقائياً
+                if ($userId) {
+                    $this->autoAssignPermissions($userId, $catSlugs, $designationId);
+                }
+
                 $transaction->commit();
-                Yii::$app->session->setFlash('success', 'تم الحفظ بنجاح.');
-                return $this->redirect($isEmployee ? ['view', 'id' => $model->user_id] : ['index']);
+                Yii::$app->session->setFlash('success', 'تم الحفظ وإسناد الصلاحيات بنجاح.');
+                return $this->redirect($isEmployee ? ['view', 'id' => $userId] : ['index']);
             } catch (\Exception $e) {
                 $transaction->rollBack();
                 Yii::$app->session->setFlash('error', $e->getMessage());
@@ -417,6 +517,66 @@ class HrEmployeeController extends Controller
             try {
                 if (!$model->save()) {
                     throw new \Exception('فشل تحديث بيانات الموظف: ' . implode(', ', $model->getFirstErrors()));
+                }
+
+                // تحديث بيانات المستخدم الأساسية + مزامنة الحقول المشتركة
+                if ($model->user_id) {
+                    $userUpdate = [];
+
+                    $editName = trim($request->post('edit_user_name', ''));
+                    $editUsername = trim($request->post('edit_user_username', ''));
+                    $editEmail = trim($request->post('edit_user_email', ''));
+                    $editPassword = $request->post('edit_user_password', '');
+                    $editMobile = trim($request->post('edit_user_mobile', ''));
+
+                    if ($editName !== '') $userUpdate['name'] = $editName;
+                    if ($editUsername !== '') {
+                        $exists = User::find()->where(['username' => $editUsername])->andWhere(['!=', 'id', $model->user_id])->exists();
+                        if ($exists) throw new \Exception('اسم المستخدم "' . $editUsername . '" مستخدم مسبقاً');
+                        $userUpdate['username'] = $editUsername;
+                    }
+                    if ($editEmail !== '') {
+                        $exists = User::find()->where(['email' => $editEmail])->andWhere(['!=', 'id', $model->user_id])->exists();
+                        if ($exists) throw new \Exception('البريد الإلكتروني "' . $editEmail . '" مستخدم مسبقاً');
+                        $userUpdate['email'] = $editEmail;
+                    }
+                    if ($editPassword !== '' && strlen($editPassword) >= 6) {
+                        $userUpdate['password_hash'] = Yii::$app->security->generatePasswordHash($editPassword);
+                    }
+                    $userUpdate['mobile'] = $editMobile ?: null;
+
+                    // مزامنة: contract_start → date_of_hire
+                    if ($model->contract_start) {
+                        $userUpdate['date_of_hire'] = $model->contract_start;
+                    }
+
+                    // مزامنة: المسمى الوظيفي
+                    $designationId = $request->post('user_designation');
+                    if ($designationId) {
+                        $userUpdate['job_title'] = (int)$designationId;
+                    }
+
+                    // مزامنة: القسم
+                    $departmentId = $request->post('user_department');
+                    if ($departmentId) {
+                        $userUpdate['department'] = (int)$departmentId;
+                    }
+
+                    // الفرع — فقط لموظف مبيعات (فئة sales_employee)
+                    $selectedCats = $request->post('user_categories', []);
+                    $updateCatSlugs = $this->getCategorySlugs($selectedCats);
+                    if (in_array('sales_employee', $updateCatSlugs)) {
+                        $locationId = $request->post('user_location');
+                        $userUpdate['location'] = ($locationId !== null && $locationId !== '') ? (int)$locationId : null;
+                    } else {
+                        $userUpdate['location'] = null;
+                    }
+
+                    $userUpdate['updated_at'] = time();
+
+                    if (!empty($userUpdate)) {
+                        Yii::$app->db->createCommand()->update('{{%user}}', $userUpdate, ['id' => $model->user_id])->execute();
+                    }
                 }
 
                 // Sync user categories
@@ -721,5 +881,162 @@ class HrEmployeeController extends Controller
         }
 
         throw new NotFoundHttpException('سجل الموظف المطلوب غير موجود.');
+    }
+
+    /**
+     * مزامنة الحقول المشتركة من HrEmployeeExtended إلى os_user
+     * contract_start → date_of_hire, department, job_title
+     */
+    protected function syncEmployeeFieldsToUser($userId, $model, $request)
+    {
+        $sync = [];
+
+        // contract_start → date_of_hire
+        if ($model->contract_start) {
+            $sync['date_of_hire'] = $model->contract_start;
+        }
+
+        // المسمى الوظيفي
+        $designationId = $request->post('user_designation');
+        if ($designationId) {
+            $sync['job_title'] = (int)$designationId;
+        }
+
+        // القسم
+        $departmentId = $request->post('user_department');
+        if ($departmentId) {
+            $sync['department'] = (int)$departmentId;
+        }
+
+        // الفرع — فقط لموظف مبيعات (يُحدَّث من syncUserLocation عند وجود فئة sales_employee)
+
+        if (!empty($sync)) {
+            $sync['updated_at'] = time();
+            Yii::$app->db->createCommand()->update('{{%user}}', $sync, ['id' => $userId])->execute();
+        }
+    }
+
+    /**
+     * مزامنة حقل الفرع (os_user.location) — فقط عندما تكون فئة "موظف مبيعات" (sales_employee) مختارة
+     */
+    protected function syncUserLocation($userId, $request, array $catSlugs = [])
+    {
+        $value = null;
+        if (in_array('sales_employee', $catSlugs)) {
+            $locationId = $request->post('user_location');
+            $value = ($locationId !== null && $locationId !== '') ? (int)$locationId : null;
+        }
+        Yii::$app->db->createCommand()->update('{{%user}}', [
+            'location' => $value,
+            'updated_at' => time(),
+        ], ['id' => $userId])->execute();
+    }
+
+    /**
+     * جلب slugs الفئات المختارة من IDs
+     */
+    protected function getCategorySlugs(array $categoryIds)
+    {
+        if (empty($categoryIds)) return [];
+        return (new Query())
+            ->select('slug')
+            ->from('{{%user_categories}}')
+            ->where(['id' => $categoryIds, 'is_active' => 1])
+            ->column();
+    }
+
+    /**
+     * خريطة ربط فئات المستخدمين (slug) مع أدوار RBAC
+     */
+    protected static function getCategoryRoleMap()
+    {
+        return [
+            'vendor'         => 'مورّد أجهزة',
+            'investor'       => 'مستثمر',
+            // court_agent = موظف بدوام كامل وعمل ميداني، يُنشأ كموظف مع فئة مندوب محكمة
+            // الصلاحيات تُسند من المسمى الوظيفي "مندوب محكمة" وليس من الفئة
+        ];
+    }
+
+    /**
+     * خريطة ربط المسميات الوظيفية (title) مع أدوار RBAC
+     */
+    protected static function getDesignationRoleMap()
+    {
+        return [
+            'مدير عام'           => 'مدير النظام',
+            'مدير مبيعات'        => 'مدير مبيعات',
+            'محاسب'              => 'محاسب',
+            'موظف متابعة'        => 'موظفة متابعه',
+            'محامي'              => 'محامي',
+            'موظف مبيعات'        => 'موظف مبيعات',
+            'مندوب محكمة'        => 'مندوب محكمة',
+            'مورّد أجهزة'        => 'مورّد أجهزة',
+            'أمين مخزن'          => 'موظف مبيعات',
+            'مدير مالي'          => 'محاسب',
+            'مسؤول موارد بشرية'  => 'مدير النظام',
+        ];
+    }
+
+    /**
+     * إسناد صلاحيات RBAC تلقائياً بناءً على الفئة أو المسمى الوظيفي
+     */
+    protected function autoAssignPermissions($userId, array $catSlugs, $designationId = null)
+    {
+        $auth = Yii::$app->authManager;
+        if (!$auth) return;
+
+        $roleName = null;
+
+        // أولاً: البحث عن الدور من المسمى الوظيفي (للموظفين)
+        if ($designationId) {
+            $desTitle = (new Query())
+                ->select('title')
+                ->from('{{%designation}}')
+                ->where(['id' => $designationId])
+                ->scalar();
+
+            if ($desTitle) {
+                $desMap = static::getDesignationRoleMap();
+                $roleName = $desMap[$desTitle] ?? null;
+            }
+        }
+
+        // ثانياً: إذا لم يتحدد من المسمى، نبحث من الفئة (للموردين/المستثمرين/المندوبين)
+        if (!$roleName && !empty($catSlugs)) {
+            $catMap = static::getCategoryRoleMap();
+            foreach ($catSlugs as $slug) {
+                if (isset($catMap[$slug])) {
+                    $roleName = $catMap[$slug];
+                    break;
+                }
+            }
+        }
+
+        if (!$roleName) return;
+
+        // جلب صلاحيات الدور
+        $role = $auth->getRole($roleName);
+        if (!$role) {
+            Yii::warning("الدور '$roleName' غير موجود في جدول الصلاحيات. تأكد من تشغيل 'إنشاء الأدوار الافتراضية' أولاً.", __METHOD__);
+            return;
+        }
+
+        $rolePerms = $auth->getChildren($roleName);
+        $assignedCount = 0;
+
+        foreach ($rolePerms as $child) {
+            $perm = $auth->getPermission($child->name);
+            if ($perm) {
+                try {
+                    $auth->assign($perm, $userId);
+                    $assignedCount++;
+                } catch (\Exception $e) {
+                    // تجاهل إذا كانت الصلاحية مسندة مسبقاً
+                }
+            }
+        }
+
+        Yii::info("تم إسناد {$assignedCount} صلاحية للمستخدم #{$userId} من دور '{$roleName}'", __METHOD__);
     }
 }

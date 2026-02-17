@@ -322,6 +322,34 @@
 }
 .perm-user-card--suspended::before { background: var(--perm-danger) !important; }
 .perm-user-card--suspended:hover { opacity: .8; }
+
+/* ─── فاصل المعطلين ─── */
+.perm-users-separator {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  margin: 4px 0;
+}
+.perm-users-separator-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to left, transparent, #fca5a5, transparent);
+}
+.perm-users-separator-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #991b1b;
+  background: #fee2e2;
+  padding: 4px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .perm-user-arrow {
   color: var(--perm-text3);
   font-size: 16px;
@@ -818,7 +846,9 @@
   position: absolute;
   top: 100%;
   right: 0;
-  background: var(--perm-surface);
+  background: #ffffff;
+  background-color: #ffffff;
+  opacity: 1;
   border: 1px solid var(--perm-border);
   border-radius: var(--perm-r-sm);
   box-shadow: var(--perm-shadow-lg);
@@ -830,6 +860,10 @@
   padding: 4px 0;
 }
 .perm-clone-menu.show { display: block; }
+.perm-clone-dropdown .perm-clone-menu {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
 .perm-clone-item {
   display: flex;
   align-items: center;
@@ -839,8 +873,15 @@
   color: var(--perm-text);
   cursor: pointer;
   transition: background var(--perm-transition);
+  background: transparent;
 }
 .perm-clone-item:hover { background: var(--perm-neutral-bg); }
+.perm-clone-dropdown .perm-clone-item {
+  background: #ffffff;
+}
+.perm-clone-dropdown .perm-clone-item:hover {
+  background: var(--perm-neutral-bg);
+}
 .perm-clone-item img { width: 28px; height: 28px; border-radius: 50%; }
 
 /* ╔═══════════════════════════════════════╗

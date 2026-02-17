@@ -16,9 +16,11 @@ use backend\modules\hr\models\HrEvaluationScore;
 use backend\modules\hr\models\HrKpiTemplate;
 use backend\modules\hr\models\HrKpiItem;
 use common\models\User;
+use common\helper\Permissions;
 
 /**
  * HrEvaluationController — Performance management
+ * يتطلب أحد صلاحيات الموارد البشرية.
  */
 class HrEvaluationController extends Controller
 {
@@ -38,6 +40,9 @@ class HrEvaluationController extends Controller
                     [
                         'allow' => true,
                         'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::hasAnyPermission(Permissions::getHrPermissions());
+                        },
                     ],
                 ],
             ],

@@ -69,7 +69,7 @@ class notificationComponent extends Component
 
         $recipients = AuthAssignment::find()->where(['in', 'item_name', $rule])->all();
         foreach ($recipients as $recipient) {
-            $model = new notification();
+            $model = new Notification();
             if ($sender_id) {
                 $model->sender_id = $sender_id;
             } else {

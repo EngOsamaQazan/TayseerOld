@@ -152,10 +152,11 @@ class EmployeeController extends Controller
         $employeeAttachments = EmployeeFiles::find()->where(['user_id' => $id, 'type' => EmployeeFiles::TYPE_ATTACHMENT])->all();
         $oldPasswordHash = $model->password_hash;
         if ($model->load($request->post())) {
-            if ($model->password_hash != $oldPasswordHash && !empty($model->password_hash)) {
+            if (!empty($model->password_hash) && $model->password_hash !== $oldPasswordHash) {
                 $model->password_hash = Yii::$app->security->generatePasswordHash($model->password_hash);
+            } else {
+                $model->password_hash = $oldPasswordHash;
             }
-            $model->password_hash = $oldPasswordHash;
             if ($model->save()) {
                 $model->profile_avatar_file = UploadedFile::getInstances($model, 'profile_avatar_file');
                 $model->profile_attachment_files = UploadedFile::getInstances($model, 'profile_attachment_files');
@@ -163,10 +164,9 @@ class EmployeeController extends Controller
                     $model->updateProfileAvatar();
                 }
                 if (!empty($model->profile_attachment_files)) {
-
                     $model->addProfileAttachment();
                 }
-                $this->redirect('index');
+                return $this->redirect('index');
             }
         }
 

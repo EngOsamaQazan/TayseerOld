@@ -13,9 +13,11 @@ use yii\db\Query;
 use yii\helpers\ArrayHelper;
 use backend\modules\hr\models\HrLoan;
 use common\models\User;
+use common\helper\Permissions;
 
 /**
  * HrLoanController — Loan and advance management
+ * يتطلب أحد صلاحيات الموارد البشرية.
  */
 class HrLoanController extends Controller
 {
@@ -35,6 +37,9 @@ class HrLoanController extends Controller
                     [
                         'allow' => true,
                         'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::hasAnyPermission(Permissions::getHrPermissions());
+                        },
                     ],
                 ],
             ],

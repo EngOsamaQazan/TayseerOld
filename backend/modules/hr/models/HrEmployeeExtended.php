@@ -91,6 +91,8 @@ class HrEmployeeExtended extends ActiveRecord
             [['basic_salary'], 'number'],
             [['date_of_birth', 'contract_start', 'contract_end', 'probation_end'], 'safe'],
             [['employee_code', 'national_id', 'social_security_no', 'tax_number'], 'string', 'max' => 20],
+            // تحويل القيم الفارغة إلى null قبل التحقق
+            [['contract_type', 'blood_type', 'field_role', 'contract_end', 'probation_end', 'iban', 'tax_number', 'social_security_no'], 'default', 'value' => null],
             [['blood_type'], 'in', 'range' => ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']],
             [['address_text'], 'string', 'max' => 500],
             [['bank_account_no'], 'string', 'max' => 30],

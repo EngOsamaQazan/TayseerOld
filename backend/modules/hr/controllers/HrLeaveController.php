@@ -13,12 +13,14 @@ use yii\data\ArrayDataProvider;
 use yii\db\Query;
 use yii\helpers\ArrayHelper;
 use common\models\User;
+use common\helper\Permissions;
 
 /**
  * HrLeaveController — Unified Leave Management
  * ──────────────────────────────────────────────
  * طلبات الإجازات + العطل الرسمية + أنواع الإجازات
  * + سياسة الإجازات + أيام العمل ← شاشة واحدة موحدة
+ * يتطلب أحد صلاحيات الموارد البشرية.
  */
 class HrLeaveController extends Controller
 {
@@ -32,7 +34,13 @@ class HrLeaveController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     ['actions' => ['login', 'error'], 'allow' => true],
-                    ['allow' => true, 'roles' => ['@']],
+                    [
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::hasAnyPermission(Permissions::getHrPermissions());
+                        },
+                    ],
                 ],
             ],
             'verbs' => [

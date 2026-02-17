@@ -38,6 +38,7 @@ $toggleUserUrl      = Url::to(['permissions-management/toggle-user-status']);
 $seedRolesUrl       = Url::to(['permissions-management/seed-roles']);
 $getRolePermsUrl    = Url::to(['permissions-management/get-role-permissions']);
 $ensurePermsUrl     = Url::to(['permissions-management/ensure-permissions']);
+$ensureSystemAdminUrl = Url::to(['permissions-management/ensure-system-admin']);
 
 /* ─── تحويل المجموعات إلى JSON للجافاسكربت ─── */
 $groupsJson = json_encode($groups, JSON_UNESCAPED_UNICODE);
@@ -138,27 +139,53 @@ $defaultAvatar = Yii::getAlias('@web') . '/img/default-avatar.png';
             <button class="perm-btn perm-btn--outline perm-btn--sm" id="btnFilterAll" type="button" title="إظهار الجميع">
                 <i class="fa fa-list"></i> الجميع
             </button>
+            <button class="perm-btn perm-btn--success perm-btn--sm" id="btnEnsurePermissions" type="button" title="إنشاء جميع الصلاحيات المعرّفة في النظام في قاعدة البيانات">
+                <i class="fa fa-database"></i> ضمان الصلاحيات
+            </button>
+            <?php
+            $auth = Yii::$app->authManager;
+            $currentUserRoles = array_keys($auth->getRolesByUser(Yii::$app->user->id));
+            $canAssignSystemAdmin = in_array('مدير النظام', $currentUserRoles, true);
+            if ($canAssignSystemAdmin): ?>
+            <span class="perm-toolbar-sep" style="margin:0 8px;color:var(--perm-border);">|</span>
+            <input type="email" id="ensureSystemAdminEmail" placeholder="بريد المستخدم لتعيين مدير نظام" style="width:220px;padding:6px 10px;border:1px solid var(--perm-border);border-radius:4px;font-size:13px;" dir="ltr">
+            <button class="perm-btn perm-btn--primary perm-btn--sm" id="btnEnsureSystemAdmin" type="button" title="تعيين دور «مدير النظام» لهذا البريد">
+                <i class="fa fa-user-plus"></i> تعيين مدير نظام
+            </button>
+            <?php endif; ?>
         </div>
 
         <!-- بطاقات المستخدمين -->
+        <?php
+        // فصل المستخدمين الفعالين عن المعطلين
+        $activeUsers = [];
+        $suspendedUsers = [];
+        foreach ($users as $user) {
+            $empStatus = $user['employee_type'] ?? '';
+            $isBlocked = !empty($user['blocked_at'] ?? null);
+            $isSuspended = ($empStatus === 'Suspended' || $isBlocked);
+            if ($isSuspended) {
+                $suspendedUsers[] = $user;
+            } else {
+                $activeUsers[] = $user;
+            }
+        }
+        ?>
         <div class="perm-users-grid" id="usersGrid">
-            <?php foreach ($users as $user): ?>
+            <?php foreach ($activeUsers as $user): ?>
                 <?php
                     $rawAvatar = $user['avatar'] ?? '';
                     $avatarSrc = (!empty($rawAvatar) && (strpos($rawAvatar, '/') !== false || strpos($rawAvatar, '.') !== false))
                         ? $rawAvatar : $defaultAvatar;
                     $hasPerms  = $user['perm_count'] > 0;
-                    $empStatus = $user['employee_type'] ?? '';
-                    $isBlocked = !empty($user['blocked_at'] ?? null);
-                    $isSuspended = ($empStatus === 'Suspended' || $isBlocked);
                 ?>
-                <div class="perm-user-card <?= !$hasPerms ? 'perm-user-card--no-perms' : '' ?> <?= $isSuspended ? 'perm-user-card--suspended' : '' ?>"
+                <div class="perm-user-card <?= !$hasPerms ? 'perm-user-card--no-perms' : '' ?>"
                      data-user-id="<?= $user['id'] ?>"
                      data-username="<?= Html::encode($user['username']) ?>"
                      data-email="<?= Html::encode($user['email']) ?>"
                      data-perm-count="<?= $user['perm_count'] ?>"
                      data-avatar="<?= Html::encode($avatarSrc) ?>"
-                     data-status="<?= $isSuspended ? 'Suspended' : 'Active' ?>">
+                     data-status="Active">
 
                     <img class="perm-user-avatar" src="<?= Html::encode($avatarSrc) ?>"
                          onerror="this.src='<?= $defaultAvatar ?>'" alt="">
@@ -170,21 +197,15 @@ $defaultAvatar = Yii::getAlias('@web') . '/img/default-avatar.png';
                             <span class="perm-user-badge perm-user-badge--perms">
                                 <i class="fa fa-key"></i> <?= $user['perm_count'] ?> صلاحية
                             </span>
-                            <?php if ($isSuspended): ?>
-                                <span class="perm-user-badge perm-user-badge--suspended"><i class="fa fa-ban"></i> معطّل</span>
-                            <?php elseif ($empStatus === 'Active'): ?>
-                                <span class="perm-user-badge perm-user-badge--active">نشط</span>
-                            <?php endif ?>
+                            <span class="perm-user-badge perm-user-badge--active">نشط</span>
                         </div>
                     </div>
 
-                    <!-- أزرار الإجراءات -->
                     <div class="perm-user-actions">
                         <?php if ($user['id'] != Yii::$app->user->id): ?>
                         <button type="button" class="perm-user-action-btn btn-toggle-user"
-                                data-user-id="<?= $user['id'] ?>"
-                                title="<?= $isSuspended ? 'تفعيل المستخدم' : 'تعطيل المستخدم' ?>">
-                            <i class="fa <?= $isSuspended ? 'fa-check-circle' : 'fa-ban' ?>"></i>
+                                data-user-id="<?= $user['id'] ?>" title="تعطيل المستخدم">
+                            <i class="fa fa-ban"></i>
                         </button>
                         <?php endif ?>
                     </div>
@@ -192,6 +213,57 @@ $defaultAvatar = Yii::getAlias('@web') . '/img/default-avatar.png';
                     <i class="fa fa-chevron-left perm-user-arrow"></i>
                 </div>
             <?php endforeach ?>
+
+            <?php if (!empty($suspendedUsers)): ?>
+            <!-- فاصل بصري بين الفعالين والمعطلين -->
+            <div class="perm-users-separator" id="suspendedSeparator">
+                <div class="perm-users-separator-line"></div>
+                <span class="perm-users-separator-label">
+                    <i class="fa fa-ban"></i> مستخدمون معطّلون (<?= count($suspendedUsers) ?>)
+                </span>
+                <div class="perm-users-separator-line"></div>
+            </div>
+
+            <?php foreach ($suspendedUsers as $user): ?>
+                <?php
+                    $rawAvatar = $user['avatar'] ?? '';
+                    $avatarSrc = (!empty($rawAvatar) && (strpos($rawAvatar, '/') !== false || strpos($rawAvatar, '.') !== false))
+                        ? $rawAvatar : $defaultAvatar;
+                    $hasPerms  = $user['perm_count'] > 0;
+                ?>
+                <div class="perm-user-card perm-user-card--suspended <?= !$hasPerms ? 'perm-user-card--no-perms' : '' ?>"
+                     data-user-id="<?= $user['id'] ?>"
+                     data-username="<?= Html::encode($user['username']) ?>"
+                     data-email="<?= Html::encode($user['email']) ?>"
+                     data-perm-count="<?= $user['perm_count'] ?>"
+                     data-avatar="<?= Html::encode($avatarSrc) ?>"
+                     data-status="Suspended">
+
+                    <img class="perm-user-avatar" src="<?= Html::encode($avatarSrc) ?>"
+                         onerror="this.src='<?= $defaultAvatar ?>'" alt="">
+
+                    <div class="perm-user-info">
+                        <p class="perm-user-name"><?= Html::encode($user['username']) ?></p>
+                        <p class="perm-user-email"><?= Html::encode($user['email']) ?></p>
+                        <div class="perm-user-meta">
+                            <span class="perm-user-badge perm-user-badge--perms">
+                                <i class="fa fa-key"></i> <?= $user['perm_count'] ?> صلاحية
+                            </span>
+                            <span class="perm-user-badge perm-user-badge--suspended"><i class="fa fa-ban"></i> معطّل</span>
+                        </div>
+                    </div>
+
+                    <div class="perm-user-actions">
+                        <button type="button" class="perm-user-action-btn btn-toggle-user"
+                                data-user-id="<?= $user['id'] ?>" title="تفعيل المستخدم">
+                            <i class="fa fa-check-circle"></i>
+                        </button>
+                    </div>
+
+                    <i class="fa fa-chevron-left perm-user-arrow"></i>
+                </div>
+            <?php endforeach ?>
+            <?php endif ?>
         </div>
     </div>
 
@@ -367,6 +439,22 @@ $defaultAvatar = Yii::getAlias('@web') . '/img/default-avatar.png';
                     <button class="perm-toggle-btn" id="btnDeselectAll" type="button">
                         <i class="fa fa-square-o"></i> إلغاء الكل
                     </button>
+                </div>
+
+                <!-- تطبيق دور -->
+                <div class="perm-clone-dropdown">
+                    <button class="perm-btn perm-btn--sm" id="btnApplyRole" type="button" title="تطبيق صلاحيات دور معين" style="background:#800020;color:#fff;border-color:#800020">
+                        <i class="fa fa-shield"></i> تطبيق دور
+                    </button>
+                    <div class="perm-clone-menu" id="roleApplyMenu" style="min-width:220px">
+                        <?php foreach ($roles as $role): ?>
+                        <div class="perm-clone-item perm-role-apply-item" data-role-name="<?= Html::encode($role->name) ?>">
+                            <i class="fa fa-shield" style="color:#800020;margin-left:6px;font-size:13px"></i>
+                            <span><?= Html::encode($role->name) ?></span>
+                            <small style="margin-right:auto;color:#94a3b8;font-size:10px"><?= $rolePermCounts[$role->name] ?? 0 ?> صلاحية</small>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
 
                 <!-- نسخ من مستخدم آخر -->
@@ -765,11 +853,49 @@ $js = <<<'JSBLOCK'
     /* ════════════════════════════════════════════
        نسخ صلاحيات من مستخدم آخر
        ════════════════════════════════════════════ */
+    /* ════════════════════════════════════════════
+       تطبيق صلاحيات دور معين
+       ════════════════════════════════════════════ */
+    $('#btnApplyRole').on('click', function(e){
+        e.stopPropagation();
+        $('#roleApplyMenu').toggleClass('show');
+        $('#cloneMenu').removeClass('show');
+    });
+
+    $(document).on('click', '.perm-role-apply-item', function(){
+        var roleName = $(this).data('role-name');
+        $('#roleApplyMenu').removeClass('show');
+
+        if (!confirm('سيتم تطبيق صلاحيات دور «' + roleName + '». سيتم إلغاء الصلاحيات الحالية واستبدالها. متابعة؟')) return;
+
+        /* إلغاء الكل أولاً */
+        $('.perm-perm-check').prop('checked', false);
+        $('.perm-item').removeClass('checked');
+
+        /* تحميل صلاحيات الدور */
+        $.getJSON(GET_ROLE_PERMS_URL_PLACEHOLDER, { name: roleName }, function(resp){
+            if (resp.success) {
+                var perms = resp.permissions || [];
+                for (var p = 0; p < perms.length; p++) {
+                    var $cb = $('.perm-perm-check[value="' + CSS.escape(perms[p]) + '"]');
+                    $cb.prop('checked', true);
+                    $cb.closest('.perm-item').addClass('checked');
+                }
+                updateAllGroupToggles();
+                updateSelectedCount();
+                showToast('تم تطبيق صلاحيات «' + roleName + '» (' + perms.length + ' صلاحية) — اضغط حفظ للتأكيد', 'info');
+            } else {
+                showToast('فشل تحميل صلاحيات الدور', 'error');
+            }
+        });
+    });
+
     $('#btnCloneDropdown').on('click', function(e){
         e.stopPropagation();
         $('#cloneMenu').toggleClass('show');
+        $('#roleApplyMenu').removeClass('show');
     });
-    $(document).on('click', function(){ $('#cloneMenu').removeClass('show'); });
+    $(document).on('click', function(){ $('#cloneMenu').removeClass('show'); $('#roleApplyMenu').removeClass('show'); });
 
     $(document).on('click', '.perm-clone-item', function(){
         var fromId = $(this).data('clone-from');
@@ -1012,7 +1138,7 @@ $js = <<<'JSBLOCK'
      * ═══════════════════════════════════════════════════════════ */
     $(document).on('click', '#btnSeedRoles', function(){
         var $btn = $(this);
-        if (!confirm('سيتم إنشاء الأدوار الافتراضية (مدير النظام، مستثمر، محاسب، موظفة متابعه، محامي، موظف مبيعات، مدير مبيعات، موزع أجهزة). هل تريد المتابعة؟')) return;
+        if (!confirm('سيتم إنشاء الأدوار الافتراضية (مدير النظام، مستثمر، محاسب، موظفة متابعه، محامي، موظف مبيعات، مدير مبيعات، مورّد أجهزة). هل تريد المتابعة؟')) return;
 
         $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الإنشاء...');
 
@@ -1037,6 +1163,63 @@ $js = <<<'JSBLOCK'
         });
     });
 
+
+    /* ═══════════════════════════════════════════════════════════
+     *  تعيين مدير نظام — بالبريد (يعمل من المتصفح دون الحاجة لـ PHP CLI)
+     * ═══════════════════════════════════════════════════════════ */
+    $(document).on('click', '#btnEnsureSystemAdmin', function(){
+        var email = $.trim($('#ensureSystemAdminEmail').val());
+        if (!email) {
+            showToast('أدخل البريد الإلكتروني للمستخدم', 'error');
+            return;
+        }
+        var $btn = $(this);
+        $btn.prop('disabled', true);
+        $.ajax({
+            url: ENSURE_SYSTEM_ADMIN_URL_PLACEHOLDER,
+            method: 'POST',
+            data: { email: email, _csrf: yii.getCsrfToken() },
+            dataType: 'json',
+            success: function(resp){
+                showToast(resp.message, resp.success ? 'success' : 'error');
+                if (resp.success) { setTimeout(function(){ location.reload(); }, 1500); }
+            },
+            error: function(){ showToast('خطأ في الاتصال', 'error'); },
+            complete: function(){ $btn.prop('disabled', false); }
+        });
+    });
+
+
+    /* ═══════════════════════════════════════════════════════════
+     *  ضمان الصلاحيات — إنشاء جميع الصلاحيات المعرّفة في النظام
+     * ═══════════════════════════════════════════════════════════ */
+    $(document).on('click', '#btnEnsurePermissions', function(){
+        var $btn = $(this);
+        if (!confirm('سيتم إنشاء أي صلاحية معرّفة في مجموعات النظام (المالية، العقود، HR، المخزون، إلخ) وغير موجودة حالياً في قاعدة البيانات. هل تريد المتابعة؟')) return;
+
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري ضمان الصلاحيات...');
+
+        $.ajax({
+            url: ENSURE_PERMS_URL_PLACEHOLDER,
+            method: 'POST',
+            data: { _csrf: yii.getCsrfToken() },
+            dataType: 'json',
+            success: function(resp){
+                if (resp.success) {
+                    showToast(resp.message, 'success');
+                    setTimeout(function(){ location.reload(); }, 1200);
+                } else {
+                    showToast(resp.message || 'حدث خطأ', 'error');
+                }
+                $btn.prop('disabled', false).html('<i class="fa fa-database"></i> ضمان الصلاحيات');
+            },
+            error: function(){
+                showToast('خطأ في الاتصال بالخادم', 'error');
+                $btn.prop('disabled', false).html('<i class="fa fa-database"></i> ضمان الصلاحيات');
+            }
+        });
+    });
+
 })(jQuery);
 
 JSBLOCK;
@@ -1056,6 +1239,7 @@ $js = str_replace('TOGGLE_USER_URL_PLACEHOLDER', "'" . $toggleUserUrl . "'", $js
 $js = str_replace('SEED_ROLES_URL_PLACEHOLDER', "'" . $seedRolesUrl . "'", $js);
 $js = str_replace('GET_ROLE_PERMS_URL_PLACEHOLDER', "'" . $getRolePermsUrl . "'", $js);
 $js = str_replace('ENSURE_PERMS_URL_PLACEHOLDER', "'" . $ensurePermsUrl . "'", $js);
+$js = str_replace('ENSURE_SYSTEM_ADMIN_URL_PLACEHOLDER', "'" . $ensureSystemAdminUrl . "'", $js);
 
 $this->registerJs($js, \yii\web\View::POS_READY);
 ?>

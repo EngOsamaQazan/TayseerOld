@@ -35,6 +35,11 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
                 'class' => 'fin-btn fin-btn--add', 'title' => 'إنشاء أمر شراء جديد',
             ]) ?>
         </div>
+        <div class="fin-act-group">
+            <?= Html::a('<i class="fa fa-file-text-o"></i> <span>إنشاء فاتورة توريد (معالج)</span>', ['create-wizard'], [
+                'class' => 'fin-btn fin-btn--add', 'title' => 'معالج فاتورة توريد — اختيار الفرع وإرسال للاستلام',
+            ]) ?>
+        </div>
         <?php endif ?>
         <div class="fin-act-group">
             <?= Html::a('<i class="fa fa-refresh"></i> <span>تحديث</span>', ['index'], [

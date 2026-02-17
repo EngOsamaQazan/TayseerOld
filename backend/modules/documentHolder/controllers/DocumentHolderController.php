@@ -149,7 +149,7 @@ class DocumentHolderController extends Controller
                 $model->approved_by_manager = Yii::$app->user->id;
                 $model->approved_at = date('Y-m-d');
                 $model->status = 2;
-                Yii::$app->notifications->sendByRule(['Archives'], 'document-holder/update?id=' . $model->id, Notification::GENERAL, Yii::t('app', 'طلب ') . $model->type . Yii::t('app', ' من الارشيف '), Notification::GENERAL, Yii::t('app', 'طلب ') . $model->type . Yii::t('app', ' من الارشيف '), Yii::$app->user->id);
+                Yii::$app->notifications->sendByRule(['Archives'], 'document-holder/update?id=' . $model->id, Notification::GENERAL, Yii::t('app', 'طلب ') . $model->type . Yii::t('app', ' من الارشيف '), Yii::t('app', 'طلب ') . $model->type . Yii::t('app', ' من الارشيف '), Yii::$app->user->id);
             }
 
             return $this->redirect(['index']);

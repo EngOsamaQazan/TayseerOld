@@ -17,9 +17,11 @@ use backend\modules\hr\models\HrFieldEvent;
 use backend\modules\hr\models\HrFieldConfig;
 use backend\modules\hr\models\HrLocationPoint;
 use common\models\User;
+use common\helper\Permissions;
 
 /**
  * HrFieldController — Field operations management
+ * يتطلب أحد صلاحيات الموارد البشرية.
  */
 class HrFieldController extends Controller
 {
@@ -61,6 +63,7 @@ class HrFieldController extends Controller
                     [
                         'allow' => true,
                         'roles' => ['@'],
+                        // نظام الحضور والانصراف متاح لجميع الموظفين المسجّلين دون اشتراط صلاحية معيّنة
                     ],
                 ],
             ],
@@ -590,7 +593,7 @@ class HrFieldController extends Controller
     // ═══════════════════════════════════════════════════════
 
     /**
-     * صفحة تسجيل دخول خفيفة للمندوب الميداني (بدون Layout)
+     * صفحة تسجيل دخول خفيفة لنظام الحضور والانصراف (بدون Layout)
      * يمكن لأي شخص الوصول لها (Guest allowed)
      * يستخدم dektrium Finder + Password helper مباشرة
      */
@@ -647,7 +650,7 @@ class HrFieldController extends Controller
     }
 
     /**
-     * تسجيل خروج المندوب — يعيد توجيهه لصفحة login الخفيفة
+     * تسجيل خروج — يعيد توجيهه لصفحة تسجيل الدخول
      */
     public function actionMobileLogout()
     {
@@ -656,7 +659,7 @@ class HrFieldController extends Controller
     }
 
     /**
-     * واجهة المندوب الميداني — صفحة خفيفة بدون Layout
+     * واجهة نظام الحضور والانصراف — صفحة خفيفة بدون Layout
      */
     public function actionMobile()
     {

@@ -1,7 +1,7 @@
 <?php
 /**
  * ════════════════════════════════════════════════════════
- *  واجهة المندوب الميداني — Mobile Field Duty
+ *  واجهة نظام الحضور والانصراف — Mobile Attendance
  *  ─────────────────────────────────────────────────
  *  خفيفة جداً: HTML + CSS + Vanilla JS فقط
  *  بدون Kartik / GridView / jQuery UI
@@ -11,7 +11,7 @@
 
 use yii\helpers\Url;
 
-$this->title = 'المندوب الميداني';
+$this->title = 'نظام الحضور والانصراف';
 
 /* ─── Disable default layout assets for lighter page ─── */
 $userId   = Yii::$app->user->id;
@@ -36,7 +36,7 @@ $apiLogEvent     = Url::to(['api-log-event']);
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#800020">
-    <title>المندوب الميداني</title>
+    <title>نظام الحضور والانصراف</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
     /* ══════════════ CSS Variables ══════════════ */

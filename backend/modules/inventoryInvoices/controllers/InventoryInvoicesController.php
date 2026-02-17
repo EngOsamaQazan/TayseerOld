@@ -12,17 +12,24 @@ namespace backend\modules\inventoryInvoices\controllers;
 use Yii;
 use backend\modules\inventoryInvoices\models\InventoryInvoices;
 use backend\modules\inventoryInvoices\models\InventoryInvoicesSearch;
+use backend\modules\inventoryInvoices\services\InventoryInvoicePostingService;
 use backend\modules\inventoryItemQuantities\models\InventoryItemQuantities;
 use backend\modules\itemsInventoryInvoices\models\ItemsInventoryInvoices;
 use backend\modules\inventoryItems\models\StockMovement;
+use backend\modules\inventoryItems\models\InventorySerialNumber;
+use backend\modules\location\models\Location;
+use backend\modules\notification\models\Notification;
 use common\models\Model;
 use yii\filters\AccessControl;
 use yii\web\Controller;
+use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use yii\web\Response;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
+use backend\modules\inventorySuppliers\models\InventorySuppliers;
+use backend\modules\companies\models\Companies;
 
 class InventoryInvoicesController extends Controller
 {
@@ -35,7 +42,7 @@ class InventoryInvoicesController extends Controller
                 'rules' => [
                     ['actions' => ['login', 'error'], 'allow' => true],
                     [
-                        'actions' => ['logout', 'index', 'view', 'create', 'update', 'delete', 'bulk-delete'],
+                        'actions' => ['logout', 'index', 'view', 'create', 'create-wizard', 'update', 'delete', 'bulk-delete', 'approve-reception', 'reject-reception', 'approve-manager', 'reject-manager'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -44,8 +51,12 @@ class InventoryInvoicesController extends Controller
             'verbs' => [
                 'class' => VerbFilter::class,
                 'actions' => [
-                    'delete'      => ['post'],
-                    'bulk-delete' => ['post'],
+                    'delete'           => ['post'],
+                    'bulk-delete'      => ['post'],
+                    'approve-reception' => ['post'],
+                    'reject-reception' => ['get', 'post'],
+                    'approve-manager'  => ['post'],
+                    'reject-manager'   => ['post'],
                 ],
             ],
         ];
@@ -53,13 +64,218 @@ class InventoryInvoicesController extends Controller
 
     public function actionIndex()
     {
+        $params = Yii::$app->request->queryParams;
+        $user = Yii::$app->user->identity;
+        if ($user && $user->hasCategory('sales_employee') && isset($user->location) && $user->location) {
+            $params['InventoryInvoicesSearch']['branch_id'] = $user->location;
+        }
         $searchModel = new InventoryInvoicesSearch();
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        $dataProvider = $searchModel->search($params);
+        $isVendor = $this->isVendorUser();
 
         return $this->render('index', [
             'searchModel'  => $searchModel,
             'dataProvider' => $dataProvider,
+            'isVendor'     => $isVendor,
         ]);
+    }
+
+    /**
+     * معالج (Wizard) إضافة فاتورة توريد جديدة — للمورد: بحث/إضافة أصناف، بيانات الفاتورة، أسعار، سيريالات، إنهاء.
+     */
+    public function actionCreateWizard()
+    {
+        $activeBranches = $this->getActiveBranches();
+        $suppliersList = ArrayHelper::map(InventorySuppliers::find()->orderBy(['name' => SORT_ASC])->all(), 'id', 'name');
+        $companiesList = ArrayHelper::map(Companies::find()->orderBy(['name' => SORT_ASC])->all(), 'id', 'name');
+        $request = Yii::$app->request;
+
+        if ($request->isPost) {
+            $branchId = (int) $request->post('branch_id');
+            $suppliersId = (int) ($request->post('suppliers_id') ?: 0);
+            $rawItems = $request->post('ItemsInventoryInvoices', []);
+
+            if ($branchId <= 0) {
+                Yii::$app->session->setFlash('error', 'يرجى اختيار الفرع.');
+            } elseif ($suppliersId <= 0) {
+                Yii::$app->session->setFlash('error', 'يرجى اختيار المورد.');
+            } else {
+                $lineItems = [];
+                foreach ($rawItems as $row) {
+                    $itemId = (int) ($row['inventory_items_id'] ?? 0);
+                    $qty = (int) ($row['number'] ?? 0);
+                    $price = (float) ($row['single_price'] ?? 0);
+                    if ($itemId <= 0 || $qty <= 0 || $price < 0) continue;
+                    $lineItems[] = [
+                        'inventory_items_id' => $itemId,
+                        'number' => $qty,
+                        'single_price' => $price,
+                    ];
+                }
+                if (empty($lineItems)) {
+                    Yii::$app->session->setFlash('error', 'يرجى إضافة صنف واحد على الأقل في الخطوة 1 وتعبئة الكمية والسعر في الخطوة 2.');
+                } else {
+                    $rawSerials = $request->post('Serials', []);
+                    $serialsValid = true;
+                    foreach ($lineItems as $idx => $row) {
+                        $serialLines = isset($rawSerials[$idx]) ? $rawSerials[$idx] : '';
+                        if (is_array($serialLines)) {
+                            $serialLines = implode("\n", $serialLines);
+                        }
+                        $serials = array_values(array_filter(array_map('trim', explode("\n", (string) $serialLines))));
+                        if (count($serials) !== (int) $row['number']) {
+                            $serialsValid = false;
+                            break;
+                        }
+                    }
+                    if (!$serialsValid) {
+                        Yii::$app->session->setFlash('error', 'عدد الأرقام التسلسلية يجب أن يساوي الكمية بالضبط لكل صنف (لا أقل ولا أكثر).');
+                    } else {
+                    $invoice = new InventoryInvoices();
+                    $invoice->branch_id = $branchId;
+                    $invoice->status = InventoryInvoices::STATUS_PENDING_RECEPTION;
+                    $invoice->suppliers_id = $suppliersId;
+                    $invoice->company_id = (int) ($request->post('company_id') ?: 0);
+                    $invoice->type = (int) ($request->post('type') ?: InventoryInvoices::TYPE_CASH);
+                    $invoice->date = $request->post('date') ?: date('Y-m-d');
+                    $invoice->invoice_notes = trim((string) $request->post('invoice_notes', ''));
+                    if ($invoice->company_id <= 0) $invoice->company_id = null;
+
+                    $transaction = Yii::$app->db->beginTransaction();
+                    try {
+                        if (!$invoice->save(false)) {
+                            throw new \Exception('فشل حفظ الفاتورة.');
+                        }
+                        $totalAmount = 0;
+                        foreach ($lineItems as $row) {
+                            $lineItem = new ItemsInventoryInvoices();
+                            $lineItem->inventory_invoices_id = $invoice->id;
+                            $lineItem->inventory_items_id = $row['inventory_items_id'];
+                            $lineItem->number = $row['number'];
+                            $lineItem->single_price = $row['single_price'];
+                            $lineItem->total_amount = (int) round($lineItem->single_price * $lineItem->number);
+                            $totalAmount += $lineItem->total_amount;
+                            if (!$lineItem->save(false)) {
+                                throw new \Exception('فشل حفظ بند الفاتورة');
+                            }
+                            $this->updateItemQuantity($invoice, $lineItem, 'add');
+                            StockMovement::record($lineItem->inventory_items_id, StockMovement::TYPE_IN, $lineItem->number, [
+                                'reference_type' => 'invoice',
+                                'reference_id'   => $invoice->id,
+                                'unit_cost'      => $lineItem->single_price,
+                                'supplier_id'    => $invoice->suppliers_id,
+                                'company_id'     => $invoice->company_id,
+                            ]);
+                        }
+                        /* حفظ الأرقام التسلسلية (إلزامي) */
+                        $companyId = (int) ($invoice->company_id ?: 0);
+                        $supplierId = (int) ($invoice->suppliers_id ?: 0);
+                        $locationId = (int) ($invoice->branch_id ?: 0);
+                        foreach ($lineItems as $idx => $row) {
+                            $serialLines = isset($rawSerials[$idx]) ? $rawSerials[$idx] : '';
+                            if (is_array($serialLines)) {
+                                $serialLines = implode("\n", $serialLines);
+                            }
+                            $serials = array_values(array_filter(array_map('trim', explode("\n", (string) $serialLines))));
+                            $qty = (int) $row['number'];
+                            $itemId = (int) $row['inventory_items_id'];
+                            for ($s = 0; $s < $qty && isset($serials[$s]); $s++) {
+                                $sn = new InventorySerialNumber();
+                                $sn->item_id = $itemId;
+                                $sn->serial_number = mb_substr($serials[$s], 0, 50);
+                                $sn->company_id = $companyId;
+                                $sn->supplier_id = $supplierId;
+                                $sn->location_id = $locationId;
+                                $sn->status = InventorySerialNumber::STATUS_AVAILABLE;
+                                if (!$sn->save(false)) {
+                                    throw new \Exception('فشل حفظ الرقم التسلسلي: ' . $sn->serial_number);
+                                }
+                            }
+                        }
+                        $invoice->total_amount = $totalAmount;
+                        $invoice->save(false);
+
+                        $recipientId = $this->getBranchSalesUserId($invoice->branch_id);
+                        if ($recipientId && Yii::$app->has('notifications')) {
+                            $branchName = $invoice->branch && $invoice->branch->location ? $invoice->branch->location : '';
+                            $href = \yii\helpers\Url::to(['/inventoryInvoices/inventory-invoices/view', 'id' => $invoice->id]);
+                            Yii::$app->notifications->add(
+                                $href,
+                                Notification::INVOICE_PENDING_RECEPTION,
+                                'فاتورة توريد جديدة #' . $invoice->id . ' بانتظار الاستلام - فرع: ' . $branchName,
+                                '',
+                                Yii::$app->user->id,
+                                $recipientId
+                            );
+                        }
+                        $transaction->commit();
+                        Yii::$app->session->setFlash('success', 'تم إرسال الفاتورة بنجاح.');
+                        return $this->redirect(['view', 'id' => $invoice->id]);
+                    } catch (\Exception $e) {
+                        $transaction->rollBack();
+                        Yii::$app->session->setFlash('error', 'خطأ: ' . $e->getMessage());
+                    }
+                    }
+                }
+            }
+        }
+
+        return $this->render('create-wizard', [
+            'activeBranches' => $activeBranches,
+            'suppliersList'  => $suppliersList,
+            'companiesList'  => $companiesList,
+        ]);
+    }
+
+    protected function isVendorUser()
+    {
+        $userId = Yii::$app->user->id;
+        if (!$userId) return false;
+        $vendorCat = \backend\models\UserCategory::find()->where(['slug' => 'vendor', 'is_active' => 1])->one();
+        if (!$vendorCat) return false;
+        return \backend\models\UserCategoryMap::find()
+            ->where(['user_id' => $userId, 'category_id' => $vendorCat->id])
+            ->exists();
+    }
+
+    /**
+     * User ID of branch sales (sales_employee) for the given branch, or null.
+     */
+    protected function getBranchSalesUserId($branchId)
+    {
+        if (!$branchId) return null;
+        $cat = \backend\models\UserCategory::find()->where(['slug' => 'sales_employee', 'is_active' => 1])->one();
+        if (!$cat) return null;
+        $user = \common\models\User::find()
+            ->alias('u')
+            ->innerJoin(\backend\models\UserCategoryMap::tableName() . ' m', 'm.user_id = u.id')
+            ->where(['u.location' => $branchId, 'm.category_id' => $cat->id])
+            ->one();
+        return $user ? (int) $user->id : null;
+    }
+
+    /**
+     * User ID of system manager (e.g. first user with admin role), or null.
+     */
+    protected function getSystemManagerUserId()
+    {
+        $userId = Yii::$app->params['systemManagerUserId'] ?? null;
+        if ($userId) return (int) $userId;
+        $assignment = \backend\modules\authAssignment\models\AuthAssignment::find()
+            ->where(['item_name' => 'admin'])
+            ->one();
+        return $assignment ? (int) $assignment->user_id : null;
+    }
+
+    /**
+     * Active branches for wizard dropdown.
+     */
+    protected function getActiveBranches()
+    {
+        return Location::find()
+            ->where(['status' => 'active'])
+            ->orderBy(['location' => SORT_ASC])
+            ->all();
     }
 
     public function actionView($id)
@@ -246,7 +462,8 @@ class InventoryInvoicesController extends Controller
                         $this->updateItemQuantity($model, $lineItem, 'add');
                     }
 
-                    $model->total_amount = $totalAmount;
+                    $discount = (float) ($model->discount_amount ?? 0);
+                    $model->total_amount = max(0, $totalAmount - $discount);
                     $model->save(false);
 
                     $transaction->commit();
@@ -317,6 +534,115 @@ class InventoryInvoicesController extends Controller
             return ['forceClose' => true, 'forceReload' => '#crud-datatable-pjax'];
         }
         return $this->redirect(['index']);
+    }
+
+    /**
+     * موافقة مسؤولة الفرع (استلام) — التحقق من الفرع داخل الـ action إلزامي.
+     */
+    public function actionApproveReception($id)
+    {
+        $invoice = $this->findModel($id);
+        $user = Yii::$app->user->identity;
+        if (!$user || (int) $invoice->branch_id !== (int) $user->location) {
+            throw new ForbiddenHttpException('غير مصرح لك بالموافقة على فاتورة هذا الفرع.');
+        }
+        if ($invoice->status !== InventoryInvoices::STATUS_PENDING_RECEPTION) {
+            Yii::$app->session->setFlash('error', 'الفاتورة ليست بانتظار الاستلام.');
+            return $this->redirect(['view', 'id' => $id]);
+        }
+        $invoice->status = InventoryInvoices::STATUS_PENDING_MANAGER;
+        $invoice->approved_by = Yii::$app->user->id;
+        $invoice->approved_at = time();
+        if ($invoice->save(false)) {
+            $managerId = $this->getSystemManagerUserId();
+            if ($managerId && Yii::$app->has('notifications')) {
+                $branchName = $invoice->branch_id && $invoice->branch ? $invoice->branch->location : '';
+                $href = \yii\helpers\Url::to(['/inventoryInvoices/inventory-invoices/view', 'id' => $invoice->id]);
+                Yii::$app->notifications->add(
+                    $href,
+                    Notification::INVOICE_PENDING_MANAGER,
+                    'فاتورة توريد بانتظار موافقة المدير - فرع: ' . $branchName,
+                    '',
+                    Yii::$app->user->id,
+                    $managerId
+                );
+            }
+            Yii::$app->session->setFlash('success', 'تمت الموافقة وتم إشعار المدير.');
+        } else {
+            Yii::$app->session->setFlash('error', 'فشل تحديث الحالة.');
+        }
+        return $this->redirect(['view', 'id' => $id]);
+    }
+
+    /**
+     * رفض استلام من مسؤول الفرع — إدخال سبب الرفض، يبقى الحساب بانتظار الاستلام لاحتمال التعديل ثم الموافقة مجدداً.
+     */
+    public function actionRejectReception($id)
+    {
+        $invoice = $this->findModel($id);
+        $user = Yii::$app->user->identity;
+        if (!$user || (int) $invoice->branch_id !== (int) $user->location) {
+            throw new ForbiddenHttpException('غير مصرح لك برفض فاتورة هذا الفرع.');
+        }
+        if ($invoice->status !== InventoryInvoices::STATUS_PENDING_RECEPTION) {
+            Yii::$app->session->setFlash('error', 'الفاتورة ليست بانتظار الاستلام.');
+            return $this->redirect(['view', 'id' => $id]);
+        }
+        $request = Yii::$app->request;
+        if ($request->isPost) {
+            $invoice->rejection_reason = trim((string) $request->post('rejection_reason', ''));
+            $invoice->save(false);
+            Yii::$app->session->setFlash('success', 'تم تسجيل رفض الاستلام. يمكن للمورد التعديل ثم إعادة الإرسال، أو يمكنك الموافقة بعد التعديل.');
+            return $this->redirect(['view', 'id' => $id]);
+        }
+        return $this->render('reject-reception', ['model' => $invoice]);
+    }
+
+    /**
+     * موافقة المدير النهائية — تحديث الحالة ثم استدعاء Posting Service.
+     */
+    public function actionApproveManager($id)
+    {
+        $invoice = $this->findModel($id);
+        if ($invoice->status !== InventoryInvoices::STATUS_PENDING_MANAGER) {
+            Yii::$app->session->setFlash('error', 'الفاتورة ليست بانتظار موافقة المدير.');
+            return $this->redirect(['view', 'id' => $id]);
+        }
+        $invoice->status = InventoryInvoices::STATUS_APPROVED_FINAL;
+        $invoice->approved_by = Yii::$app->user->id;
+        $invoice->approved_at = time();
+        if ($invoice->save(false)) {
+            try {
+                InventoryInvoicePostingService::post($invoice->id);
+                Yii::$app->session->setFlash('success', 'تمت الموافقة وترحيل الفاتورة إلى المخزون.');
+            } catch (\Exception $e) {
+                Yii::$app->session->setFlash('error', 'تمت الموافقة لكن فشل الترحيل: ' . $e->getMessage());
+            }
+        } else {
+            Yii::$app->session->setFlash('error', 'فشل تحديث الحالة.');
+        }
+        return $this->redirect(['view', 'id' => $id]);
+    }
+
+    /**
+     * رفض المدير.
+     */
+    public function actionRejectManager($id)
+    {
+        $invoice = $this->findModel($id);
+        if ($invoice->status !== InventoryInvoices::STATUS_PENDING_MANAGER) {
+            Yii::$app->session->setFlash('error', 'الفاتورة ليست بانتظار موافقة المدير.');
+            return $this->redirect(['view', 'id' => $id]);
+        }
+        $reason = Yii::$app->request->post('rejection_reason', '');
+        $invoice->status = InventoryInvoices::STATUS_REJECTED_MANAGER;
+        $invoice->rejection_reason = $reason;
+        $invoice->approved_by = Yii::$app->user->id;
+        $invoice->approved_at = time();
+        if ($invoice->save(false)) {
+            Yii::$app->session->setFlash('success', 'تم رفض الفاتورة.');
+        }
+        return $this->redirect(['view', 'id' => $id]);
     }
 
     /* ═══════════════════════════════════════════════════════════

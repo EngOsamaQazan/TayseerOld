@@ -25,11 +25,15 @@ if ($primary_company == '') {
 }
 
 /* === جلب صورة المستخدم === */
-$avatar = \backend\modules\employee\models\EmployeeFiles::find()
+$_avatarRecord = \backend\modules\employee\models\EmployeeFiles::find()
     ->where(['user_id' => Yii::$app->user->id])
     ->andWhere(['type' => 0])
     ->orderBy(['id' => SORT_DESC])
     ->one();
+$avatar = $_avatarRecord;
+if ($avatar && $avatar->path && !file_exists(Yii::getAlias('@webroot') . '/' . ltrim($avatar->path, '/'))) {
+    $avatar = null;
+}
 
 /* === جلب آخر 10 إشعارات + عدد غير المقروءة === */
 $userId = Yii::$app->user->id;

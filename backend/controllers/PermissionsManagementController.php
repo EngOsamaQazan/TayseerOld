@@ -17,9 +17,12 @@ use yii\web\BadRequestHttpException;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use common\helper\Permissions;
+use common\models\User;
 
 class PermissionsManagementController extends Controller
 {
+    /** دور مدير النظام — للاستثناء في تعيين الصلاحيات */
+    const ROLE_SYSTEM_ADMIN = 'مدير النظام';
 
     /* ─── تعريف مجموعات الصلاحيات المنطقية ─── */
     public static function getPermissionGroups()
@@ -128,11 +131,13 @@ class PermissionsManagementController extends Controller
                 'icon'  => 'fa-cogs',
                 'color' => '#475569',
                 'permissions' => [
+                    'لوحة التحكم',
                     'الصلاحيات',
                     'القواعد',
                     'الجذر',
                     'اسناد الصلاحيات  للموظفين',
                     'الاشعارات',
+                    'أدوات المستخدم',
                 ],
             ],
             'settings' => [
@@ -210,6 +215,7 @@ class PermissionsManagementController extends Controller
                             'seed-roles',
                             'get-role-permissions',
                             'ensure-permissions',
+                            'ensure-system-admin',
                         ],
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -345,6 +351,18 @@ class PermissionsManagementController extends Controller
         }
         if (empty($id)) {
             return ['success' => false, 'message' => 'معرّف المستخدم مطلوب'];
+        }
+
+        /* منع المستخدم من تعديل صلاحياته بنفسه إلا إذا كان لديه دور «مدير النظام» */
+        if ((int)$id === (int)Yii::$app->user->id) {
+            $roles = array_keys($auth->getRolesByUser(Yii::$app->user->id));
+            $isSystemAdmin = in_array(self::ROLE_SYSTEM_ADMIN, $roles, true);
+            if (!$isSystemAdmin) {
+                return [
+                    'success' => false,
+                    'message' => 'لا يمكن تعديل صلاحيات حسابك الشخصي من هذه الشاشة. يُرجى طلب ذلك من مدير نظام آخر.',
+                ];
+            }
         }
 
         $newPermissions = $request->post('permissions', []);
@@ -839,6 +857,59 @@ class PermissionsManagementController extends Controller
     }
 
 
+    /* ═══════════════════════════════════════════════════════════
+     *  تعيين دور «مدير النظام» لمستخدم بالبريد (من الويب — يتجنب مشكلة PDO في CLI)
+     * ═══════════════════════════════════════════════════════════ */
+    public function actionEnsureSystemAdmin()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $auth = Yii::$app->authManager;
+        $request = Yii::$app->request;
+
+        /* تعيين مدير نظام مسموح فقط لمن لديه دور «مدير النظام» */
+        $currentRoles = array_keys($auth->getRolesByUser(Yii::$app->user->id));
+        if (!in_array(self::ROLE_SYSTEM_ADMIN, $currentRoles, true)) {
+            return ['success' => false, 'message' => 'غير مصرح. تعيين دور مدير النظام متاح فقط لمستخدم لديه هذا الدور.'];
+        }
+
+        $email = trim((string) ($request->post('email') ?: $request->get('email') ?: ''));
+
+        if ($email === '') {
+            return ['success' => false, 'message' => 'يجب إدخال البريد الإلكتروني للمستخدم.'];
+        }
+
+        $user = User::find()->andWhere(['email' => $email])->one();
+        if (!$user) {
+            return ['success' => false, 'message' => "المستخدم غير موجود بالبريد: {$email}"];
+        }
+
+        $roles = array_keys($auth->getRolesByUser($user->id));
+        $hasRole = in_array(self::ROLE_SYSTEM_ADMIN, $roles, true);
+
+        if ($hasRole) {
+            return [
+                'success' => true,
+                'message' => "المستخدم (id={$user->id}, {$user->email}) لديه بالفعل دور «" . self::ROLE_SYSTEM_ADMIN . "».",
+            ];
+        }
+
+        $role = $auth->getRole(self::ROLE_SYSTEM_ADMIN);
+        if (!$role) {
+            return [
+                'success' => false,
+                'message' => 'دور «' . self::ROLE_SYSTEM_ADMIN . '» غير موجود. نفّذ أولاً من هذه الصفحة: إنشاء الأدوار الافتراضية.',
+            ];
+        }
+
+        $auth->assign($role, $user->id);
+        $auth->invalidateCache();
+        return [
+            'success' => true,
+            'message' => "تم تعيين دور «" . self::ROLE_SYSTEM_ADMIN . "» للمستخدم (id={$user->id}, {$user->email}).",
+        ];
+    }
+
+
     /* ─── تعريف الأدوار الافتراضية وصلاحياتها ─── */
     public static function getDefaultRoles()
     {
@@ -873,7 +944,7 @@ class PermissionsManagementController extends Controller
                     /* التقارير */
                     'التقارير', 'تقارير المتابعات', 'تقارير مجموع دفعات العملاء',
                     /* النظام */
-                    'الصلاحيات', 'القواعد', 'الجذر', 'اسناد الصلاحيات  للموظفين', 'الاشعارات',
+                    'الصلاحيات', 'القواعد', 'الجذر', 'اسناد الصلاحيات  للموظفين', 'الاشعارات', 'أدوات المستخدم',
                     /* الإعدادات */
                     'الحالات', 'حالات الوثائق', 'الاقارب', 'الجنسيه', 'البنوك',
                     'كيف سمعت عنا', 'المدن', 'طرق الدفع', 'الانفعالات',
@@ -1001,10 +1072,10 @@ class PermissionsManagementController extends Controller
             ],
 
             /* ══════════════════════════════════════════════
-             *  موزع أجهزة (مورد) — إدخال سيريالات المخزون
+             *  مورّد أجهزة (مورد بضائع) — إدخال سيريالات المخزون
              * ══════════════════════════════════════════════ */
-            'موزع أجهزة' => [
-                'description' => 'موزع أجهزة / مورد — إدخال سيريالات الأجهزة في المخزون لاعتمادها من موظفة المبيعات ثم التأكيد من مدير المبيعات',
+            'مورّد أجهزة' => [
+                'description' => 'مورّد أجهزة / مورد بضائع — إدخال سيريالات الأجهزة في المخزون لاعتمادها من موظف المبيعات ثم التأكيد من مدير المبيعات',
                 'permissions' => [
                     'عناصر المخزون', 'كمية عناصر المخزون',
                     'مواقع المخزون', 'موردي المخزون', 'فواتير المخزون',

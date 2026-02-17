@@ -55,6 +55,18 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                         <span class="sys-nav-badge inactive"><i class="fa fa-times-circle"></i></span>
                     <?php endif; ?>
                 </a>
+                <a href="#" class="sys-nav-item <?= $activeTab === 'google_maps' ? 'active' : '' ?>" data-tab="google_maps">
+                    <div class="sys-nav-icon"><i class="fa fa-map"></i></div>
+                    <div class="sys-nav-text">
+                        <span class="sys-nav-label">خريطة Google</span>
+                        <span class="sys-nav-sub">مفتاح API لخريطة تتبع الموظفين</span>
+                    </div>
+                    <?php if (!empty($googleMaps['configured'])): ?>
+                        <span class="sys-nav-badge active"><i class="fa fa-check-circle"></i></span>
+                    <?php else: ?>
+                        <span class="sys-nav-badge inactive"><i class="fa fa-times-circle"></i></span>
+                    <?php endif; ?>
+                </a>
                 <a href="#" class="sys-nav-item disabled" data-tab="notifications">
                     <div class="sys-nav-icon"><i class="fa fa-bell"></i></div>
                     <div class="sys-nav-text">
@@ -792,6 +804,104 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                 </form>
             </div>
 
+            <!-- ═══════════ Google Maps Tab (نفس فكرة وتصميم تحليل الوثائق) ═══════════ -->
+            <div class="sys-tab-content <?= $activeTab === 'google_maps' ? 'active' : '' ?>" id="tab-google_maps">
+                <form method="post" action="<?= Url::to(['system-settings']) ?>">
+                    <?= Html::hiddenInput(Yii::$app->request->csrfParam, Yii::$app->request->csrfToken) ?>
+                    <input type="hidden" name="settings_tab" value="google_maps">
+
+                    <!-- حالة الاتصال / التكوين -->
+                    <div class="sys-card sys-status-card">
+                        <div class="sys-card-header">
+                            <div class="sys-card-title">
+                                <i class="fa fa-map-marker"></i> حالة التكوين
+                            </div>
+                        </div>
+                        <div class="sys-card-body">
+                            <div class="sys-connection-status" id="gm-connection-status">
+                                <?php if (!empty($googleMaps['configured'])): ?>
+                                    <div class="sys-status-indicator configured">
+                                        <i class="fa fa-check-circle fa-2x"></i>
+                                        <div>
+                                            <strong>تم التكوين</strong>
+                                            <p>مفتاح Google Maps API محفوظ — خريطة تتبع الموظفين ستستخدم خريطة Google تلقائياً</p>
+                                        </div>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="sys-status-indicator not-configured">
+                                        <i class="fa fa-exclamation-circle fa-2x"></i>
+                                        <div>
+                                            <strong>غير مكوّن</strong>
+                                            <p>أدخل مفتاح Google Maps API لتفعيل خريطة Google في صفحة تتبع الموظفين (معالم، محلات، مستشفيات)</p>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- مفتاح API -->
+                    <div class="sys-card">
+                        <div class="sys-card-body">
+                            <div class="sys-form-group">
+                                <label for="gm_api_key" class="sys-label">
+                                    <i class="fa fa-key"></i> مفتاح Google Maps API
+                                </label>
+                                <input type="text"
+                                       id="gm_api_key"
+                                       name="gm_api_key"
+                                       class="sys-input"
+                                       placeholder="<?= !empty($googleMaps['configured']) ? 'اتركه فارغاً للإبقاء على المفتاح الحالي' : 'AIza...' ?>"
+                                       value=""
+                                       autocomplete="off">
+                                <p class="sys-field-hint">احصل على المفتاح من <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a> — فعّل «Maps JavaScript API» ثم أنشئ مفتاح API.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- دليل مختصر (قابل للطي) -->
+                    <div class="sys-card sys-guide-card">
+                        <div class="sys-card-header sys-guide-toggle" onclick="toggleGmGuide()">
+                            <div class="sys-card-title">
+                                <i class="fa fa-graduation-cap"></i> كيف تحصل على المفتاح؟
+                            </div>
+                            <div class="sys-guide-toggle-hint">
+                                <span id="gm-guide-toggle-text">عرض الدليل</span>
+                                <i class="fa fa-chevron-down" id="gm-guide-chevron"></i>
+                            </div>
+                        </div>
+                        <div class="sys-guide-body" id="gm-setup-guide" style="display:none;">
+                            <div class="gc-step active">
+                                <div class="gc-step-header">
+                                    <div class="gc-step-number">1</div>
+                                    <div>
+                                        <h3>إنشاء مفتاح API</h3>
+                                        <p>ادخل إلى <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">APIs & Services → Credentials</a></p>
+                                    </div>
+                                </div>
+                                <div class="gc-step-instructions">
+                                    <div class="gc-instruction-item"><span class="gc-inst-num">1</span><span>من القائمة اختر <strong>Create Credentials</strong> → <strong>API key</strong></span></div>
+                                    <div class="gc-instruction-item"><span class="gc-inst-num">2</span><span>فعّل <strong>Maps JavaScript API</strong> من قسم Library إن لم يكن مفعّلاً</span></div>
+                                    <div class="gc-instruction-item"><span class="gc-inst-num">3</span><span>انسخ المفتاح (يبدأ بـ <code>AIza</code>) والصقه في الحقل أعلاه</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- أزرار الحفظ -->
+                    <div class="sys-card sys-actions-card">
+                        <div class="sys-card-body">
+                            <button type="submit" class="sys-save-btn">
+                                <i class="fa fa-save"></i> حفظ الإعدادات
+                            </button>
+                            <button type="button" class="sys-cancel-btn" onclick="window.location.reload()">
+                                <i class="fa fa-undo"></i> إلغاء التغييرات
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
             <!-- ═══════════ General Settings Tab ═══════════ -->
             <div class="sys-tab-content <?= $activeTab === 'general' ? 'active' : '' ?>" id="tab-general">
 
@@ -1059,6 +1169,22 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
 <?php
 $testUrl = Url::to(['test-google-connection']);
 $js = <<<JS
+// دليل خريطة Google — طيّ/فتح
+window.toggleGmGuide = function() {
+    var body = $('#gm-setup-guide');
+    var text = $('#gm-guide-toggle-text');
+    var chevron = $('#gm-guide-chevron');
+    if (body.is(':visible')) {
+        body.slideUp(300);
+        text.text('عرض الدليل');
+        chevron.css('transform', 'rotate(0deg)');
+    } else {
+        body.slideDown(300);
+        text.text('إخفاء الدليل');
+        chevron.css('transform', 'rotate(180deg)');
+    }
+};
+
 // Tab navigation (only for non-disabled)
 $('.sys-nav-item:not(.disabled)').on('click', function(e) {
     var tab = $(this).data('tab');

@@ -13,9 +13,11 @@ use yii\db\Query;
 use yii\helpers\ArrayHelper;
 use backend\modules\hr\models\HrAttendance;
 use common\models\User;
+use common\helper\Permissions;
 
 /**
  * HrAttendanceController — Attendance management
+ * يتطلب أحد صلاحيات الموارد البشرية.
  */
 class HrAttendanceController extends Controller
 {
@@ -35,6 +37,9 @@ class HrAttendanceController extends Controller
                     [
                         'allow' => true,
                         'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::hasAnyPermission(Permissions::getHrPermissions());
+                        },
                     ],
                 ],
             ],

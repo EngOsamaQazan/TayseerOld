@@ -48,7 +48,7 @@ class LoginForm extends Model
             $user = $this->getUser();
 
             if (!$user || !$user->validatePassword($this->password, $user->password_hash)) {
-                $this->addError($attribute, 'Incorrect username or password.');
+                $this->addError($attribute, 'اسم المستخدم أو البريد الإلكتروني أو كلمة المرور غير صحيحة');
             }
         }
     }
@@ -68,15 +68,17 @@ class LoginForm extends Model
     }
 
     /**
-     * Finds user by [[username]]
+     * Finds user by username or email.
      *
      * @return User|null
      */
     protected function getUser()
     {
-
         if ($this->_user === null) {
-            $this->_user = User::findByUsername($this->username);
+            $login = trim((string) $this->username);
+            $this->_user = User::find()
+                ->andWhere(['or', ['username' => $login], ['email' => $login]])
+                ->one();
         }
 
         return $this->_user;

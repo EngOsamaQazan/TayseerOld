@@ -134,10 +134,10 @@ class Profile extends ActiveRecord
 
     /**
      * Converts DateTime to user's local time
-     * @param \DateTime the datetime to convert
+     * @param \DateTime|null the datetime to convert
      * @return \DateTime
      */
-    public function toLocalTime(\DateTime $dateTime = null)
+    public function toLocalTime(?\DateTime $dateTime = null)
     {
         if ($dateTime === null) {
             $dateTime = new \DateTime();

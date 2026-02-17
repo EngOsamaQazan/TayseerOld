@@ -1,7 +1,7 @@
 <?php
 /**
  * ════════════════════════════════════════════════════════
- *  صفحة تسجيل دخول المندوب الميداني — خفيفة جداً
+ *  صفحة تسجيل دخول نظام الحضور والانصراف — خفيفة جداً
  *  ─────────────────────────────────────────────────
  *  بدون Layout / AdminLTE / jQuery UI
  *  HTML + CSS + Vanilla JS فقط
@@ -23,7 +23,7 @@ $error     = $error ?? '';
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#800020">
-    <title>تسجيل الدخول — المندوب الميداني</title>
+    <title>تسجيل الدخول — نظام الحضور والانصراف</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
     /* ══════════════ Variables ══════════════ */
@@ -243,8 +243,8 @@ $error     = $error ?? '';
         <div class="brand-icon">
             <i class="fa fa-map-marker"></i>
         </div>
-        <h1>المندوب الميداني</h1>
-        <p>سجّل دخولك للبدء بالجولة الميدانية</p>
+        <h1>نظام الحضور والانصراف</h1>
+        <p>سجّل دخولك لتسجيل الحضور والانصراف</p>
     </div>
 
     <!-- Login Card -->
@@ -293,7 +293,7 @@ $error     = $error ?? '';
     </div>
 
     <div class="footer">
-        نظام تيسير — الإدارة الميدانية
+        نظام تيسير — الحضور والانصراف
     </div>
 </div>
 

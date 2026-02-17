@@ -5,9 +5,11 @@ namespace backend\modules\hr\controllers;
 use Yii;
 use yii\web\Controller;
 use yii\filters\AccessControl;
+use common\helper\Permissions;
 
 /**
  * HrDashboardController - لوحة تحكم الموارد البشرية
+ * يتطلب أحد صلاحيات الموارد البشرية.
  */
 class HrDashboardController extends Controller
 {
@@ -23,6 +25,9 @@ class HrDashboardController extends Controller
                     [
                         'allow' => true,
                         'roles' => ['@'],
+                        'matchCallback' => function () {
+                            return Permissions::hasAnyPermission(Permissions::getHrPermissions());
+                        },
                     ],
                 ],
             ],

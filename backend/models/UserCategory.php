@@ -76,10 +76,11 @@ class UserCategory extends ActiveRecord
     {
         return [
             ['slug' => 'employee',       'name_ar' => 'موظف',                'name_en' => 'Employee',      'icon' => 'fa-id-badge',  'color' => '#3B82F6', 'sort_order' => 1, 'is_system' => 1],
-            ['slug' => 'vendor',         'name_ar' => 'مندوب مبيعات (مورد)', 'name_en' => 'Vendor',        'icon' => 'fa-truck',     'color' => '#F59E0B', 'sort_order' => 2, 'is_system' => 1],
-            ['slug' => 'investor',       'name_ar' => 'مستثمر (شريك)',       'name_en' => 'Investor',      'icon' => 'fa-briefcase', 'color' => '#8B5CF6', 'sort_order' => 3, 'is_system' => 1],
-            ['slug' => 'court_agent',    'name_ar' => 'مندوب محكمة',         'name_en' => 'Court Agent',   'icon' => 'fa-gavel',     'color' => '#800020', 'sort_order' => 4, 'is_system' => 1],
-            ['slug' => 'branch_manager', 'name_ar' => 'مدير فرع',            'name_en' => 'Branch Manager','icon' => 'fa-building',  'color' => '#059669', 'sort_order' => 5, 'is_system' => 1],
+            ['slug' => 'sales_employee', 'name_ar' => 'موظف مبيعات',         'name_en' => 'Sales Employee','icon' => 'fa-shopping-cart', 'color' => '#0ea5e9', 'sort_order' => 2, 'is_system' => 1],
+            ['slug' => 'vendor',         'name_ar' => 'مورد بضائع',          'name_en' => 'Vendor',        'icon' => 'fa-truck',     'color' => '#F59E0B', 'sort_order' => 3, 'is_system' => 1],
+            ['slug' => 'investor',       'name_ar' => 'مستثمر (شريك)',       'name_en' => 'Investor',      'icon' => 'fa-briefcase', 'color' => '#8B5CF6', 'sort_order' => 4, 'is_system' => 1],
+            ['slug' => 'court_agent',    'name_ar' => 'مندوب محكمة',         'name_en' => 'Court Agent',   'icon' => 'fa-gavel',     'color' => '#800020', 'sort_order' => 5, 'is_system' => 1],
+            ['slug' => 'branch_manager', 'name_ar' => 'مدير فرع',            'name_en' => 'Branch Manager','icon' => 'fa-building',  'color' => '#059669', 'sort_order' => 6, 'is_system' => 1],
         ];
     }
 
@@ -128,6 +129,9 @@ class UserCategory extends ActiveRecord
             if (!$exists) {
                 $db->createCommand()->insert('os_user_categories', array_merge($cat, ['company_id' => null, 'is_active' => 1]))->execute();
                 $created++;
+            } elseif ($cat['slug'] === 'vendor') {
+                // توحيد الاسم للموجود مسبقاً
+                $db->createCommand()->update('os_user_categories', ['name_ar' => $cat['name_ar'], 'name_en' => $cat['name_en']], ['slug' => 'vendor', 'company_id' => null])->execute();
             }
         }
         return $created;

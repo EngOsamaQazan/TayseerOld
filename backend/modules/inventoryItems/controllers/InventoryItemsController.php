@@ -27,6 +27,7 @@ use yii\web\Response;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\data\ActiveDataProvider;
+use yii\db\Query;
 
 class InventoryItemsController extends Controller
 {
@@ -47,6 +48,7 @@ class InventoryItemsController extends Controller
                             'search-items', 'adjustment',
                             'serial-numbers', 'serial-create', 'serial-update', 'serial-view',
                             'serial-delete', 'serial-change-status', 'serial-bulk-delete',
+                            'delete-supplier', 'transfer-supplier-data',
                         ],
                         'allow' => true,
                         'roles' => ['@'],
@@ -69,6 +71,8 @@ class InventoryItemsController extends Controller
                     'serial-delete'       => ['post'],
                     'serial-change-status'=> ['post'],
                     'serial-bulk-delete'  => ['post'],
+                    'delete-supplier'     => ['post'],
+                    'transfer-supplier-data' => ['post'],
                 ],
             ],
         ];
@@ -177,9 +181,25 @@ class InventoryItemsController extends Controller
         $suppliers = InventorySuppliers::find()->all();
         $locations = InventoryStockLocations::find()->all();
 
+        // جلب المستخدمين المصنفين كموردين من نظام فئات المستخدمين
+        $vendorUsers = [];
+        try {
+            $vendorUsers = (new Query())
+                ->select(['u.id', 'u.name', 'u.middle_name', 'u.last_name', 'u.username', 'u.mobile', 'u.email'])
+                ->from('{{%user}} u')
+                ->innerJoin('{{%user_category_map}} ucm', 'ucm.user_id = u.id')
+                ->innerJoin('{{%user_categories}} uc', 'uc.id = ucm.category_id')
+                ->where(['uc.slug' => 'vendor', 'uc.is_active' => 1])
+                ->andWhere(['not', ['u.confirmed_at' => null]])
+                ->all();
+        } catch (\Exception $e) {
+            Yii::warning('فشل جلب موردي المستخدمين: ' . $e->getMessage(), __METHOD__);
+        }
+
         return $this->render('settings', [
             'suppliers' => $suppliers,
             'locations' => $locations,
+            'vendorUsers' => $vendorUsers,
         ]);
     }
 
@@ -534,6 +554,141 @@ class InventoryItemsController extends Controller
             return ['success' => true, 'id' => $model->id, 'name' => $model->name, 'message' => 'تم إضافة المورد'];
         }
         return ['success' => false, 'message' => 'خطأ: ' . implode(', ', array_map(function($e){ return implode(', ', $e); }, $model->getErrors()))];
+    }
+
+    /**
+     * حذف مورد خارجي (من جدول inventory_suppliers فقط).
+     * إذا وُجدت فواتير أو أصناف أو أرقام تسلسلية أو حركات مرتبطة، يُرجع رسالة لِنقلها لمورد آخر.
+     */
+    public function actionDeleteSupplier()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $id = (int) Yii::$app->request->post('id');
+        $supplier = InventorySuppliers::findOne($id);
+        if (!$supplier) {
+            return ['success' => false, 'message' => 'المورد غير موجود.'];
+        }
+
+        $invoicesCount = (int) \backend\modules\inventoryInvoices\models\InventoryInvoices::find()->andWhere(['suppliers_id' => $id])->count();
+        $itemsCount   = (int) InventoryItems::find()->andWhere(['supplier_id' => $id])->count();
+        $serialsCount = (int) InventorySerialNumber::find()->andWhere(['supplier_id' => $id])->count();
+        $movementsCount = (int) StockMovement::find()->andWhere(['supplier_id' => $id])->count();
+        $quantitiesCount = (int) \backend\modules\inventoryItemQuantities\models\InventoryItemQuantities::find()->andWhere(['suppliers_id' => $id])->count();
+
+        $total = $invoicesCount + $itemsCount + $serialsCount + $movementsCount + $quantitiesCount;
+        if ($total > 0) {
+            $parts = [];
+            if ($invoicesCount) $parts[] = $invoicesCount . ' فاتورة';
+            if ($itemsCount) $parts[] = $itemsCount . ' صنف';
+            if ($serialsCount) $parts[] = $serialsCount . ' رقم تسلسلي';
+            if ($movementsCount) $parts[] = $movementsCount . ' حركة';
+            if ($quantitiesCount) $parts[] = $quantitiesCount . ' كمية';
+            $msg = 'لا يمكن الحذف: توجد سجلات مرتبطة بهذا المورد (' . implode('، ', $parts) . '). انقلها لمورد آخر من خلال "نقل البيانات ثم حذف" ثم أعد المحاولة.';
+            return [
+                'success' => false,
+                'message' => $msg,
+                'linked' => [
+                    'invoices' => $invoicesCount,
+                    'items' => $itemsCount,
+                    'serials' => $serialsCount,
+                    'movements' => $movementsCount,
+                    'quantities' => $quantitiesCount,
+                ],
+            ];
+        }
+
+        $supplier->delete(); // soft delete
+        return ['success' => true, 'message' => 'تم حذف المورد.'];
+    }
+
+    /**
+     * نقل كل الفواتير والأصناف والأرقام التسلسلية والحركات والكميات من مورد إلى آخر، ثم حذف المورد المصدر.
+     * POST: from_id, to_id (مورد خارجي) أو to_user_id (مستخدم مصنّف كمورد — يُستدعى أو يُنشأ له سجل في inventory_suppliers)
+     */
+    public function actionTransferSupplierData()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $fromId  = (int) Yii::$app->request->post('from_id');
+        $toId    = (int) Yii::$app->request->post('to_id');
+        $toUserId = (int) Yii::$app->request->post('to_user_id');
+        if (!$fromId) {
+            return ['success' => false, 'message' => 'حدد المورد المصدر.'];
+        }
+        if (!$toId && !$toUserId) {
+            return ['success' => false, 'message' => 'حدد المورد المستهدف (مورد خارجي أو مستخدم مصنّف كمورد).'];
+        }
+        if ($toId && $fromId === $toId) {
+            return ['success' => false, 'message' => 'المورد المستهدف لا يمكن أن يكون نفس المورد المراد حذفه.'];
+        }
+
+        $from = InventorySuppliers::findOne($fromId);
+        if (!$from) {
+            return ['success' => false, 'message' => 'المورد المصدر غير موجود.'];
+        }
+
+        if ($toUserId) {
+            $user = \common\models\User::findOne($toUserId);
+            if (!$user) {
+                return ['success' => false, 'message' => 'المستخدم المختار غير موجود.'];
+            }
+            $to = $this->findOrCreateSupplierForUser($user);
+            if (!$to) {
+                return ['success' => false, 'message' => 'تعذر إنشاء أو العثور على سجل المورد لهذا المستخدم.'];
+            }
+            $toId = $to->id;
+        } else {
+            $to = InventorySuppliers::findOne($toId);
+            if (!$to) {
+                return ['success' => false, 'message' => 'المورد المستهدف غير موجود.'];
+            }
+        }
+
+        $db = Yii::$app->db;
+        $tr = $db->beginTransaction();
+        try {
+            \backend\modules\inventoryInvoices\models\InventoryInvoices::updateAll(
+                ['suppliers_id' => $toId],
+                ['suppliers_id' => $fromId]
+            );
+            InventoryItems::updateAll(['supplier_id' => $toId], ['supplier_id' => $fromId]);
+            InventorySerialNumber::updateAll(['supplier_id' => $toId], ['supplier_id' => $fromId]);
+            StockMovement::updateAll(['supplier_id' => $toId], ['supplier_id' => $fromId]);
+            \backend\modules\inventoryItemQuantities\models\InventoryItemQuantities::updateAll(
+                ['suppliers_id' => $toId],
+                ['suppliers_id' => $fromId]
+            );
+            $from->delete(); // soft delete
+            $tr->commit();
+            return ['success' => true, 'message' => 'تم نقل البيانات وحذف المورد القديم.'];
+        } catch (\Exception $e) {
+            $tr->rollBack();
+            return ['success' => false, 'message' => 'خطأ: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * إيجاد أو إنشاء سجل مورد خارجي (inventory_suppliers) لمستخدم مصنّف كمورد — لاستخدامه في نقل البيانات
+     */
+    protected function findOrCreateSupplierForUser($user)
+    {
+        $name = trim(implode(' ', array_filter([$user->name ?? '', $user->middle_name ?? '', $user->last_name ?? ''])));
+        if ($name === '' || strpos($name, '@') !== false) {
+            $name = $user->username ?? 'مورد-' . $user->id;
+        }
+        $phone = !empty($user->mobile) ? $user->mobile : ('u' . $user->id);
+        $existing = InventorySuppliers::find()
+            ->andWhere(['or', ['phone_number' => $phone], ['name' => $name]])
+            ->one();
+        if ($existing) {
+            return $existing;
+        }
+        $model = new InventorySuppliers();
+        $model->name = $name;
+        $model->phone_number = $phone;
+        if ($model->save()) {
+            return $model;
+        }
+        return null;
     }
 
     /** إضافة موقع سريعة */

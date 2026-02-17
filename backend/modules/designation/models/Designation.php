@@ -11,12 +11,14 @@ use \common\models\User;
  * @property int $id
  * @property string $title
  * @property string|null $description
+ * @property int|null $department_id
  * @property string $status
  * @property int $created_by
  * @property int $created_at
  * @property int|null $updated_at
  *
  * @property User $createdBy
+ * @property Department $department
  * @property Profile[] $profiles
  */
 class Designation extends Model
@@ -37,7 +39,8 @@ class Designation extends Model
         return [
             [['title', 'status'], 'required'],
             [['status'], 'string'],
-            [['created_by', 'created_at', 'updated_at'], 'integer'],
+            [['created_by', 'created_at', 'updated_at', 'department_id'], 'integer'],
+            [['department_id'], 'default', 'value' => null],
             [['title'], 'string', 'max' => 50],
             [['description'], 'string', 'max' => 250],
             [['created_by'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['created_by' => 'id']],
@@ -50,42 +53,55 @@ class Designation extends Model
     public function attributeLabels()
     {
         return [
-            'id' => Yii::t('app', 'ID'),
-            'title' => Yii::t('app', 'Title'),
-            'description' => Yii::t('app', 'Description'),
-            'status' => Yii::t('app', 'Status'),
-            'created_by' => Yii::t('app', 'Created By'),
-            'created_at' => Yii::t('app', 'Created At'),
-            'updated_at' => Yii::t('app', 'Updated At'),
+            'id' => 'ID',
+            'title' => 'المسمى الوظيفي',
+            'description' => 'الوصف',
+            'department_id' => 'القسم',
+            'status' => 'الحالة',
+            'created_by' => 'أنشأه',
+            'created_at' => 'تاريخ الإنشاء',
+            'updated_at' => 'تاريخ التحديث',
         ];
     }
 
-    /**
-     * Gets query for [[CreatedBy]].
-     *
-     * @return \yii\db\ActiveQuery|yii\db\ActiveQuery
-     */
     public function getCreatedBy()
     {
         return $this->hasOne(\common\models\User::className(), ['id' => 'created_by']);
     }
 
-    /**
-     * Gets query for [[Profiles]].
-     *
-     * @return \yii\db\ActiveQuery|ProfileQuery
-     */
+    public function getDepartment()
+    {
+        return $this->hasOne(\backend\modules\department\models\Department::className(), ['id' => 'department_id']);
+    }
+
     public function getProfiles()
     {
         return $this->hasMany(Profile::className(), ['job_title' => 'id']);
     }
 
-    /**
-     * {@inheritdoc}
-     * @return DesignationQuery the active query used by this AR class.
-     */
     public static function find()
     {
         return new DesignationQuery(get_called_class());
+    }
+
+    /**
+     * التأكد من وجود عمود department_id في الجدول — إن لم يكن موجوداً يُنشأ تلقائياً.
+     * لا يرمي استثناءً حتى لا يوقف "إنشاء الافتراضية" على سيرفرات بصلاحيات محدودة.
+     */
+    public static function ensureDepartmentColumn()
+    {
+        $db = Yii::$app->db;
+        $tableName = $db->getSchema()->getRawTableName('{{%designation}}');
+        $quotedTable = $db->getSchema()->quoteTableName($tableName);
+        try {
+            $rows = $db->createCommand("SHOW COLUMNS FROM {$quotedTable} LIKE 'department_id'")->queryAll();
+            if (empty($rows)) {
+                $db->createCommand("ALTER TABLE {$quotedTable} ADD COLUMN `department_id` INT NULL AFTER `description`")->execute();
+            }
+            $db->getSchema()->refreshTableSchema('{{%designation}}');
+        } catch (\Exception $e) {
+            Yii::warning('ensureDepartmentColumn: ' . $e->getMessage(), __METHOD__);
+            // عدم إعادة رمي الاستثناء لئلا تتوقف "إنشاء الافتراضية"؛ الإدراج سيجرب بدون department_id إن لزم
+        }
     }
 }

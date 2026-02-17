@@ -130,18 +130,20 @@ class Finder extends BaseObject
 
     /**
      * Finds a user by the given username or email.
+     * Searches both columns so either identifier works.
      *
      * @param string $usernameOrEmail Username or email to be used on search.
      *
-     * @return models\User
+     * @return models\User|null
      */
     public function findUserByUsernameOrEmail($usernameOrEmail)
     {
-        if (filter_var($usernameOrEmail, FILTER_VALIDATE_EMAIL)) {
-            return $this->findUserByEmail($usernameOrEmail);
+        $value = trim((string) $usernameOrEmail);
+        if ($value === '') {
+            return null;
         }
 
-        return $this->findUserByUsername($usernameOrEmail);
+        return $this->findUser(['or', ['username' => $value], ['email' => $value]])->one();
     }
 
     /**
