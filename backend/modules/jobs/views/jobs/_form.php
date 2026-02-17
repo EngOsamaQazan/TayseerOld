@@ -282,6 +282,7 @@ $modelId = $model->isNewRecord ? 0 : $model->id;
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <?php
+$existingPhonesCount = count($existingPhones);
 $js = <<<JS
 
 /* ═══════════════════════════════════════════════════════════
@@ -316,7 +317,7 @@ $('#job-name-input').on('focus', function(){ if ($('#job-similar-list').children
 var phoneIdx = 0;
 function updatePhoneBadge() {
     var count = $('#phones-container .phone-row').length;
-    var existing = <?= count($existingPhones) ?>;
+    var existing = $existingPhonesCount;
     $('#phone-count-badge').text(count + existing);
 }
 $('#btn-add-phone').on('click', function(){
