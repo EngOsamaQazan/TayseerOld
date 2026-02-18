@@ -10,7 +10,7 @@ return [
             'tablePrefix' => 'os_',
         ],
         'mailer' => [
-            'class' => 'yii\swiftmailer\Mailer',
+            'class' => 'yii\symfonymailer\Mailer',
             'viewPath' => '@common/mail',
             // send all mails to a file by default. You have to set
             // 'useFileTransport' to false and configure a transport
