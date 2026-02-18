@@ -52,7 +52,7 @@ class Queue extends \yii\queue\amqp\Queue
         $this->open();
         $callback = function (AMQPMessage $payload) {
             $id = $payload->get('message_id');
-            list($ttr, $message) = explode(';', $payload->body, 2);
+            list($ttr, $message) = explode(';', (string)$payload->body, 2);
             if ($this->handleMessage($id, $message, $ttr, 1)) {
                 $payload->delivery_info['channel']->basic_ack($payload->delivery_info['delivery_tag']);
             }
@@ -73,7 +73,7 @@ class Queue extends \yii\queue\amqp\Queue
             $messageQueue = $this->channel->basic_get();
             if (isset($messageQueue)) {
                 $id = $messageQueue->get('message_id');
-                list($ttr, $message) = explode(';', $messageQueue->body, 2);
+                list($ttr, $message) = explode(';', (string)$messageQueue->body, 2);
                 if ($this->handleMessage($id, $message, $ttr, 1)) {
                     $this->channel->basic_ack($messageQueue->delivery_info['delivery_tag']);
                 }

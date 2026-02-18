@@ -583,7 +583,7 @@ class SiteController extends Controller
         foreach ($pagedItems as $item) {
             if ($item['type'] === 'im') {
                 $row = $item['data'];
-                $ext = strtolower(pathinfo($row['fileName'], PATHINFO_EXTENSION));
+                $ext = strtolower(pathinfo($row['fileName'] ?? '', PATHINFO_EXTENSION));
                 if (empty($ext)) $ext = 'jpg';
 
                 // ── بحث في عدة مواقع عن الصورة ──

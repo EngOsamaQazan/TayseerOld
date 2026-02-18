@@ -316,12 +316,13 @@ class ExpenseCategoriesController extends Controller
             }
 
             for ($i = 16; $i < $sheetDataCount; $i++) {
-                if (empty(trim($sheetData[$i]['M']))) {
+                $cellM = $sheetData[$i]['M'] ?? '';
+                if (!is_string($cellM) || trim($cellM) === '') {
                     continue;
                 }
 
                 $model = new Expenses();
-                $model->description = trim($sheetData[$i]['M']);
+                $model->description = trim($cellM);
                 $model->amount = (float)($sheetData[$i]['I']);
                 $model->receiver_number = 0;
                 $model->document_number = 0;

@@ -807,7 +807,11 @@ class JudiciaryController extends Controller
     public function actionBulkDelete()
     {
         $request = Yii::$app->request;
-        $pks = explode(',', $request->post('pks')); // Array or selected records primary keys
+        $rawPks = $request->post('pks');
+        if ($rawPks === null || $rawPks === '') {
+            return $this->redirect(['index']);
+        }
+        $pks = explode(',', $rawPks);
         foreach ($pks as $pk) {
             $model = $this->findModel($pk);
             $model->delete();
@@ -845,7 +849,7 @@ class JudiciaryController extends Controller
         if (is_array($rawIds)) {
             $contractIds = array_map('intval', $rawIds);
         } else {
-            $contractIds = array_filter(array_map('intval', explode(',', $rawIds)));
+            $contractIds = array_filter(array_map('intval', explode(',', (string)$rawIds)));
         }
 
         if (empty($contractIds)) {
@@ -1025,7 +1029,7 @@ class JudiciaryController extends Controller
     /**
      * طباعة جماعية لعدة قضايا — صفحات A4 متتالية
      */
-    public function actionBatchPrint($ids)
+    public function actionBatchPrint(string $ids = '')
     {
         $this->layout = '/print_cases';
         $judiciaryIds = array_filter(array_map('intval', explode(',', $ids)));

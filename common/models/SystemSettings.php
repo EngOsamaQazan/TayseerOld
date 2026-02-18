@@ -229,6 +229,7 @@ class SystemSettings extends ActiveRecord
     {
         try {
             $data = base64_decode($value);
+            if ($data === false) return $value;
             $parts = explode('::', $data, 2);
             if (count($parts) !== 2) return $value;
 

@@ -17,7 +17,7 @@ $userMenu = ['active','register','invoice'];
 $controller = \Yii::$app->controller->id;
 $action = \Yii::$app->controller->action->id;
 
-$currentUrlParts = explode('/', \Yii::$app->request->url);
+$currentUrlParts = explode('/', (string)\Yii::$app->request->url);
 
 $class_id = $currentUrlParts[count($currentUrlParts)-1];
 

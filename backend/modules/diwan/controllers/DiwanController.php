@@ -119,7 +119,7 @@ class DiwanController extends Controller
 
         if ($model->load(Yii::$app->request->post())) {
             /* تصحيح صيغة التاريخ من datetime-local (T separator) */
-            if (!empty($model->transaction_date) && strpos($model->transaction_date, 'T') !== false) {
+            if (!empty($model->transaction_date) && is_string($model->transaction_date) && strpos($model->transaction_date, 'T') !== false) {
                 $model->transaction_date = str_replace('T', ' ', $model->transaction_date) . ':00';
             }
 
