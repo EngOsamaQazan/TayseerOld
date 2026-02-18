@@ -584,9 +584,9 @@ class ContractsController extends Controller
      */
     private function updateSerialItems($model)
     {
-        $newSerialIds = array_map('intval', Yii::$app->request->post('serial_ids', []));
+        $postSerialIds = Yii::$app->request->post('serial_ids');
+        $newSerialIds = is_array($postSerialIds) ? array_map('intval', $postSerialIds) : [];
 
-        // الأرقام التسلسلية الحالية
         $oldItems = ContractInventoryItem::find()
             ->where(['contract_id' => $model->id])
             ->andWhere(['IS NOT', 'serial_number_id', null])
@@ -594,23 +594,15 @@ class ContractsController extends Controller
 
         $oldSerialIds = array_map(function($i) { return (int)$i->serial_number_id; }, $oldItems);
 
-        // إزالة السيريالات اللي اتشالت
         $toRelease = array_diff($oldSerialIds, $newSerialIds);
         foreach ($toRelease as $sid) {
-            $serial = InventorySerialNumber::findOne($sid);
-            if ($serial) {
-                $serial->status = InventorySerialNumber::STATUS_AVAILABLE;
-                $serial->contract_id = null;
-                $serial->sold_at = null;
-                $serial->save(false);
-            }
+            $this->releaseSerial($sid);
             ContractInventoryItem::deleteAll([
                 'contract_id' => $model->id,
                 'serial_number_id' => $sid,
             ]);
         }
 
-        // إضافة السيريالات الجديدة
         $toAdd = array_diff($newSerialIds, $oldSerialIds);
         foreach ($toAdd as $sid) {
             $serial = InventorySerialNumber::findOne($sid);
@@ -630,6 +622,38 @@ class ContractsController extends Controller
 
             $this->deductInventoryQuantity($model, $serial->item_id);
         }
+
+        $this->syncOrphanedSerials();
+    }
+
+    /**
+     * إرجاع سيريال إلى حالة "متاح" — يعمل حتى لو كان محذوفاً ناعماً
+     */
+    private function releaseSerial($serialId)
+    {
+        Yii::$app->db->createCommand()->update(
+            'os_inventory_serial_numbers',
+            ['status' => 'available', 'contract_id' => null, 'sold_at' => null],
+            ['id' => (int) $serialId]
+        )->execute();
+    }
+
+    /**
+     * مزامنة: أي سيريال حالته "مباع" بدون سجل فعلي في بنود العقود يرجع "متاح"
+     */
+    private function syncOrphanedSerials()
+    {
+        Yii::$app->db->createCommand(
+            "UPDATE os_inventory_serial_numbers
+             SET status = 'available', contract_id = NULL, sold_at = NULL
+             WHERE status = 'sold'
+               AND is_deleted = 0
+               AND id NOT IN (
+                   SELECT serial_number_id
+                   FROM os_contract_inventory_item
+                   WHERE serial_number_id IS NOT NULL
+               )"
+        )->execute();
     }
 
     /**

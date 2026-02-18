@@ -774,6 +774,8 @@ class InventoryItemsController extends Controller
      */
     public function actionSerialNumbers()
     {
+        $this->syncOrphanedSerials();
+
         $searchModel  = new InventorySerialNumberSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
 
@@ -792,6 +794,24 @@ class InventoryItemsController extends Controller
             'dataProvider' => $dataProvider,
             'stats'        => $stats,
         ]);
+    }
+
+    /**
+     * مزامنة: إرجاع سيريالات "مباع" يتيمة (غير مرتبطة فعلياً بعقد) إلى "متاح"
+     */
+    private function syncOrphanedSerials()
+    {
+        Yii::$app->db->createCommand(
+            "UPDATE os_inventory_serial_numbers
+             SET status = 'available', contract_id = NULL, sold_at = NULL
+             WHERE status = 'sold'
+               AND is_deleted = 0
+               AND id NOT IN (
+                   SELECT serial_number_id
+                   FROM os_contract_inventory_item
+                   WHERE serial_number_id IS NOT NULL
+               )"
+        )->execute();
     }
 
     /**
