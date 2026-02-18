@@ -25,11 +25,8 @@ class Security {
                 $output[$var] = self::sanitize($val);
             }
         } else {
-            if (get_magic_quotes_gpc()) {
-                $input = stripslashes($input);
-            }
             $input = self::cleanInput($input);
-            $output = ($input); //mysql_real_escape_string($input); //\Yii::$app->db->quoteValue($inp
+            $output = $input;
         }
         return $output;
     }
