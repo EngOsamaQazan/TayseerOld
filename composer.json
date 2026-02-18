@@ -60,9 +60,6 @@
         },
         "allow-plugins": {
             "yiisoft/yii2-composer": true
-        },
-        "platform": {
-            "php": "8.3.30"
         }
     },
     "repositories": [
