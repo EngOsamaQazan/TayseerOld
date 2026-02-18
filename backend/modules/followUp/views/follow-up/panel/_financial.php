@@ -18,6 +18,12 @@ $paidRatio = $total > 0 ? round(($paid / $total) * 100) : 0;
 $overdueRatio = $total > 0 ? round(($overdue / $total) * 100) : 0;
 
 $hasSettlement = !empty($settlementFinancials);
+
+$hasJudiciary = !empty($financials['has_judiciary']);
+$lawyerCosts = $financials['lawyer_costs'] ?? 0;
+$caseCosts = $financials['case_costs'] ?? 0;
+$contractValue = $financials['contract_value'] ?? 0;
+$allExpenses = $total - $contractValue - $lawyerCosts;
 ?>
 
 <style>
@@ -34,6 +40,11 @@ $hasSettlement = !empty($settlementFinancials);
 .ocp-stl-item--success .ocp-stl-item__value{color:#059669}
 .ocp-stl-item--info .ocp-stl-item__value{color:#0284c7}
 .ocp-stl-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.ocp-debt-breakdown{margin-top:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;font-size:13px}
+.ocp-debt-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;color:#334155}
+.ocp-debt-row+.ocp-debt-row{border-top:1px dashed #e2e8f0}
+.ocp-debt-row--total{border-top:2px solid #800020 !important;margin-top:4px;padding-top:8px;font-weight:800;color:#800020}
+.ocp-debt-row i{margin-left:6px;width:16px;text-align:center}
 </style>
 
 <!-- ═══ القسم الأول: الحسابات الأصلية ═══ -->
@@ -93,6 +104,37 @@ $hasSettlement = !empty($settlementFinancials);
             <div class="ocp-fin-card__bar"><div class="ocp-fin-card__bar-fill" style="width:<?= $complianceRate ?>%;background:<?= $complianceRate >= 70 ? 'var(--ocp-success)' : ($complianceRate >= 40 ? 'var(--ocp-warning)' : 'var(--ocp-danger)') ?>"></div></div>
         </div>
     </div>
+
+    <?php if ($hasJudiciary && ($lawyerCosts > 0 || $caseCosts > 0 || $allExpenses > 0)): ?>
+    <div class="ocp-debt-breakdown">
+        <div class="ocp-debt-row">
+            <span><i class="fa fa-file-text-o" style="color:#075985"></i> أصل العقد</span>
+            <span style="font-weight:700"><?= number_format($contractValue) ?></span>
+        </div>
+        <?php if ($lawyerCosts > 0): ?>
+        <div class="ocp-debt-row">
+            <span><i class="fa fa-gavel" style="color:#92400e"></i> أتعاب المحاماة</span>
+            <span style="font-weight:700;color:#92400e"><?= number_format($lawyerCosts) ?></span>
+        </div>
+        <?php endif ?>
+        <?php if ($caseCosts > 0): ?>
+        <div class="ocp-debt-row">
+            <span><i class="fa fa-balance-scale" style="color:#7c3aed"></i> رسوم القضية</span>
+            <span style="font-weight:700;color:#7c3aed"><?= number_format($caseCosts) ?></span>
+        </div>
+        <?php endif ?>
+        <?php if ($allExpenses - $caseCosts > 0): ?>
+        <div class="ocp-debt-row">
+            <span><i class="fa fa-money" style="color:#64748b"></i> مصاريف أخرى</span>
+            <span style="font-weight:700"><?= number_format($allExpenses - $caseCosts) ?></span>
+        </div>
+        <?php endif ?>
+        <div class="ocp-debt-row ocp-debt-row--total">
+            <span><i class="fa fa-calculator"></i> الإجمالي</span>
+            <span><?= number_format($total) ?></span>
+        </div>
+    </div>
+    <?php endif ?>
 </div>
 
 <?php if ($hasSettlement): ?>
