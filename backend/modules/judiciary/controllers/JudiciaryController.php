@@ -388,7 +388,8 @@ class JudiciaryController extends Controller
         /* ── رؤوس الأعمدة (صف 3) ── */
         $hRow = 3;
         for ($c = 0; $c < $colCount; $c++) {
-            $sheet->setCellValueByColumnAndRow($c + 1, $hRow, $headers[$c]);
+            $col = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c + 1);
+            $sheet->setCellValue("{$col}{$hRow}", $headers[$c]);
         }
         $sheet->getStyle("A{$hRow}:{$lastCol}{$hRow}")->applyFromArray([
             'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => $HFG], 'name' => 'Arial'],
@@ -408,9 +409,10 @@ class JudiciaryController extends Controller
         $rowNum = $hRow + 1;
         foreach ($rows as $idx => $row) {
             /* كتابة القيم */
-            $sheet->setCellValueByColumnAndRow(1, $rowNum, $idx + 1);
+            $sheet->setCellValue("A{$rowNum}", $idx + 1);
             for ($c = 0; $c < count($keys); $c++) {
-                $sheet->setCellValueByColumnAndRow($c + 2, $rowNum, $row[$keys[$c]] ?? '');
+                $col = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c + 2);
+                $sheet->setCellValue("{$col}{$rowNum}", $row[$keys[$c]] ?? '');
             }
             /* تصنيف الصفوف */
             $pc = $row['persistence_color'];
