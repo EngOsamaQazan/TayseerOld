@@ -900,18 +900,20 @@ class FinancialTransactionController extends Controller
     private function readExcelFile(string $filePath, string $extension): array
     {
         if ($extension === 'xlsx') {
-            $reader = new \PHPExcel_Reader_Excel2007();
+            $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
         } elseif ($extension === 'xls') {
-            $reader = new \PHPExcel_Reader_Excel5();
+            $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xls();
         } else {
-            $reader = \PHPExcel_IOFactory::createReader($extension);
+            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
         }
 
         $excel = $reader->load($filePath);
         $excel->setActiveSheetIndex(0);
 
-        /* القراءة بالتنسيق (formatData=true) — التواريخ تأتي كنصوص مُنسّقة */
         $data = $excel->getActiveSheet()->toArray(null, true, true, true);
+
+        $excel->disconnectWorksheets();
+        unset($excel);
 
         return $data;
     }

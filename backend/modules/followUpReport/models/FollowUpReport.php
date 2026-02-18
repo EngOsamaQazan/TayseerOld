@@ -52,7 +52,7 @@ class FollowUpReport extends \yii\db\ActiveRecord
             [['type', 'status'], 'required'],
             [['type', 'notes', 'status', 'company_id'], 'string'],
             [['Date_of_sale', 'first_installment_date', 'updated_at', 'last_follow_up', 'promise_to_pay_at', 'reminder'], 'safe'],
-            [['total_value', 'first_installment_value', 'monthly_installment_value', 'total_paid', 'due_amount'], 'number'],
+            [['total_value', 'first_installment_value', 'monthly_installment_value', 'total_paid', 'due_amount', 'effective_installment'], 'number'],
             [['selected_image'], 'string', 'max' => 255],
         ];
     }
@@ -84,6 +84,7 @@ class FollowUpReport extends \yii\db\ActiveRecord
             'total_paid' => 'المدفوع',
             'due_installments' => 'أقساط مستحقة',
             'due_amount' => 'المبلغ المستحق',
+            'effective_installment' => 'القسط الفعّال',
             'never_followed' => 'لم يُتابع أبداً',
         ];
     }

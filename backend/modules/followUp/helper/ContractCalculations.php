@@ -9,6 +9,7 @@ use backend\modules\expenses\models\Expenses;
 use backend\modules\judiciary\models\Judiciary;
 use backend\modules\contracts\models\Contracts;
 use backend\modules\contractInstallment\models\ContractInstallment;
+use backend\modules\loanScheduling\models\LoanScheduling;
 
 class ContractCalculations
 {
@@ -19,6 +20,9 @@ class ContractCalculations
      * يُستخدم في "الحسابات الأصلية" فقط
      */
     public $original_contract;
+
+    /** @var LoanScheduling|null آخر تسوية فعّالة */
+    public $latestSettlement;
 
     public function __construct($contract_id)
     {
@@ -34,6 +38,12 @@ class ContractCalculations
 
         // العقد الأصلي — مباشرة من قاعدة البيانات بدون تعديلات
         $this->original_contract = Contracts::findOne($contract_id);
+
+        // آخر تسوية فعّالة
+        $this->latestSettlement = LoanScheduling::find()
+            ->where(['contract_id' => $contract_id])
+            ->orderBy(['id' => SORT_DESC])
+            ->one();
     }
 
     /* ═══════════════════════════════════════════════════
@@ -124,27 +134,73 @@ class ContractCalculations
     }
 
     /**
-     * المبلغ المستحق حتى اليوم (أصلي) = min(أشهر × قسط_أصلي, إجمالي الدين)
+     * عدد الأشهر من تاريخ التسوية حتى اليوم
      */
-    public function amountShouldBePaid(): float
+    public function settlementTimeInterval(): int
     {
-        $months = $this->timeInterval() + 1;
-        $monthly = (float)($this->original_contract->monthly_installment_value ?? 0);
-        $shouldPaid = $months * $monthly;
-        $total = $this->totalDebt();
-        return min($shouldPaid, $total);
+        if (!$this->latestSettlement) return 0;
+        $firstDate = $this->latestSettlement->first_installment_date ?? null;
+        if (empty($firstDate)) return 0;
+        $d1 = new DateTime($firstDate);
+        $d2 = new DateTime(date('Y-m-d'));
+        if ($d2 < $d1) return 0;
+        $interval = $d2->diff($d1);
+        return $interval->y * 12 + $interval->m;
     }
 
     /**
-     * المتأخر (أصلي) = المستحق حتى اليوم - المدفوع
+     * المبلغ المستحق حتى اليوم
+     * قضائي بدون تسوية → كامل الدين مستحق فوراً
+     * عقد عليه تسوية → حساب حسب أقساط التسوية
+     * عقد عادي → حساب حسب أقساط العقد الأصلي
+     */
+    public function amountShouldBePaid(): float
+    {
+        $total = $this->totalDebt();
+
+        if ($this->hasJdicary() && !$this->latestSettlement) {
+            return $total;
+        }
+
+        if ($this->latestSettlement) {
+            $months = $this->settlementTimeInterval() + 1;
+            $monthly = (float)($this->latestSettlement->monthly_installment ?? 0);
+            return min($months * $monthly, $total);
+        }
+
+        $months = $this->timeInterval() + 1;
+        $monthly = (float)($this->original_contract->monthly_installment_value ?? 0);
+        return min($months * $monthly, $total);
+    }
+
+    /**
+     * المتأخر = المستحق حتى اليوم - المدفوع
      */
     public function deservedAmount(): float
     {
-        $firstDate = $this->original_contract->first_installment_date ?? null;
+        if ($this->hasJdicary() && !$this->latestSettlement) {
+            return max(0, $this->totalDebt() - $this->paidAmount());
+        }
+
+        $firstDate = $this->latestSettlement
+            ? ($this->latestSettlement->first_installment_date ?? null)
+            : ($this->original_contract->first_installment_date ?? null);
+
         if (empty($firstDate) || date('Y-m-d') < $firstDate) {
             return 0;
         }
         return max(0, $this->amountShouldBePaid() - $this->paidAmount());
+    }
+
+    /**
+     * القسط الفعّال (تسوية أو أصلي)
+     */
+    public function effectiveInstallment(): float
+    {
+        if ($this->latestSettlement) {
+            return (float)($this->latestSettlement->monthly_installment ?? 0);
+        }
+        return (float)($this->original_contract->monthly_installment_value ?? 0);
     }
 
     /* ═══════════════════════════════════════════════════

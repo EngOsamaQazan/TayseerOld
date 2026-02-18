@@ -1,8 +1,7 @@
 <?php
-require _DIR_.
-    '/../vendor/phpoffice/phpexcel/Classes/PHPExcel/Cell/DefaultValueBinder.php';
+use PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder;
 
-class myPHPExcel_Cell_DefaultValueBinder extends PHPExcel_Cell_DefaultValueBinder
+class myPHPExcel_Cell_DefaultValueBinder extends DefaultValueBinder
 {
 
 }

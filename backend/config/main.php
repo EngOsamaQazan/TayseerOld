@@ -288,7 +288,7 @@ return [
         'companyChecked' => [
             'class' => 'common\components\CompanyChecked'
         ],
-        'PHPExcel_Cell_DefaultValueBinder' => [
+        'PhpSpreadsheet_DefaultValueBinder' => [
             'class' => 'common/overridden/DefaultValueBinder.php',
         ],
         'notifications' => [

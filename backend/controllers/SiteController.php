@@ -242,11 +242,11 @@ class SiteController extends Controller
         $filePath = Yii::getAlias('@backend/web/rptAccountStatment.xlsx');
 
         if ($extension == 'xlsx') {
-            $objReader = new \PHPExcel_Reader_Excel2007();
+            $objReader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
         } elseif ($extension == 'xls') {
-            $objReader = new \PHPExcel_Reader_Excel5();
+            $objReader = new \PhpOffice\PhpSpreadsheet\Reader\Xls();
         } else {
-            $objReader = \PHPExcel_IOFactory::createReader($extension);
+            $objReader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
         }
 
         $objPHPExcel = $objReader->load($filePath);

@@ -261,7 +261,7 @@ a.fur-id-link:hover{text-decoration:underline}
                 <thead><tr>
                     <th class="ct-th-id"><?= $sortLink('id', '#') ?></th>
                     <th>العميل</th>
-                    <th><?= $sortLink('monthly_installment_value', 'القسط') ?></th>
+                    <th><?= $sortLink('effective_installment', 'القسط') ?></th>
                     <th><?= $sortLink('due_installments', 'أقساط مستحقة') ?></th>
                     <th><?= $sortLink('due_amount', 'المبلغ المستحق') ?></th>
                     <th><?= $sortLink('last_follow_up', 'آخر متابعة') ?></th>
@@ -286,7 +286,7 @@ a.fur-id-link:hover{text-decoration:underline}
                         <?php if ($isNF): ?><span class="fur-nf-badge"><i class="fa fa-exclamation-circle"></i> لم يُتابع</span><?php endif ?>
                     </td>
                     <td data-label="العميل" title="<?= Html::encode($customerNames) ?>"><?= Html::encode($customerNames) ?></td>
-                    <td data-label="القسط"><?= number_format($m->monthly_installment_value ?? 0, 0) ?></td>
+                    <td data-label="القسط"><?= number_format($m->effective_installment ?? $m->monthly_installment_value ?? 0, 0) ?></td>
                     <td data-label="أقساط مستحقة" style="text-align:center"><span class="fur-due-badge"><?= (int)($m->due_installments ?? 0) ?></span></td>
                     <td data-label="المبلغ المستحق"><span class="<?= $dueAmt > 0 ? 'fur-amount-red' : 'fur-amount-green' ?>"><?= number_format($dueAmt, 0) ?></span></td>
                     <td data-label="آخر متابعة">

@@ -304,9 +304,7 @@ class JudiciaryController extends Controller
      * ═══════════════════════════════════════════════════════════ */
     public function actionExportCasesReport()
     {
-        /* ── تفعيل التخزين المؤقت لتقليل استهلاك الذاكرة ── */
-        $cacheMethod = \PHPExcel_CachedObjectStorageFactory::cache_to_phpTemp;
-        \PHPExcel_Settings::setCacheStorageMethod($cacheMethod, ['memoryCacheSize' => '32MB']);
+        /* PhpSpreadsheet handles memory caching internally */
 
         /* ── جلب الفلاتر من الـ URL ── */
         $request = Yii::$app->request;
@@ -343,7 +341,7 @@ class JudiciaryController extends Controller
         /* ══════════════════════════════════════════
          *  بناء ملف Excel — تنسيق محسّن بالدُفعات
          * ══════════════════════════════════════════ */
-        $excel = new \PHPExcel();
+        $excel = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $excel->getProperties()
             ->setCreator('نظام جدل')
             ->setTitle('كشف المثابره');
@@ -358,15 +356,15 @@ class JudiciaryController extends Controller
         /* العناوين */
         $headers = ['#','رقم القضية','سنة القضية','اسم المحكمة','رقم العقد','اسم العميل','الإجراء الأخير','تاريخ آخر إجراء','مؤشّر المثابرة','آخر متابعة للعقد','آخر تشييك وظيفة','المحامي','الوظيفة','نوع الوظيفة'];
         $colCount = count($headers);
-        $lastCol  = \PHPExcel_Cell::stringFromColumnIndex($colCount - 1);
+        $lastCol  = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colCount);
 
         /* ── صف العنوان الرئيسي (صف 1) ── */
         $sheet->mergeCells("A1:{$lastCol}1");
         $sheet->setCellValue('A1', 'كشف المثابره — ' . $filterLabel . ' — تاريخ: ' . date('Y-m-d'));
         $sheet->getStyle("A1")->applyFromArray([
             'font' => ['bold' => true, 'size' => 16, 'color' => ['rgb' => $HFG], 'name' => 'Arial'],
-            'fill' => ['type' => \PHPExcel_Style_Fill::FILL_SOLID, 'startcolor' => ['rgb' => $HBG]],
-            'alignment' => ['horizontal' => \PHPExcel_Style_Alignment::HORIZONTAL_CENTER, 'vertical' => \PHPExcel_Style_Alignment::VERTICAL_CENTER],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => $HBG]],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
         ]);
         $sheet->getRowDimension(1)->setRowHeight(36);
 
@@ -382,21 +380,21 @@ class JudiciaryController extends Controller
         $sheet->setCellValue('A2', "إجمالي: {$total}  |  عاجل: {$cnt['red']}  |  قريب: {$cnt['orange']}  |  جيد: {$cnt['green']}");
         $sheet->getStyle("A2")->applyFromArray([
             'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => '334155'], 'name' => 'Arial'],
-            'fill' => ['type' => \PHPExcel_Style_Fill::FILL_SOLID, 'startcolor' => ['rgb' => 'F0F0FF']],
-            'alignment' => ['horizontal' => \PHPExcel_Style_Alignment::HORIZONTAL_CENTER, 'vertical' => \PHPExcel_Style_Alignment::VERTICAL_CENTER],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F0F0FF']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
         ]);
         $sheet->getRowDimension(2)->setRowHeight(26);
 
         /* ── رؤوس الأعمدة (صف 3) ── */
         $hRow = 3;
         for ($c = 0; $c < $colCount; $c++) {
-            $sheet->setCellValueByColumnAndRow($c, $hRow, $headers[$c]);
+            $sheet->setCellValueByColumnAndRow($c + 1, $hRow, $headers[$c]);
         }
         $sheet->getStyle("A{$hRow}:{$lastCol}{$hRow}")->applyFromArray([
             'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => $HFG], 'name' => 'Arial'],
-            'fill' => ['type' => \PHPExcel_Style_Fill::FILL_SOLID, 'startcolor' => ['rgb' => $HBG]],
-            'alignment' => ['horizontal' => \PHPExcel_Style_Alignment::HORIZONTAL_CENTER, 'vertical' => \PHPExcel_Style_Alignment::VERTICAL_CENTER, 'wrapText' => true],
-            'borders' => ['allborders' => ['style' => \PHPExcel_Style_Border::BORDER_THIN, 'color' => ['rgb' => '666666']]],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => $HBG]],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER, 'wrapText' => true],
+            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => '666666']]],
         ]);
         $sheet->getRowDimension($hRow)->setRowHeight(28);
         $sheet->freezePane('A4');
@@ -410,9 +408,9 @@ class JudiciaryController extends Controller
         $rowNum = $hRow + 1;
         foreach ($rows as $idx => $row) {
             /* كتابة القيم */
-            $sheet->setCellValueByColumnAndRow(0, $rowNum, $idx + 1);
+            $sheet->setCellValueByColumnAndRow(1, $rowNum, $idx + 1);
             for ($c = 0; $c < count($keys); $c++) {
-                $sheet->setCellValueByColumnAndRow($c + 1, $rowNum, $row[$keys[$c]] ?? '');
+                $sheet->setCellValueByColumnAndRow($c + 2, $rowNum, $row[$keys[$c]] ?? '');
             }
             /* تصنيف الصفوف */
             $pc = $row['persistence_color'];
@@ -431,14 +429,14 @@ class JudiciaryController extends Controller
         $allData = "A" . ($hRow + 1) . ":{$lastCol}{$lastDataRow}";
         $sheet->getStyle($allData)->applyFromArray([
             'font'      => ['size' => 10.5, 'name' => 'Arial'],
-            'alignment' => ['horizontal' => \PHPExcel_Style_Alignment::HORIZONTAL_RIGHT, 'vertical' => \PHPExcel_Style_Alignment::VERTICAL_CENTER],
-            'borders'   => ['allborders' => ['style' => \PHPExcel_Style_Border::BORDER_THIN, 'color' => ['rgb' => 'D1D5DB']]],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
+            'borders'   => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => 'D1D5DB']]],
         ]);
 
         /* 2. الصفوف الزوجية (خلفية مخططة) — بالدُفعة */
         foreach ($oddRows as $or) {
             $sheet->getStyle("A{$or}:{$lastCol}{$or}")->applyFromArray([
-                'fill' => ['type' => \PHPExcel_Style_Fill::FILL_SOLID, 'startcolor' => ['rgb' => 'F9FAFB']],
+                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F9FAFB']],
             ]);
         }
 
@@ -446,35 +444,35 @@ class JudiciaryController extends Controller
         foreach ($redRows as $rr) {
             $sheet->getStyle("I{$rr}")->applyFromArray([
                 'font' => ['bold' => true, 'color' => ['rgb' => '991B1B']],
-                'fill' => ['type' => \PHPExcel_Style_Fill::FILL_SOLID, 'startcolor' => ['rgb' => 'FEE2E2']],
-                'alignment' => ['horizontal' => \PHPExcel_Style_Alignment::HORIZONTAL_CENTER],
+                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEE2E2']],
+                'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
             ]);
             $sheet->getStyle("A{$rr}")->applyFromArray([
-                'borders' => ['left' => ['style' => \PHPExcel_Style_Border::BORDER_THICK, 'color' => ['rgb' => 'DC2626']]],
+                'borders' => ['left' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK, 'color' => ['rgb' => 'DC2626']]],
             ]);
         }
         foreach ($orangeRows as $or) {
             $sheet->getStyle("I{$or}")->applyFromArray([
                 'font' => ['bold' => true, 'color' => ['rgb' => '92400E']],
-                'fill' => ['type' => \PHPExcel_Style_Fill::FILL_SOLID, 'startcolor' => ['rgb' => 'FEF3C7']],
-                'alignment' => ['horizontal' => \PHPExcel_Style_Alignment::HORIZONTAL_CENTER],
+                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
+                'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
             ]);
             $sheet->getStyle("A{$or}")->applyFromArray([
-                'borders' => ['left' => ['style' => \PHPExcel_Style_Border::BORDER_THICK, 'color' => ['rgb' => 'D97706']]],
+                'borders' => ['left' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK, 'color' => ['rgb' => 'D97706']]],
             ]);
         }
         foreach ($greenRows as $gr) {
             $sheet->getStyle("I{$gr}")->applyFromArray([
                 'font' => ['bold' => true, 'color' => ['rgb' => '166534']],
-                'fill' => ['type' => \PHPExcel_Style_Fill::FILL_SOLID, 'startcolor' => ['rgb' => 'DCFCE7']],
-                'alignment' => ['horizontal' => \PHPExcel_Style_Alignment::HORIZONTAL_CENTER],
+                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DCFCE7']],
+                'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
             ]);
         }
 
         /* ── عرض الأعمدة ── */
         $widths = [6,12,10,18,10,28,22,14,30,14,14,18,18,16];
         for ($c = 0; $c < $colCount; $c++) {
-            $sheet->getColumnDimension(\PHPExcel_Cell::stringFromColumnIndex($c))->setWidth($widths[$c]);
+            $sheet->getColumnDimension(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c + 1))->setWidth($widths[$c]);
         }
 
         /* ── فلتر تلقائي ── */
@@ -487,7 +485,7 @@ class JudiciaryController extends Controller
         $filename = 'كشف_المثابره' . $filterSuffix . '_' . date('Y-m-d') . '.xlsx';
         $tmpFile  = tempnam(sys_get_temp_dir(), 'xl') . '.xlsx';
 
-        $writer = \PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($excel);
         $writer->save($tmpFile);
 
         $excel->disconnectWorksheets();

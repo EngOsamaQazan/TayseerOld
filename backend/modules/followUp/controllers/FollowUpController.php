@@ -639,14 +639,13 @@ class FollowUpController extends Controller
         // ContractCalculations — needed for old tabs (phone_numbers, payments, settlements, judiciary)
         $calc = new ContractCalculations($contract_id);
 
-        // Financial Snapshot — حسابات أصلية (لا تنظر للتسويات أبداً)
-        $total = $calc->totalDebt();                       // إجمالي = أصلي + كل Outcome + أتعاب
-        $paid = $calc->paidAmount();                        // المدفوع = كل Income
-        $remaining = $calc->remainingAmount();              // المتبقي = إجمالي - مدفوع
-        $shouldPaid = $calc->amountShouldBePaid();          // المستحق حتى اليوم (أصلي)
-        $overdue = $calc->deservedAmount();                 // المتأخر (أصلي)
-        // القسط الشهري الأصلي (ليس من التسوية)
-        $monthlyAmount = (float)($calc->original_contract->monthly_installment_value ?: 1);
+        // Financial Snapshot — يراعي التسويات والقضايا
+        $total = $calc->totalDebt();
+        $paid = $calc->paidAmount();
+        $remaining = $calc->remainingAmount();
+        $shouldPaid = $calc->amountShouldBePaid();
+        $overdue = $calc->deservedAmount();
+        $monthlyAmount = $calc->effectiveInstallment() ?: 1;
         $overdueInstallments = ($monthlyAmount > 0 && $overdue > 0) ? (int)ceil($overdue / $monthlyAmount) : 0;
         $remainingInstallments = ($monthlyAmount > 0 && $remaining > 0) ? (int)ceil($remaining / $monthlyAmount) : 0;
         $complianceRate = ($shouldPaid > 0) ? min(100, (int)round(($paid / $shouldPaid) * 100)) : 100;

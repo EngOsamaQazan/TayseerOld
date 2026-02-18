@@ -65,8 +65,12 @@ class FollowUpReportController extends Controller
      */
     public function actionIndex()
     {
-        // ═══ إنشاء/تحديث الـ VIEW — المعادلة الجديدة ═══
-        // يشمل: عقود المتابعة العادية + عقود بدون أرقام تواصل
+        // ═══ إنشاء/تحديث الـ VIEW ═══
+        // يدعم: التسويات (os_loan_scheduling) + القضايا (كامل المبلغ مستحق)
+        // المنطق:
+        //   1. قضائي بدون تسوية → كامل المبلغ + أتعاب + مصاريف مستحق فوراً
+        //   2. عقد عليه تسوية (قضائي أو عادي) → حساب حسب قسط وتاريخ التسوية
+        //   3. عقد عادي بدون تسوية → حساب حسب قسط وتاريخ العقد الأصلي
         $sql = "CREATE OR REPLACE VIEW os_follow_up_report AS
 SELECT
     c.*,
@@ -74,36 +78,75 @@ SELECT
     f.promise_to_pay_at,
     f.reminder,
     IFNULL(payments.total_paid, 0) AS total_paid,
+    COALESCE(ls.monthly_installment, c.monthly_installment_value) AS effective_installment,
     GREATEST(0,
-        PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'), DATE_FORMAT(c.first_installment_date,'%Y%m'))
-        + CASE WHEN DAY(CURDATE()) >= DAY(c.first_installment_date) THEN 1 ELSE 0 END
+        PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'),
+            DATE_FORMAT(COALESCE(ls.first_installment_date, c.first_installment_date),'%Y%m'))
+        + CASE WHEN DAY(CURDATE()) >= DAY(COALESCE(ls.first_installment_date, c.first_installment_date))
+               THEN 1 ELSE 0 END
     ) AS due_installments,
-    GREATEST(0,
-        (GREATEST(0,
-            PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'), DATE_FORMAT(c.first_installment_date,'%Y%m'))
-            + CASE WHEN DAY(CURDATE()) >= DAY(c.first_installment_date) THEN 1 ELSE 0 END
-        ) * c.monthly_installment_value) - IFNULL(payments.total_paid, 0)
-    ) AS due_amount,
+    CASE
+        WHEN jud.jud_id IS NOT NULL AND ls.id IS NULL THEN
+            GREATEST(0,
+                c.total_value
+                + IFNULL(exp_sum.total_expenses, 0)
+                + IFNULL(jud.total_lawyer, 0)
+                - IFNULL(payments.total_paid, 0)
+            )
+        ELSE
+            GREATEST(0,
+                (GREATEST(0,
+                    PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'),
+                        DATE_FORMAT(COALESCE(ls.first_installment_date, c.first_installment_date),'%Y%m'))
+                    + CASE WHEN DAY(CURDATE()) >= DAY(COALESCE(ls.first_installment_date, c.first_installment_date))
+                           THEN 1 ELSE 0 END
+                ) * COALESCE(ls.monthly_installment, c.monthly_installment_value))
+                - IFNULL(payments.total_paid, 0)
+            )
+    END AS due_amount,
     CASE WHEN f.id IS NULL THEN 1 ELSE 0 END AS never_followed
 FROM os_contracts c
 LEFT JOIN os_follow_up f ON f.contract_id = c.id
     AND f.id = (SELECT MAX(id) FROM os_follow_up WHERE contract_id = c.id)
+LEFT JOIN os_loan_scheduling ls ON ls.contract_id = c.id
+    AND ls.is_deleted = 0
+    AND ls.id = (SELECT MAX(id) FROM os_loan_scheduling WHERE contract_id = c.id AND is_deleted = 0)
 LEFT JOIN (
     SELECT contract_id, SUM(amount) AS total_paid
     FROM os_income GROUP BY contract_id
 ) payments ON c.id = payments.contract_id
+LEFT JOIN (
+    SELECT contract_id, MAX(id) AS jud_id, SUM(lawyer_cost) AS total_lawyer
+    FROM os_judiciary WHERE is_deleted = 0
+    GROUP BY contract_id
+) jud ON jud.contract_id = c.id
+LEFT JOIN (
+    SELECT contract_id, SUM(amount) AS total_expenses
+    FROM os_expenses
+    GROUP BY contract_id
+) exp_sum ON exp_sum.contract_id = c.id
 WHERE
     c.status NOT IN ('finished','canceled','refused')
     AND (
-        /* عقود المتابعة العادية: مبلغ مستحق > 0 */
-        (c.is_can_not_contact = 0 AND
-            ((GREATEST(0,
-                PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'), DATE_FORMAT(c.first_installment_date,'%Y%m'))
-                + CASE WHEN DAY(CURDATE()) >= DAY(c.first_installment_date) THEN 1 ELSE 0 END
-            ) * c.monthly_installment_value) - IFNULL(payments.total_paid, 0)) > 0
-        )
+        (c.is_can_not_contact = 0 AND (
+            /* قضائي بدون تسوية: كامل المبلغ مستحق */
+            (jud.jud_id IS NOT NULL AND ls.id IS NULL AND
+                (c.total_value + IFNULL(exp_sum.total_expenses, 0) + IFNULL(jud.total_lawyer, 0)
+                 - IFNULL(payments.total_paid, 0)) > 0
+            )
+            OR
+            /* عقود عادية أو عقود عليها تسوية: حساب بالأقساط */
+            ((jud.jud_id IS NULL OR ls.id IS NOT NULL) AND
+                ((GREATEST(0,
+                    PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'),
+                        DATE_FORMAT(COALESCE(ls.first_installment_date, c.first_installment_date),'%Y%m'))
+                    + CASE WHEN DAY(CURDATE()) >= DAY(COALESCE(ls.first_installment_date, c.first_installment_date))
+                           THEN 1 ELSE 0 END
+                ) * COALESCE(ls.monthly_installment, c.monthly_installment_value))
+                - IFNULL(payments.total_paid, 0)) > 0
+            )
+        ))
         OR
-        /* عقود بدون أرقام تواصل: بدون شرط المبلغ */
         c.is_can_not_contact = 1
     )
 ORDER BY
@@ -158,37 +201,60 @@ ORDER BY
      */
     public function actionNoContact()
     {
-        // إنشاء VIEW خاص بعقود "لا يمكن التواصل"
-        $sql = "CREATE OR REPLACE VIEW os_follow_up_no_contact AS SELECT
+        $sql = "CREATE OR REPLACE VIEW os_follow_up_no_contact AS
+SELECT
     c.*,
     f.date_time,
     f.promise_to_pay_at,
     f.reminder,
     IFNULL(payments.total_paid, 0) AS total_paid,
-    (
-        PERIOD_DIFF(
-            DATE_FORMAT(CURDATE(), '%Y%m'),
-            DATE_FORMAT(c.first_installment_date, '%Y%m')) + CASE WHEN DAY(CURDATE()) >= DAY(c.first_installment_date) THEN 1 ELSE 0
-            END) AS due_installments,
-        (
-            (
-                PERIOD_DIFF(
-                    DATE_FORMAT(CURDATE(), '%Y%m'),
-                    DATE_FORMAT(c.first_installment_date, '%Y%m')) + CASE WHEN DAY(CURDATE()) >= DAY(c.first_installment_date) THEN 1 ELSE 0
-                    END) * c.monthly_installment_value - IFNULL(payments.total_paid, 0)
-            ) AS due_amount
-        FROM
-            os_contracts c
-        LEFT JOIN os_follow_up f ON
-            f.contract_id = c.id AND f.id =(
-            SELECT MAX(id) FROM os_follow_up WHERE contract_id = c.id
-        )
-    LEFT JOIN(
-        SELECT contract_id, SUM(amount) AS total_paid
-        FROM os_income GROUP BY contract_id
-    ) payments ON c.id = payments.contract_id
-WHERE
-    c.is_can_not_contact = 1
+    COALESCE(ls.monthly_installment, c.monthly_installment_value) AS effective_installment,
+    GREATEST(0,
+        PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'),
+            DATE_FORMAT(COALESCE(ls.first_installment_date, c.first_installment_date),'%Y%m'))
+        + CASE WHEN DAY(CURDATE()) >= DAY(COALESCE(ls.first_installment_date, c.first_installment_date))
+               THEN 1 ELSE 0 END
+    ) AS due_installments,
+    CASE
+        WHEN jud.jud_id IS NOT NULL AND ls.id IS NULL THEN
+            GREATEST(0,
+                c.total_value
+                + IFNULL(exp_sum.total_expenses, 0)
+                + IFNULL(jud.total_lawyer, 0)
+                - IFNULL(payments.total_paid, 0)
+            )
+        ELSE
+            GREATEST(0,
+                (GREATEST(0,
+                    PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'),
+                        DATE_FORMAT(COALESCE(ls.first_installment_date, c.first_installment_date),'%Y%m'))
+                    + CASE WHEN DAY(CURDATE()) >= DAY(COALESCE(ls.first_installment_date, c.first_installment_date))
+                           THEN 1 ELSE 0 END
+                ) * COALESCE(ls.monthly_installment, c.monthly_installment_value))
+                - IFNULL(payments.total_paid, 0)
+            )
+    END AS due_amount
+FROM os_contracts c
+LEFT JOIN os_follow_up f ON f.contract_id = c.id
+    AND f.id = (SELECT MAX(id) FROM os_follow_up WHERE contract_id = c.id)
+LEFT JOIN os_loan_scheduling ls ON ls.contract_id = c.id
+    AND ls.is_deleted = 0
+    AND ls.id = (SELECT MAX(id) FROM os_loan_scheduling WHERE contract_id = c.id AND is_deleted = 0)
+LEFT JOIN (
+    SELECT contract_id, SUM(amount) AS total_paid
+    FROM os_income GROUP BY contract_id
+) payments ON c.id = payments.contract_id
+LEFT JOIN (
+    SELECT contract_id, MAX(id) AS jud_id, SUM(lawyer_cost) AS total_lawyer
+    FROM os_judiciary WHERE is_deleted = 0
+    GROUP BY contract_id
+) jud ON jud.contract_id = c.id
+LEFT JOIN (
+    SELECT contract_id, SUM(amount) AS total_expenses
+    FROM os_expenses
+    GROUP BY contract_id
+) exp_sum ON exp_sum.contract_id = c.id
+WHERE c.is_can_not_contact = 1
 ORDER BY c.id DESC";
 
         $connection = Yii::$app->getDb();

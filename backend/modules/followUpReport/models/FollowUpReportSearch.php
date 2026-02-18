@@ -31,7 +31,7 @@ class FollowUpReportSearch extends FollowUpReport
             [['type', 'Date_of_sale', 'first_installment_date', 'notes', 'status', 'updated_at',
               'selected_image', 'company_id', 'customer_name', 'seller_name',
               'last_follow_up', 'promise_to_pay_at', 'reminder'], 'safe'],
-            [['total_value', 'first_installment_value', 'monthly_installment_value', 'users_follow_up'], 'number'],
+            [['total_value', 'first_installment_value', 'monthly_installment_value', 'users_follow_up', 'effective_installment'], 'number'],
         ];
     }
 
@@ -72,6 +72,7 @@ class FollowUpReportSearch extends FollowUpReport
                     'due_amount',
                     'due_installments',
                     'never_followed',
+                    'effective_installment',
                     'customer_name' => [
                         'asc' => ['c.name' => SORT_ASC],
                         'desc' => ['c.name' => SORT_DESC],

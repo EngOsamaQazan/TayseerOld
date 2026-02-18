@@ -385,7 +385,6 @@ class Permissions
     {
         return [
             self::EMPLOYEE,
-            self::JOBS,
             self::HOLIDAYS,
             self::LEAVE_POLICY,
             self::LEAVE_TYPES,
