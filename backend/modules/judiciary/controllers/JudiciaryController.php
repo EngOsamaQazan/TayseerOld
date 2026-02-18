@@ -103,7 +103,7 @@ class JudiciaryController extends Controller
      * ═══════════════════════════════════════════════════════════ */
     private function parsePersistence(&$row)
     {
-        $s = $row['persistence_status'];
+        $s = $row['persistence_status'] ?? '';
         if ($s === 'red_renew') {
             $row['persistence_label'] = 'بحاجة تجديد دعوى';
             $row['persistence_color'] = 'red';
