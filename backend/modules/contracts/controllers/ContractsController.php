@@ -287,7 +287,7 @@ class ContractsController extends Controller
      *  البحث بالرقم التسلسلي — AJAX
      * ══════════════════════════════════════════════════════════════ */
 
-    public function actionLookupSerial($serial = '')
+    public function actionLookupSerial(string $serial = '')
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
         $serial = trim($serial);
@@ -339,7 +339,11 @@ class ContractsController extends Controller
 
     public function actionBulkdelete()
     {
-        $pks = explode(',', Yii::$app->request->post('pks'));
+        $raw = Yii::$app->request->post('pks');
+        if ($raw === null || $raw === '') {
+            return $this->redirect(['index']);
+        }
+        $pks = is_array($raw) ? $raw : explode(',', (string)$raw);
         foreach ($pks as $pk) {
             $this->findModel($pk)->delete();
         }

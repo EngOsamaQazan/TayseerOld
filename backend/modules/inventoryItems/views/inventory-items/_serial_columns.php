@@ -79,7 +79,8 @@ return [
         'vAlign' => 'middle',
         'format' => 'raw',
         'value' => function ($model) {
-            return $model->note ? '<span title="' . Html::encode($model->note) . '">' . Html::encode(mb_substr($model->note, 0, 30)) . (mb_strlen($model->note) > 30 ? '...' : '') . '</span>' : '<span style="color:#cbd5e1">—</span>';
+            $note = (string)($model->note ?? '');
+            return $note !== '' ? '<span title="' . Html::encode($note) . '">' . Html::encode(mb_substr($note, 0, 30)) . (mb_strlen($note) > 30 ? '...' : '') . '</span>' : '<span style="color:#cbd5e1">—</span>';
         },
     ],
     [

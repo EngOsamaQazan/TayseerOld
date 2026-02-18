@@ -369,9 +369,8 @@ class DiwanController extends Controller
     public function actionQuickSearch()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
-        $q = Yii::$app->request->get('q', '');
-
-        if (strlen($q) < 1) {
+        $q = Yii::$app->request->get('q');
+        if ($q === null || $q === '') {
             return ['results' => []];
         }
 

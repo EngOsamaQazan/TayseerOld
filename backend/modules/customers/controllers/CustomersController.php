@@ -511,7 +511,7 @@ class CustomersController extends Controller
      * mode=id   → يُرجع id كمُعرّف   (لحقول customer_id)
      * mode=name → يُرجع name كمُعرّف  (لحقول customer_name)
      */
-    public function actionSearchCustomers($q = '', $mode = 'id')
+    public function actionSearchCustomers(string $q = '', string $mode = 'id')
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
         $q = trim($q);

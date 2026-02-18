@@ -796,8 +796,8 @@ class SiteController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        $q = trim(Yii::$app->request->get('q', ''));
-        if (mb_strlen($q) < 2) return [];
+        $q = trim((string)Yii::$app->request->get('q', ''));
+        if ($q === '' || mb_strlen($q) < 2) return [];
 
         $db = Yii::$app->db;
 

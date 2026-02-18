@@ -8,7 +8,7 @@ use yii\helpers\Url;
 /** @var int $id */
 /** @var array $employeeAttachments */
 
-$fullName = trim($model->name . ' ' . $model->middle_name . ' ' . $model->last_name);
+$fullName = trim(implode(' ', array_filter([$model->name ?? '', $model->middle_name ?? '', $model->last_name ?? ''])));
 $this->title = 'ملفي الشخصي - ' . Html::encode($model->name);
 ?>
 

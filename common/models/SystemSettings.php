@@ -214,7 +214,8 @@ class SystemSettings extends ActiveRecord
 
     private static function getEncryptionKey(): string
     {
-        return substr(hash('sha256', Yii::$app->params['encryptionSalt'] ?? Yii::$app->request->cookieValidationKey), 0, 32);
+        $salt = Yii::$app->params['encryptionSalt'] ?? Yii::$app->request->cookieValidationKey ?? '';
+        return substr(hash('sha256', $salt), 0, 32);
     }
 
     public static function encrypt(string $value): string
