@@ -15,10 +15,10 @@ $mainMenuItems = [
     ['label' => 'العمليات', 'options' => ['class' => 'header']],
 
     // ─── 1. العملاء ───
-    ['label' => 'العملاء', 'icon' => 'users', 'url' => ['/customers/customers/index'], 'privilege' => Permissions::CUSTOMERS],
+    ['label' => 'العملاء', 'icon' => 'users', 'url' => ['/customers/customers/index'], 'privilege' => [Permissions::CUSTOMERS, Permissions::CUST_VIEW]],
 
     // ─── 2. العقود ───
-    ['label' => 'العقود', 'icon' => 'file-text', 'url' => ['/contracts/contracts/index'], 'privilege' => Permissions::CONTRACTS],
+    ['label' => 'العقود', 'icon' => 'file-text', 'url' => ['/contracts/contracts/index'], 'privilege' => [Permissions::CONTRACTS, Permissions::CONT_VIEW]],
 
     // ─── 3. المتابعة ───
     ['label' => 'تقرير المتابعة', 'icon' => 'phone', 'url' => ['/followUpReport/follow-up-report/index'], 'privilege' => Permissions::FOLLOW_UP_REPORT],
@@ -27,11 +27,11 @@ $mainMenuItems = [
     ['label' => 'الإدارة المالية', 'icon' => 'money', 'url' => ['/financialTransaction/financial-transaction/index'], 'privilege' => [Permissions::FINANCIAL_TRANSACTION, Permissions::INCOME, Permissions::EXPENSES, Permissions::LOAN_SCHEDULING]],
 
     // ─── 5. القسم القانوني ───
-    ['label' => 'القسم القانوني', 'icon' => 'gavel', 'url' => ['/judiciary/judiciary/index'], 'privilege' => Permissions::JUDICIARY],
-    ['label' => 'التحصيل',       'icon' => 'handshake-o', 'url' => ['/collection/collection/index'], 'privilege' => Permissions::COLLECTION],
+    ['label' => 'القسم القانوني', 'icon' => 'gavel', 'url' => ['/judiciary/judiciary/index'], 'privilege' => [Permissions::JUDICIARY, Permissions::JUD_VIEW]],
+    ['label' => 'التحصيل',       'icon' => 'handshake-o', 'url' => ['/collection/collection/index'], 'privilege' => [Permissions::COLLECTION, Permissions::COLL_VIEW, Permissions::COLLECTION_MANAGER]],
 
     // ─── 6. التقارير ───
-    ['label' => 'التقارير', 'icon' => 'bar-chart', 'url' => ['/reports/reports/index'], 'privilege' => Permissions::REPORTS],
+    ['label' => 'التقارير', 'icon' => 'bar-chart', 'url' => ['/reports/reports/index'], 'privilege' => [Permissions::REPORTS, Permissions::REP_VIEW]],
 
     ['label' => 'الموارد', 'options' => ['class' => 'header']],
 
