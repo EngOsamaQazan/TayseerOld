@@ -11,11 +11,13 @@ $total = $financials['total'] ?? 0;
 $paid = $financials['paid'] ?? 0;
 $remaining = $financials['remaining'] ?? 0;
 $overdue = $financials['overdue'] ?? 0;
+$shouldPaid = $financials['should_paid'] ?? 0;
 $overdueInstallments = $financials['overdue_installments'] ?? 0;
 $remainingInstallments = $financials['remaining_installments'] ?? 0;
 $complianceRate = $financials['compliance_rate'] ?? 0;
 $paidRatio = $total > 0 ? round(($paid / $total) * 100) : 0;
 $overdueRatio = $total > 0 ? round(($overdue / $total) * 100) : 0;
+$shouldPaidRatio = $total > 0 ? round(($shouldPaid / $total) * 100) : 0;
 
 $hasSettlement = !empty($settlementFinancials);
 
@@ -67,6 +69,13 @@ $allExpenses = $total - $contractValue - $lawyerCosts;
             <div class="ocp-fin-card__value ocp-text-success"><?= number_format($paid) ?></div>
             <div class="ocp-fin-card__label">المدفوع</div>
             <div class="ocp-fin-card__bar"><div class="ocp-fin-card__bar-fill" style="width:<?= $paidRatio ?>%;background:var(--ocp-success)"></div></div>
+        </div>
+
+        <div class="ocp-fin-card">
+            <div class="ocp-fin-card__icon" style="background:#FFF8E1;color:#F57F17"><i class="fa fa-clock-o"></i></div>
+            <div class="ocp-fin-card__value" style="color:#F57F17"><?= number_format($shouldPaid) ?></div>
+            <div class="ocp-fin-card__label">المستحق حتى الآن</div>
+            <div class="ocp-fin-card__bar"><div class="ocp-fin-card__bar-fill" style="width:<?= $shouldPaidRatio ?>%;background:#F57F17"></div></div>
         </div>
 
         <div class="ocp-fin-card">

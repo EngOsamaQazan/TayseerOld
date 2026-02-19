@@ -132,7 +132,7 @@ WHERE
             /* قضائي بدون تسوية: كامل المبلغ مستحق */
             (jud.jud_id IS NOT NULL AND ls.id IS NULL AND
                 (c.total_value + IFNULL(exp_sum.total_expenses, 0) + IFNULL(jud.total_lawyer, 0)
-                 - IFNULL(payments.total_paid, 0)) > 0
+                 - IFNULL(payments.total_paid, 0)) > 5
             )
             OR
             /* عقود عادية أو عقود عليها تسوية: حساب بالأقساط */
@@ -143,7 +143,7 @@ WHERE
                     + CASE WHEN DAY(CURDATE()) >= DAY(COALESCE(ls.first_installment_date, c.first_installment_date))
                            THEN 1 ELSE 0 END
                 ) * COALESCE(ls.monthly_installment, c.monthly_installment_value))
-                - IFNULL(payments.total_paid, 0)) > 0
+                - IFNULL(payments.total_paid, 0)) > 5
             )
         ))
         OR

@@ -661,6 +661,7 @@ class FollowUpController extends Controller
             'paid' => $paid,
             'remaining' => $remaining,
             'overdue' => $overdue,
+            'should_paid' => $shouldPaid,
             'overdue_installments' => $overdueInstallments,
             'remaining_installments' => $remainingInstallments,
             'compliance_rate' => $complianceRate,
