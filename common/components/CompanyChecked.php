@@ -9,60 +9,61 @@ use backend\modules\companyBanks\models\CompanyBanks;
 
 class CompanyChecked
 {
-    public $id ;
+    public $id;
+
+    private static ?Companies $_primaryCompany = null;
+    private static bool $_primaryLoaded = false;
+
+    private static function loadPrimary(): ?Companies
+    {
+        if (!static::$_primaryLoaded) {
+            static::$_primaryCompany = Companies::find()
+                ->where(['is_primary_company' => 1])
+                ->limit(1)
+                ->one();
+            static::$_primaryLoaded = true;
+        }
+        return static::$_primaryCompany;
+    }
+
     function therePrimaryCompany()
     {
-
-        $companies = Companies::find()->all();
-        foreach ($companies as $company) {
-            if ($company->is_primary_company == 1) {
-                return 0;
-            }
-        }
-        return 1;
+        return static::loadPrimary() ? 0 : 1;
     }
 
     function findPrimaryCompany()
     {
-        $companies = Companies::find()->all();
-        foreach ($companies as $company) {
-            if ($company->is_primary_company == 1) {
-                return $company;
-            }
-        }
-        return '';
+        return static::loadPrimary() ?: '';
     }
 
     function findPrimaryCompanyBancks()
     {
-        $CompanyChecked = new CompanyChecked();
-        $primary_banck = $CompanyChecked->findPrimaryCompany();
-        $bancks = CompanyBanks::find()->where(['company_id' => $primary_banck->id])->all();
-        $all_bancks = '';
-        foreach ($bancks as $banck) {
-            $bankName = \backend\modules\bancks\models\Bancks::findOne(['id'=>$banck->bank_id]);
-            if ($all_bancks == '') {
-                $all_bancks .= $bankName->name . ' رقم الحساب' .$banck->bank_number;
-            } else {
-                $all_bancks .= ',' .$bankName->name . ' رقم الحساب ' .$banck->bank_number;
-            }
+        $primary = static::loadPrimary();
+        if (!$primary) return '';
 
-        }
-        return $all_bancks;
-    }
-    function is_primary_company(){
+        $bancks = CompanyBanks::find()
+            ->alias('cb')
+            ->innerJoin('{{%bancks}} b', 'b.id = cb.bank_id')
+            ->select(['b.name as bank_name', 'cb.bank_number'])
+            ->where(['cb.company_id' => $primary->id])
+            ->asArray()
+            ->all();
 
-        $companies = Companies::find()->all();
-        foreach ($companies as $company) {
-            if ($company->is_primary_company == 1) {
-                return $company->id;
-            }
+        $parts = [];
+        foreach ($bancks as $b) {
+            $parts[] = ($b['bank_name'] ?? '') . ' رقم الحساب ' . ($b['bank_number'] ?? '');
         }
-        return 0;
+        return implode(',', $parts);
     }
-    function findCompany(){
-        $company = Companies::find()->where(['id'=>$this->id])->one();
- 
-        return $company;
+
+    function is_primary_company()
+    {
+        $primary = static::loadPrimary();
+        return $primary ? $primary->id : 0;
+    }
+
+    function findCompany()
+    {
+        return Companies::find()->where(['id' => $this->id])->one();
     }
 }

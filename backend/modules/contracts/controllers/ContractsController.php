@@ -93,10 +93,40 @@ class ContractsController extends Controller
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $dataCount = $searchModel->searchcounter(Yii::$app->request->queryParams);
 
+        $dataProvider->query->with(['customers', 'seller', 'followedBy']);
+
+        $models = $dataProvider->getModels();
+        $contractIds = ArrayHelper::getColumn($models, 'id');
+
+        $preloaded = [];
+        if (!empty($contractIds)) {
+            $db = Yii::$app->db;
+            $idList = implode(',', array_map('intval', $contractIds));
+
+            $preloaded['judiciary'] = $db->createCommand(
+                "SELECT contract_id, id, case_cost, lawyer_cost
+                 FROM os_judiciary WHERE contract_id IN ($idList) AND is_deleted=0
+                 ORDER BY id DESC"
+            )->queryAll();
+
+            $preloaded['expenses'] = $db->createCommand(
+                "SELECT contract_id, COALESCE(SUM(amount),0) as total
+                 FROM os_expenses WHERE contract_id IN ($idList) AND category_id=4
+                 GROUP BY contract_id"
+            )->queryAll();
+
+            $preloaded['paid'] = $db->createCommand(
+                "SELECT contract_id, COALESCE(SUM(amount),0) as total
+                 FROM os_contract_installment WHERE contract_id IN ($idList)
+                 GROUP BY contract_id"
+            )->queryAll();
+        }
+
         return $this->render('index', [
             'searchModel'  => $searchModel,
             'dataProvider' => $dataProvider,
             'dataCount'    => $dataCount,
+            'preloaded'    => $preloaded,
         ]);
     }
 
