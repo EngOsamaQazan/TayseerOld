@@ -117,7 +117,7 @@ class ContractsController extends Controller
 
             $preloaded['paid'] = $db->createCommand(
                 "SELECT contract_id, COALESCE(SUM(amount),0) as total
-                 FROM os_contract_installment WHERE contract_id IN ($idList)
+                 FROM os_income WHERE contract_id IN ($idList)
                  GROUP BY contract_id"
             )->queryAll();
         }

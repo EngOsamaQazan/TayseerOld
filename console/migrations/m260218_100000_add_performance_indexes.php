@@ -15,8 +15,8 @@ class m260218_100000_add_performance_indexes extends Migration
         $this->createIndexIfMissing('os_judiciary', 'idx-judiciary-contract_del', ['contract_id', 'is_deleted']);
         $this->createIndexIfMissing('os_judiciary', 'idx-judiciary-company', ['company_id']);
 
-        // os_contract_installment — SUM queries on every contract row
-        $this->createIndexIfMissing('os_contract_installment', 'idx-installment-contract', ['contract_id']);
+        // os_income — SUM queries on every contract row (ContractInstallment uses os_income table)
+        $this->createIndexIfMissing('os_income', 'idx-income-contract', ['contract_id']);
 
         // os_expenses — SUM queries filtered by contract + category
         $this->createIndexIfMissing('os_expenses', 'idx-expenses-contract_cat', ['contract_id', 'category_id']);
@@ -62,7 +62,7 @@ class m260218_100000_add_performance_indexes extends Migration
         $indexes = [
             'os_contracts' => ['idx-contracts-company_del_status', 'idx-contracts-followed_by', 'idx-contracts-date_of_sale'],
             'os_judiciary' => ['idx-judiciary-contract_del', 'idx-judiciary-company'],
-            'os_contract_installment' => ['idx-installment-contract'],
+            'os_income' => ['idx-income-contract'],
             'os_expenses' => ['idx-expenses-contract_cat'],
             'os_customers' => ['idx-customers-is_deleted', 'idx-customers-id_number'],
             'os_inventory_serial_numbers' => ['idx-serial-item_del_company', 'idx-serial-contract_status', 'idx-serial-status_del'],
