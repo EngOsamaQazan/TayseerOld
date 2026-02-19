@@ -169,6 +169,9 @@ $end   = $begin + count($models) - 1;
                     <?php foreach ($models as $m):
                         $cid = $m->id;
 
+                        $calc = new ContractCalculations($cid);
+                        $deserved = $calc->deservedAmount();
+
                         $customerNames = implode('، ', ArrayHelper::map($m->customers, 'id', 'name')) ?: '—';
 
                         $judRows = $judByContract[$cid] ?? [];
@@ -189,9 +192,6 @@ $end   = $begin + count($models) - 1;
                             $totalForRemain += $caseCosts + $lawyerSum;
                         }
                         $remaining = $totalForRemain - $paid;
-
-                        /* Deserved — simplified: total debt - paid (matches ContractCalculations logic) */
-                        $deserved = $totalForRemain - $paid;
 
                         $sellerName = $m->seller->name ?? '—';
                         $followName = $allUsers[$m->followed_by] ?? ($m->followedBy->username ?? '—');
