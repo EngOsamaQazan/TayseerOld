@@ -17,7 +17,7 @@ use common\models\Countries;
 /** @var int $id */
 
 $avatarSrc = !empty($model->profileAvatar) ? $model->profileAvatar->path : '';
-$fullName = trim($model->name . ' ' . $model->middle_name . ' ' . $model->last_name);
+$fullName = trim(implode(' ', array_filter([$model->name ?? '', $model->middle_name ?? '', $model->last_name ?? ''])));
 
 $departmentName = '';
 try {

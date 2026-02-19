@@ -72,9 +72,19 @@ class SiteController extends Controller
     public function actionIndex()
     {
         $companyId = isset(Yii::$app->params['company_id']) ? Yii::$app->params['company_id'] : null;
+        $cacheKey = 'dashboard_stats_' . ($companyId ?: 'all') . '_' . date('Y-m');
+
+        $stats = Yii::$app->cache->getOrSet($cacheKey, function () use ($companyId) {
+            return $this->buildDashboardStats($companyId);
+        }, 300);
+
+        return $this->render('index', $stats);
+    }
+
+    private function buildDashboardStats($companyId): array
+    {
         $db = Yii::$app->db;
 
-        // ─── الاستعلامات مغلفة بـ try-catch لمنع كسر الصفحة ───
         $contractsByStatus = [];
         $totalContracts = 0;
         $totalContractValue = 0;
@@ -90,7 +100,6 @@ class SiteController extends Controller
         $topCollectors = [];
 
         try {
-            // ─── KPI: عدد العقود حسب الحالة ───
             $contractStats = $db->createCommand(
                 "SELECT status, COUNT(*) as cnt, COALESCE(SUM(total_value),0) as total_value
                  FROM os_contracts WHERE is_deleted=0
@@ -190,7 +199,7 @@ class SiteController extends Controller
             )->queryAll();
         } catch (\Exception $e) {}
 
-        return $this->render('index', [
+        return [
             'totalContracts'    => $totalContracts,
             'contractsByStatus' => $contractsByStatus,
             'totalContractValue'=> $totalContractValue,
@@ -204,7 +213,7 @@ class SiteController extends Controller
             'recentPayments'    => $recentPayments,
             'recentContracts'   => $recentContracts,
             'topCollectors'     => $topCollectors,
-        ]);
+        ];
     }
 
     /**
@@ -583,7 +592,7 @@ class SiteController extends Controller
         foreach ($pagedItems as $item) {
             if ($item['type'] === 'im') {
                 $row = $item['data'];
-                $ext = strtolower(pathinfo($row['fileName'], PATHINFO_EXTENSION));
+                $ext = strtolower(pathinfo($row['fileName'] ?? '', PATHINFO_EXTENSION));
                 if (empty($ext)) $ext = 'jpg';
 
                 // ── بحث في عدة مواقع عن الصورة ──
@@ -796,8 +805,8 @@ class SiteController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        $q = trim(Yii::$app->request->get('q', ''));
-        if (mb_strlen($q) < 2) return [];
+        $q = trim((string)Yii::$app->request->get('q', ''));
+        if ($q === '' || mb_strlen($q) < 2) return [];
 
         $db = Yii::$app->db;
 

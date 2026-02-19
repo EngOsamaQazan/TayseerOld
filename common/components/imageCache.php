@@ -29,10 +29,11 @@ class imageCache extends \yii\base\Component
         if(is_object($image) && $image instanceof Media){
             $image = $image->path . ($image->type == Media::TYPE_VIDEO ? '.png' : '');
         }
+        $cdn = Yii::$app->params['urls']['cdn'] ?? '';
         if($size) {
-            return rtrim(Yii::$app->params['urls']['cdn'], "/") . '/cache/' . $size . '/' . ltrim($image, "/");
+            return rtrim($cdn, "/") . '/cache/' . $size . '/' . ltrim((string)$image, "/");
         }else{
-            return rtrim(Yii::$app->params['urls']['cdn'], "/") . '/' . ltrim($image, "/");
+            return rtrim($cdn, "/") . '/' . ltrim((string)$image, "/");
         }
     }
 
@@ -127,6 +128,7 @@ class imageCache extends \yii\base\Component
      */
     private function parseSize($sizeString)
     {
+        if ($sizeString === null || $sizeString === '') return null;
         $sizeArray = explode('x', $sizeString);
         $part1 = (isset($sizeArray[0]) and $sizeArray[0] != '');
         $part2 = (isset($sizeArray[1]) and $sizeArray[1] != '');

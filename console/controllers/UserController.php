@@ -58,7 +58,7 @@ class UserController extends Controller
         $this->stdout("المستخدم: id={$user->id} | username={$user->username} | email={$user->email}\n");
         $this->stdout("  confirmed_at: " . ($user->confirmed_at ? date('Y-m-d H:i', $user->confirmed_at) : 'null (غير مؤكد)') . "\n");
         $this->stdout("  blocked_at:   " . ($user->blocked_at ? date('Y-m-d H:i', $user->blocked_at) . ' (محظور)' : 'null') . "\n");
-        $this->stdout("  password_hash: " . (strlen($user->password_hash) ? 'موجود' : 'فارغ') . "\n");
+        $this->stdout("  password_hash: " . (!empty($user->password_hash) ? 'موجود' : 'فارغ') . "\n");
 
         if (!$user->confirmed_at) {
             $this->stdout("\nتحذير: الحساب غير مؤكد — قد يمنع تسجيل الدخول. استخدم: php yii user/fix-account {$login}\n");

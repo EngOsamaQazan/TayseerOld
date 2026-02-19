@@ -300,6 +300,12 @@ class Permissions
                 'create' => self::JUD_CREATE,
                 'update' => self::JUD_UPDATE,
                 'delete' => self::JUD_DELETE,
+                'tab-actions'     => self::JUD_VIEW,
+                'tab-cases'       => self::JUD_VIEW,
+                'tab-persistence' => self::JUD_VIEW,
+                'tab-legal'       => self::JUD_VIEW,
+                'export-cases-report' => self::JUD_VIEW,
+                'batch-print'     => self::JUD_VIEW,
             ],
             /* الموظفين */
             'employee/employee' => [
@@ -354,7 +360,7 @@ class Permissions
      * فحص صلاحية إجراء محدد لمسار معيّن
      * يُرجع الصلاحية المطلوبة أو null إذا لا قيد action-level
      */
-    public static function getActionPermission($controllerId, $actionId)
+    public static function getActionPermission(string $controllerId, string $actionId)
     {
         $map = self::getActionPermissionMap();
 
@@ -593,7 +599,7 @@ class Permissions
      * إرجاع صلاحيات مطلوبة لمسار معيّن.
      * يدعم المسارات المختصرة (مثل customers بدل customers/customers) لأن urlManager ينتج روابط قصيرة.
      */
-    public static function getRequiredPermissionsForRoute($controllerUniqueId)
+    public static function getRequiredPermissionsForRoute(string $controllerUniqueId)
     {
         $map = self::getRoutePermissionMap();
         if (isset($map[$controllerUniqueId])) {
@@ -633,7 +639,7 @@ class Permissions
     {
         foreach ($items as $key => $menuItem) {
             // ── تجاوز العناوين (headers) — لا تحتاج صلاحيات ──
-            if (isset($menuItem['options']['class']) && strpos($menuItem['options']['class'], 'header') !== false) {
+            if (isset($menuItem['options']['class']) && is_string($menuItem['options']['class']) && strpos($menuItem['options']['class'], 'header') !== false) {
                 continue;
             }
 

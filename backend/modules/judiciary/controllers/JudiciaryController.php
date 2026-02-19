@@ -103,7 +103,7 @@ class JudiciaryController extends Controller
      * ═══════════════════════════════════════════════════════════ */
     private function parsePersistence(&$row)
     {
-        $s = $row['persistence_status'];
+        $s = $row['persistence_status'] ?? '';
         if ($s === 'red_renew') {
             $row['persistence_label'] = 'بحاجة تجديد دعوى';
             $row['persistence_color'] = 'red';
@@ -388,7 +388,8 @@ class JudiciaryController extends Controller
         /* ── رؤوس الأعمدة (صف 3) ── */
         $hRow = 3;
         for ($c = 0; $c < $colCount; $c++) {
-            $sheet->setCellValueByColumnAndRow($c + 1, $hRow, $headers[$c]);
+            $col = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c + 1);
+            $sheet->setCellValue("{$col}{$hRow}", $headers[$c]);
         }
         $sheet->getStyle("A{$hRow}:{$lastCol}{$hRow}")->applyFromArray([
             'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => $HFG], 'name' => 'Arial'],
@@ -408,9 +409,10 @@ class JudiciaryController extends Controller
         $rowNum = $hRow + 1;
         foreach ($rows as $idx => $row) {
             /* كتابة القيم */
-            $sheet->setCellValueByColumnAndRow(1, $rowNum, $idx + 1);
+            $sheet->setCellValue("A{$rowNum}", $idx + 1);
             for ($c = 0; $c < count($keys); $c++) {
-                $sheet->setCellValueByColumnAndRow($c + 2, $rowNum, $row[$keys[$c]] ?? '');
+                $col = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c + 2);
+                $sheet->setCellValue("{$col}{$rowNum}", $row[$keys[$c]] ?? '');
             }
             /* تصنيف الصفوف */
             $pc = $row['persistence_color'];
@@ -690,7 +692,7 @@ class JudiciaryController extends Controller
             $modelContractDocumentFile->save();
             Yii::$app->cache->set(Yii::$app->params['key_judiciary_contract'], Yii::$app->db->createCommand(Yii::$app->params['judiciary_contract_query'])->queryAll(), Yii::$app->params['time_duration']);
             Yii::$app->cache->set(Yii::$app->params['key_judiciary_year'], Yii::$app->db->createCommand(Yii::$app->params['judiciary_year_query'])->queryAll(), Yii::$app->params['time_duration']);
-            if (isset($_POST['print'])) {
+            if (Yii::$app->request->post('print') !== null) {
                 return $this->redirect(['print-case', 'id' => $model->id]);
             } else {
                 $this->redirect('index');
@@ -805,7 +807,11 @@ class JudiciaryController extends Controller
     public function actionBulkDelete()
     {
         $request = Yii::$app->request;
-        $pks = explode(',', $request->post('pks')); // Array or selected records primary keys
+        $rawPks = $request->post('pks');
+        if ($rawPks === null || $rawPks === '') {
+            return $this->redirect(['index']);
+        }
+        $pks = explode(',', $rawPks);
         foreach ($pks as $pk) {
             $model = $this->findModel($pk);
             $model->delete();
@@ -843,7 +849,7 @@ class JudiciaryController extends Controller
         if (is_array($rawIds)) {
             $contractIds = array_map('intval', $rawIds);
         } else {
-            $contractIds = array_filter(array_map('intval', explode(',', $rawIds)));
+            $contractIds = array_filter(array_map('intval', explode(',', (string)$rawIds)));
         }
 
         if (empty($contractIds)) {
@@ -1023,7 +1029,7 @@ class JudiciaryController extends Controller
     /**
      * طباعة جماعية لعدة قضايا — صفحات A4 متتالية
      */
-    public function actionBatchPrint($ids)
+    public function actionBatchPrint(string $ids = '')
     {
         $this->layout = '/print_cases';
         $judiciaryIds = array_filter(array_map('intval', explode(',', $ids)));

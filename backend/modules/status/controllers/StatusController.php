@@ -58,7 +58,7 @@ class StatusController extends Controller
 
         if ($this->request->isPost) {
             if ($model->load($this->request->post()) && $model->save()) {
-                Yii::app()->cache->set(Yii::$app->params['key_status'],\yii\helpers\ArrayHelper::map(backend\modules\status\models\Status::find()->all(),'id','name'), Yii::$app->params['time_duration']);
+                Yii::$app->cache->set(Yii::$app->params['key_status'], \yii\helpers\ArrayHelper::map(\backend\modules\status\models\Status::find()->all(), 'id', 'name'), Yii::$app->params['time_duration']);
 
                 return $this->redirect(['index']);
             }
@@ -83,7 +83,7 @@ class StatusController extends Controller
         $model = $this->findModel($id);
 
         if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            Yii::app()->cache->set(Yii::$app->params['key_status'],\yii\helpers\ArrayHelper::map(backend\modules\status\models\Status::find()->all(),'id','name'), Yii::$app->params['time_duration']);
+            Yii::$app->cache->set(Yii::$app->params['key_status'], \yii\helpers\ArrayHelper::map(\backend\modules\status\models\Status::find()->all(), 'id', 'name'), Yii::$app->params['time_duration']);
 
             return $this->redirect(['index']);
         }

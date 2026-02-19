@@ -46,24 +46,30 @@ class SystemSettings extends ActiveRecord
     //  Static API
     // ─────────────────────────────────────────────────────────
 
+    private static array $_cache = [];
+
     /**
      * Get a single setting value
      */
     public static function get(string $group, string $key, $default = null)
     {
+        $cacheKey = $group . '::' . $key;
+        if (array_key_exists($cacheKey, static::$_cache)) {
+            return static::$_cache[$cacheKey] ?? $default;
+        }
+
         $model = static::find()
             ->where(['setting_group' => $group, 'setting_key' => $key])
             ->one();
 
         if (!$model || $model->setting_value === null || $model->setting_value === '') {
+            static::$_cache[$cacheKey] = null;
             return $default;
         }
 
-        if ($model->is_encrypted) {
-            return static::decrypt($model->setting_value);
-        }
-
-        return $model->setting_value;
+        $val = $model->is_encrypted ? static::decrypt($model->setting_value) : $model->setting_value;
+        static::$_cache[$cacheKey] = $val;
+        return $val;
     }
 
     /**
@@ -91,7 +97,11 @@ class SystemSettings extends ActiveRecord
         $model->updated_by = Yii::$app->user->id ?? null;
         $model->updated_at = date('Y-m-d H:i:s');
 
-        return $model->save(false);
+        $ok = $model->save(false);
+        if ($ok) {
+            unset(static::$_cache[$group . '::' . $key], static::$_cache['_grp::' . $group]);
+        }
+        return $ok;
     }
 
     /**
@@ -99,6 +109,11 @@ class SystemSettings extends ActiveRecord
      */
     public static function getGroup(string $group): array
     {
+        $groupCacheKey = '_grp::' . $group;
+        if (array_key_exists($groupCacheKey, static::$_cache)) {
+            return static::$_cache[$groupCacheKey];
+        }
+
         $models = static::find()
             ->where(['setting_group' => $group])
             ->all();
@@ -110,8 +125,10 @@ class SystemSettings extends ActiveRecord
                 $val = static::decrypt($val);
             }
             $result[$model->setting_key] = $val;
+            static::$_cache[$group . '::' . $model->setting_key] = $val;
         }
 
+        static::$_cache[$groupCacheKey] = $result;
         return $result;
     }
 
@@ -214,7 +231,8 @@ class SystemSettings extends ActiveRecord
 
     private static function getEncryptionKey(): string
     {
-        return substr(hash('sha256', Yii::$app->params['encryptionSalt'] ?? Yii::$app->request->cookieValidationKey), 0, 32);
+        $salt = Yii::$app->params['encryptionSalt'] ?? Yii::$app->request->cookieValidationKey ?? '';
+        return substr(hash('sha256', $salt), 0, 32);
     }
 
     public static function encrypt(string $value): string
@@ -229,6 +247,7 @@ class SystemSettings extends ActiveRecord
     {
         try {
             $data = base64_decode($value);
+            if ($data === false) return $value;
             $parts = explode('::', $data, 2);
             if (count($parts) !== 2) return $value;
 

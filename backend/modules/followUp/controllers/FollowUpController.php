@@ -545,7 +545,7 @@ class FollowUpController extends Controller
         ]);
     }
 
-    function actionChangeStatus()
+    public function actionChangeStatus()
     {
         $id = Yii::$app->request->post('id');
         $statusContent = Yii::$app->request->post('statusContent');
@@ -553,7 +553,7 @@ class FollowUpController extends Controller
 
     }
 
-    function actionCustamerInfo()
+    public function actionCustamerInfo()
     {
         $id = Yii::$app->request->post('customerId');
 

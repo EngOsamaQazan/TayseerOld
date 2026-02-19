@@ -406,7 +406,11 @@ class InventoryItemsController extends Controller
 
     public function actionBulkDelete()
     {
-        $pks = explode(',', Yii::$app->request->post('pks'));
+        $raw = Yii::$app->request->post('pks');
+        if ($raw === null || $raw === '') {
+            return $this->redirect(['items']);
+        }
+        $pks = is_array($raw) ? $raw : explode(',', (string)$raw);
         foreach ($pks as $pk) {
             $this->findModel($pk)->delete();
         }
@@ -935,7 +939,12 @@ class InventoryItemsController extends Controller
      */
     public function actionSerialBulkDelete()
     {
-        $pks = explode(',', Yii::$app->request->post('pks'));
+        $raw = Yii::$app->request->post('pks');
+        if ($raw === null || $raw === '') {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+            return ['forceClose' => true, 'forceReload' => '#serial-datatable-pjax'];
+        }
+        $pks = is_array($raw) ? $raw : explode(',', (string)$raw);
         foreach ($pks as $pk) {
             $model = InventorySerialNumber::findOne($pk);
             if ($model) $model->softDelete();

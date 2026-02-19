@@ -124,7 +124,7 @@ class IncomeCategoryController extends Controller
             *   Process for non-ajax request
             */
             if ($model->load($request->post()) && $model->save()) {
-                Yii::app()->cache->set(Yii::$app->params['key_income_category'],yii\helpers\ArrayHelper::map(\backend\modules\incomeCategory\models\IncomeCategory::find()->all(), 'id', 'name'), Yii::$app->params['time_duration']);
+                Yii::$app->cache->set(Yii::$app->params['key_income_category'], yii\helpers\ArrayHelper::map(\backend\modules\incomeCategory\models\IncomeCategory::find()->all(), 'id', 'name'), Yii::$app->params['time_duration']);
 
                 return $this->redirect(['view', 'id' => $model->id]);
             } else {
@@ -187,7 +187,7 @@ class IncomeCategoryController extends Controller
             *   Process for non-ajax request
             */
             if ($model->load($request->post()) && $model->save()) {
-                Yii::app()->cache->set(Yii::$app->params['key_income_category'],yii\helpers\ArrayHelper::map(\backend\modules\incomeCategory\models\IncomeCategory::find()->all(), 'id', 'name'), Yii::$app->params['time_duration']);
+                Yii::$app->cache->set(Yii::$app->params['key_income_category'], yii\helpers\ArrayHelper::map(\backend\modules\incomeCategory\models\IncomeCategory::find()->all(), 'id', 'name'), Yii::$app->params['time_duration']);
 
                 return $this->redirect(['view', 'id' => $model->id]);
             } else {

@@ -17,7 +17,6 @@ use backend\modules\inventoryItemQuantities\models\InventoryItemQuantities;
 use backend\modules\itemsInventoryInvoices\models\ItemsInventoryInvoices;
 use backend\modules\inventoryItems\models\StockMovement;
 use backend\modules\inventoryItems\models\InventorySerialNumber;
-use backend\modules\location\models\Location;
 use backend\modules\inventoryStockLocations\models\InventoryStockLocations;
 use backend\modules\notification\models\Notification;
 use common\models\Model;
@@ -226,7 +225,7 @@ class InventoryInvoicesController extends Controller
                             for ($s = 0; $s < $qty && isset($serials[$s]); $s++) {
                                 $sn = new InventorySerialNumber();
                                 $sn->item_id = $itemId;
-                                $sn->serial_number = mb_substr($serials[$s], 0, 50);
+                                $sn->serial_number = mb_substr((string)$serials[$s], 0, 50);
                                 $sn->company_id = $companyId;
                                 $sn->supplier_id = $supplierId;
                                 $sn->location_id = $locationId;
@@ -567,7 +566,11 @@ class InventoryInvoicesController extends Controller
 
     public function actionBulkDelete()
     {
-        $pks = explode(',', Yii::$app->request->post('pks'));
+        $raw = Yii::$app->request->post('pks');
+        if ($raw === null || $raw === '') {
+            return $this->redirect(['index']);
+        }
+        $pks = is_array($raw) ? $raw : explode(',', (string)$raw);
         foreach ($pks as $pk) {
             $this->actionDelete($pk);
         }

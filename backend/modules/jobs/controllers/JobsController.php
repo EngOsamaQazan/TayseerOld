@@ -8,7 +8,6 @@ use backend\modules\jobs\models\JobsSearch;
 use backend\modules\jobs\models\JobsPhone;
 use backend\modules\jobs\models\JobsWorkingHours;
 use backend\modules\jobs\models\JobsRating;
-use backend\modules\jobs\models\JobsType;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -147,10 +146,10 @@ class JobsController extends Controller
     public function actionSearchSimilar()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
-        $q = trim(Yii::$app->request->get('q', ''));
+        $q = trim((string)Yii::$app->request->get('q', ''));
         $excludeId = (int) Yii::$app->request->get('exclude', 0);
 
-        if (mb_strlen($q) < 2) {
+        if ($q === '' || mb_strlen($q) < 2) {
             return ['results' => []];
         }
 

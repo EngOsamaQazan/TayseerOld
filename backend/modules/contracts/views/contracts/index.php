@@ -34,6 +34,14 @@ $allUsers   = $isManager
     ? ArrayHelper::map(\common\models\User::find()->select(['id', 'username'])->asArray()->all(), 'id', 'username')
     : [];
 
+$pre = $preloaded ?? [];
+$judByContract = [];
+foreach ($pre['judiciary'] ?? [] as $j) {
+    $judByContract[$j['contract_id']][] = $j;
+}
+$expByContract = ArrayHelper::map($pre['expenses'] ?? [], 'contract_id', 'total');
+$paidByContract = ArrayHelper::map($pre['paid'] ?? [], 'contract_id', 'total');
+
 $statusLabels = [
     'active' => 'نشط', 'pending' => 'معلّق', 'judiciary' => 'قضاء',
     'legal_department' => 'قانوني', 'settlement' => 'تسوية', 'finished' => 'منتهي',
@@ -159,28 +167,30 @@ $end   = $begin + count($models) - 1;
                 </thead>
                 <tbody>
                     <?php foreach ($models as $m):
-                        /* Calculations */
-                        $calc = new ContractCalculations($m->id);
+                        $cid = $m->id;
+
+                        $calc = new ContractCalculations($cid);
                         $deserved = $calc->deservedAmount();
 
                         $customerNames = implode('، ', ArrayHelper::map($m->customers, 'id', 'name')) ?: '—';
 
+                        $judRows = $judByContract[$cid] ?? [];
+                        $caseCosts = (float)($expByContract[$cid] ?? 0);
+                        $paid = (float)($paidByContract[$cid] ?? 0);
+
                         /* Total with judiciary costs */
-                        $total = $m->total_value;
-                        if ($m->status === 'judiciary') {
-                            $jud = Judiciary::find()->where(['contract_id' => $m->id])->orderBy(['id' => SORT_DESC])->one();
-                            if ($jud) $total += $jud->case_cost + $jud->lawyer_cost;
+                        $total = (float)$m->total_value;
+                        if ($m->status === 'judiciary' && !empty($judRows)) {
+                            $total += (float)$judRows[0]['case_cost'] + (float)$judRows[0]['lawyer_cost'];
                         }
 
                         /* Remaining */
-                        $totalForRemain = $m->total_value;
-                        $judRecords = Judiciary::find()->where(['contract_id' => $m->id])->all();
-                        if ($judRecords) {
-                            $caseCosts = \backend\modules\expenses\models\Expenses::find()
-                                ->where(['contract_id' => $m->id, 'category_id' => 4])->sum('amount') ?? 0;
-                            foreach ($judRecords as $j) $totalForRemain += $caseCosts + $j->lawyer_cost;
+                        $totalForRemain = (float)$m->total_value;
+                        if (!empty($judRows)) {
+                            $lawyerSum = 0;
+                            foreach ($judRows as $j) $lawyerSum += (float)$j['lawyer_cost'];
+                            $totalForRemain += $caseCosts + $lawyerSum;
                         }
-                        $paid = ContractInstallment::find()->where(['contract_id' => $m->id])->sum('amount') ?? 0;
                         $remaining = $totalForRemain - $paid;
 
                         $sellerName = $m->seller->name ?? '—';

@@ -23,7 +23,7 @@ $userMenu = ['class-participant'];
 
 $controller = Yii::$app->controller->id;
 
-$currentUrlParts = explode('/', Yii::$app->request->url);
+$currentUrlParts = explode('/', (string)Yii::$app->request->url);
 
 
 $class_id = $currentUrlParts[count($currentUrlParts) - 1];

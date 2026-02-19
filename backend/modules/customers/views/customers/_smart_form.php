@@ -489,7 +489,7 @@ if (!$isNew) {
                             ];
 
                             foreach ($existingImages as $idx => $img) {
-                                $imgExt = pathinfo($img['fileName'], PATHINFO_EXTENSION);
+                                $imgExt = pathinfo($img['fileName'] ?? '', PATHINFO_EXTENSION);
                                 $imgWebPath = '/images/imagemanager/' . $img['id'] . '_' . $img['fileHash'] . '.' . $imgExt;
                                 $imgLabel = $docTypes[$img['groupName'] ?? '9'] ?? 'أخرى';
                                 $isPdf = strtolower($imgExt) === 'pdf';
