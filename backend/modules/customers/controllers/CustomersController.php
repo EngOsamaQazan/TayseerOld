@@ -17,7 +17,6 @@ use yii\helpers\ArrayHelper;
 use common\models\Model;
 use backend\modules\phoneNumbers\models\PhoneNumbers;
 use backend\modules\customers\models\CustomersDocument;
-use yii\web\UploadedFile;
 use yii\filters\AccessControl;
 use backend\modules\customers\components\RiskEngine;
 use common\helper\Permissions;
@@ -491,7 +490,7 @@ class CustomersController extends Controller
         }
     }
 
-    function actionCustomerData($id)
+    public function actionCustomerData($id)
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
         $model = $this->findModel($id);

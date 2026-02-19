@@ -692,7 +692,7 @@ class JudiciaryController extends Controller
             $modelContractDocumentFile->save();
             Yii::$app->cache->set(Yii::$app->params['key_judiciary_contract'], Yii::$app->db->createCommand(Yii::$app->params['judiciary_contract_query'])->queryAll(), Yii::$app->params['time_duration']);
             Yii::$app->cache->set(Yii::$app->params['key_judiciary_year'], Yii::$app->db->createCommand(Yii::$app->params['judiciary_year_query'])->queryAll(), Yii::$app->params['time_duration']);
-            if (isset($_POST['print'])) {
+            if (Yii::$app->request->post('print') !== null) {
                 return $this->redirect(['print-case', 'id' => $model->id]);
             } else {
                 $this->redirect('index');

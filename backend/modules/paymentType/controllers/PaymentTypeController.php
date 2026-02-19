@@ -138,7 +138,7 @@ class PaymentTypeController extends Controller
             *   Process for non-ajax request
             */
             if ($model->load($request->post()) && $model->save()) {
-                Yii::app()->cache->set(Yii::$app->params['key_payment_type'],yii\helpers\ArrayHelper::map(\backend\modules\paymentType\models\PaymentType::find()->all(), 'id', 'name'), Yii::$app->params['time_duration']);
+                Yii::$app->cache->set(Yii::$app->params['key_payment_type'], yii\helpers\ArrayHelper::map(\backend\modules\paymentType\models\PaymentType::find()->all(), 'id', 'name'), Yii::$app->params['time_duration']);
                 return $this->redirect(['index']);
             } else {
                 return $this->render('create', [
@@ -200,7 +200,7 @@ class PaymentTypeController extends Controller
             *   Process for non-ajax request
             */
             if ($model->load($request->post()) && $model->save()) {
-                Yii::app()->cache->set(Yii::$app->params['key_payment_type'],yii\helpers\ArrayHelper::map(\backend\modules\paymentType\models\PaymentType::find()->all(), 'id', 'name'), Yii::$app->params['time_duration']);
+                Yii::$app->cache->set(Yii::$app->params['key_payment_type'], yii\helpers\ArrayHelper::map(\backend\modules\paymentType\models\PaymentType::find()->all(), 'id', 'name'), Yii::$app->params['time_duration']);
                 return $this->redirect(['index']);
             } else {
                 return $this->render('update', [

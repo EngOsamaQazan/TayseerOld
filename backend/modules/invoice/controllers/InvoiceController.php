@@ -200,8 +200,8 @@ class InvoiceController extends Controller {
                             foreach ($modelsAddress as $modelAddress) {
                                 $modelAddress->invoice_number = $model->id;
                                 if (!$modelAddress->save(false)) {
-                                    var_dump($modelAddress->getErrors());
-                                    die();
+                                    Yii::error('Invoice item save failed: ' . json_encode($modelAddress->getErrors()));
+                                    $flag = false;
                                     $transaction->rollBack();
                                     break;
                                 }

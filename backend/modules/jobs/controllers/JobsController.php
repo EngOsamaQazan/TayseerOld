@@ -8,7 +8,6 @@ use backend\modules\jobs\models\JobsSearch;
 use backend\modules\jobs\models\JobsPhone;
 use backend\modules\jobs\models\JobsWorkingHours;
 use backend\modules\jobs\models\JobsRating;
-use backend\modules\jobs\models\JobsType;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;

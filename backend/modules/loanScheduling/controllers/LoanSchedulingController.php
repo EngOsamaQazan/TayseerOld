@@ -237,7 +237,7 @@ public function  actionCreateFromFollowUp ($contract_id)
         *   Process for non-ajax request
         */
         if ($model->load($request->post()) && $model->save()) {
-            Yii::app()->cache->set(Yii::$app->params['key_loan_contract'],yii\helpers\ArrayHelper::map(\backend\modules\loanScheduling\models\LoanScheduling::find()->all(), 'contract_id', 'contract_id'), Yii::$app->params['time_duration']);
+            Yii::$app->cache->set(Yii::$app->params['key_loan_contract'], yii\helpers\ArrayHelper::map(\backend\modules\loanScheduling\models\LoanScheduling::find()->all(), 'contract_id', 'contract_id'), Yii::$app->params['time_duration']);
 
             return $this->redirect(['view', 'id' => $model->id]);
         } else {

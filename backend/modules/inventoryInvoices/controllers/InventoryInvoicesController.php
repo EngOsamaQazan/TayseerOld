@@ -17,7 +17,6 @@ use backend\modules\inventoryItemQuantities\models\InventoryItemQuantities;
 use backend\modules\itemsInventoryInvoices\models\ItemsInventoryInvoices;
 use backend\modules\inventoryItems\models\StockMovement;
 use backend\modules\inventoryItems\models\InventorySerialNumber;
-use backend\modules\location\models\Location;
 use backend\modules\inventoryStockLocations\models\InventoryStockLocations;
 use backend\modules\notification\models\Notification;
 use common\models\Model;

@@ -327,18 +327,18 @@ class CollectionController extends Controller
         }
     }
 
-    function actionFindCustamers()
+    public function actionFindCustamers()
     {
-        $id = Yii::$app->request->post('id');
-        $cutamers = \backend\modules\customers\models\Customers::find()->innerJoin('os_contracts_customers', 'os_customers.id = os_contracts_customers.customer_id ')->where(['os_contracts_customers.contract_id' => $id])->all();
-        $contract_custamers = [];
-        foreach ($cutamers as $cutamer) {
-            array_push($contract_custamers, $cutamer->name);
-        }
-        return json_encode($contract_custamers);
+        $id = (int)Yii::$app->request->post('id');
+        $names = \backend\modules\customers\models\Customers::find()
+            ->innerJoin('os_contracts_customers', 'os_customers.id = os_contracts_customers.customer_id')
+            ->where(['os_contracts_customers.contract_id' => $id])
+            ->select(['os_customers.name'])
+            ->column();
+        return json_encode($names);
     }
 
-    function actionUpdateAmount()
+    public function actionUpdateAmount()
     {
         $new_amount = (int)(Yii::$app->request->post('amount'));
         $id = (int)(Yii::$app->request->post('amount_id'));

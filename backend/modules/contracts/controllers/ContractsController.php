@@ -11,7 +11,6 @@ use yii\helpers\ArrayHelper;
 use yii\filters\AccessControl;
 use yii\web\NotFoundHttpException;
 
-use backend\models\Model;
 use common\components\notificationComponent;
 use backend\modules\customers\models\Customers;
 use backend\modules\contracts\models\Contracts;
@@ -228,7 +227,7 @@ class ContractsController extends Controller
 
             $transaction->commit();
 
-            if (isset($_POST['print'])) {
+            if (Yii::$app->request->post('print') !== null) {
                 return $this->redirect(['print-preview', 'id' => $model->id]);
             }
             return $this->redirect(['index']);
@@ -295,7 +294,7 @@ class ContractsController extends Controller
             $this->refreshContractCaches();
             $transaction->commit();
 
-            if (isset($_POST['print'])) {
+            if (Yii::$app->request->post('print') !== null) {
                 return $this->redirect(['print-preview', 'id' => $model->id]);
             }
             return $this->redirect(['update', 'id' => $model->id]);

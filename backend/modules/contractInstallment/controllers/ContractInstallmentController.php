@@ -93,7 +93,7 @@ class  ContractInstallmentController extends Controller
             $findInstelment = $findInstelment->findContractInstallment($model,$contract_id);
             if ($findInstelment) {
                 if ($model->save()) {
-                    if (isset($_POST['print'])) {
+                    if (Yii::$app->request->post('print') !== null) {
                         return $this->redirect(['print', 'id' => $model->id]);
                     }
                     return $this->redirect(['index?contract_id=' . $contract_id]);
@@ -122,7 +122,7 @@ class  ContractInstallmentController extends Controller
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
 
-            if (isset($_POST['print'])) {
+            if (Yii::$app->request->post('print') !== null) {
                 return $this->redirect(['print', 'id' => $model->id]);
             }
 
