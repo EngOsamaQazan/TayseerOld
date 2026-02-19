@@ -300,6 +300,12 @@ class Permissions
                 'create' => self::JUD_CREATE,
                 'update' => self::JUD_UPDATE,
                 'delete' => self::JUD_DELETE,
+                'tab-actions'     => self::JUD_VIEW,
+                'tab-cases'       => self::JUD_VIEW,
+                'tab-persistence' => self::JUD_VIEW,
+                'tab-legal'       => self::JUD_VIEW,
+                'export-cases-report' => self::JUD_VIEW,
+                'batch-print'     => self::JUD_VIEW,
             ],
             /* الموظفين */
             'employee/employee' => [

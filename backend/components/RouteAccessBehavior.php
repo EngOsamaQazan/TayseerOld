@@ -31,6 +31,8 @@ class RouteAccessBehavior extends Behavior
         'dektrium/user/profile/show',
         'dektrium/user/settings/profile',
         'dektrium/user/settings/account',
+        'debug',
+        'gii',
     ];
 
     public function events()
