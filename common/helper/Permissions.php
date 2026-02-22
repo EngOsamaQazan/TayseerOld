@@ -38,13 +38,11 @@ class Permissions
     const LEAVE_TYPES = 'أنواع الإجازات';
     const WORKDAYS = 'أيام العمل';
     const  LEAVE_REQUEST = 'طلب إجازة';
-    const  ARCHEVE = 'أرشيف';
     const  DOCUMENT_HOLDER = 'حامل الوثيقة';
     const  MANAGER = 'الاداره';
     const  DIWAN = 'الديوان';
     const  DIWAN_REPORTS = 'تقارير الديوان';
     const  JOBS = 'الوظائف';
-    const  DETERMINATION = 'تحديد';
     const  COLLECTION = 'الحسميات';
     const COMPAINES = 'المستثمرين';
     const REPORTS = 'التقارير';
@@ -532,8 +530,12 @@ class Permissions
             'inventoryStockLocations/inventory-stock-locations' => [self::INVENTORY_STOCK_LOCATIONS],
             'inventoryItemQuantities/inventory-item-quantities' => [self::INVENTORY_ITEMS_QUANTITY],
             'itemsInventoryInvoices/items-inventory-invoices' => self::getModulePermissions(self::INVENTORY_INVOICES),
-            /* المستثمرين */
+            /* المستثمرين والاستثمار */
             'companies/companies' => self::getModulePermissions(self::COMPAINES),
+            'shareholders/shareholders' => self::getModulePermissions(self::COMPAINES),
+            'capitalTransactions/capital-transactions' => self::getModulePermissions(self::COMPAINES),
+            'sharedExpenses/shared-expense' => self::getModulePermissions(self::COMPAINES),
+            'profitDistribution/profit-distribution' => self::getModulePermissions(self::COMPAINES),
             /* الديوان */
             'diwan/diwan' => array_merge(
                 self::getModulePermissions(self::DIWAN),

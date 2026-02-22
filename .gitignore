@@ -68,6 +68,9 @@ mysql_data/
 # Database dumps (large files)
 *.sql
 
+# Temporary scripts
+/scripts/temp/
+
 # Deploy config (contains credentials)
 deploy.config
 sshpass.exe

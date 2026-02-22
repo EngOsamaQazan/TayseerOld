@@ -197,7 +197,7 @@ use app\helper\Permissions;
                                         <ion-icon name="list-sharp" role="img" class="md hydrated"
                                                   aria-label="person circle sharp"></ion-icon>
                                     </div>
-                                    <div class="menu-title">'.Yii::t('app','Companies').'</div>',Url::to(['/companies/companies/index']))?>
+                                    <div class="menu-title">المُستثمرين</div>',Url::to(['/companies/companies/index']))?>
 
                                 </li>
                             <?php } ?>

@@ -45,8 +45,14 @@ return [
             'class' => 'backend\modules\workdays\Workdays',
         ],
 
-        'shares' => [
-            'class' => 'backend\modules\shares\Shares',
+        'capitalTransactions' => [
+            'class' => 'backend\modules\capitalTransactions\CapitalTransactions',
+        ],
+        'sharedExpenses' => [
+            'class' => 'backend\modules\sharedExpenses\SharedExpenses',
+        ],
+        'profitDistribution' => [
+            'class' => 'backend\modules\profitDistribution\ProfitDistribution',
         ],
         'phoneNumbers' => [
             'class' => 'backend\modules\phoneNumbers\PhoneNumbers',
@@ -448,7 +454,9 @@ return [
                     'notification'          => 'notification',
                     'sms'                   => 'sms',
                     'shareholders'          => 'shareholders',
-                    'shares'                => 'shares',
+                    'capitalTransactions'   => 'capital-transactions',
+                    'sharedExpenses'        => 'shared-expenses',
+                    'profitDistribution'    => 'profit-distribution',
                     'authAssignment'        => 'auth-assignment',
                     'rejesterFollowUpType'  => 'rejester-follow-up-type',
                     'realEstate'            => 'real-estate',

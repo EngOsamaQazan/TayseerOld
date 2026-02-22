@@ -1131,7 +1131,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                             <div class="gs-item-icon"><i class="fa fa-building-o"></i></div>
                             <div class="gs-item-text">
                                 <span class="gs-item-label">جهات العمل</span>
-                                <span class="gs-item-desc">الشركات وجهات التوظيف</span>
+                                <span class="gs-item-desc">المُستثمرين وجهات التوظيف</span>
                             </div>
                             <i class="fa fa-chevron-left gs-item-arrow"></i>
                         </a>

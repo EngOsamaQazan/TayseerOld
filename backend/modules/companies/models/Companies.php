@@ -36,10 +36,9 @@ use \common\models\User;
  */
 class Companies extends \yii\db\ActiveRecord
 {
-    /**
-     * {@inheritdoc}
-     */
     public $number_row;
+    public $commercial_register_files;
+    public $trade_license_files;
     public static function tableName()
     {
         return '{{%companies}}';
@@ -70,13 +69,18 @@ class Companies extends \yii\db\ActiveRecord
     {
         return [
             [['name', 'phone_number'], 'required'],
-            [['is_primary_company'],'boolean'],
-            [['created_by', 'created_at', 'updated_at','is_deleted','number_row'], 'integer'],
+            [['is_primary_company', 'capital_refundable'], 'boolean'],
+            [['created_by', 'created_at', 'updated_at', 'is_deleted', 'number_row', 'total_shares'], 'integer'],
             [['name', 'phone_number'], 'string', 'max' => 50],
-            [['logo'],'file','extensions' => 'png, jpg'],
+            [['logo'], 'file', 'extensions' => 'png, jpg, jpeg, gif, bmp, webp, svg, pdf'],
+            [['commercial_register_files'], 'file', 'extensions' => 'png, jpg, jpeg, gif, bmp, webp, pdf', 'maxFiles' => 10],
+            [['trade_license_files'], 'file', 'extensions' => 'png, jpg, jpeg, gif, bmp, webp, pdf', 'maxFiles' => 10],
+            [['commercial_register', 'trade_license', 'agreement_notes'], 'safe'],
             [['company_email'], 'email'],
-            [['company_social_security_number', 'company_tax_number','company_address'], 'string', 'max' => 255],
-
+            [['company_social_security_number', 'company_tax_number', 'company_address'], 'string', 'max' => 255],
+            [['invested_capital', 'profit_share_ratio', 'parent_share_ratio'], 'number'],
+            [['portfolio_status'], 'string'],
+            [['agreement_date'], 'safe'],
         ];
     }
 
@@ -86,20 +90,29 @@ class Companies extends \yii\db\ActiveRecord
     public function attributeLabels()
     {
         return [
-            'id' => Yii::t('app', 'ID'),
-            'name' => Yii::t('app', 'Name'),
-            'phone_number' => Yii::t('app', 'Phone Number'),
-            'logo' => Yii::t('app', 'Logo'),
-            'created_by' => Yii::t('app', 'Created By'),
-            'created_at' => Yii::t('app', 'Created At'),
-            'updated_at' => Yii::t('app', 'Updated At'),
-            'is_deleted' => Yii::t('app', 'Is Deleted'),
-            'is_primary_company' => Yii::t('app', 'Is Primary Company'),
-            'company_social_security_number' => Yii::t('app', 'Company Social Security Number'), 
-            'company_tax_number' => Yii::t('app', 'Company Tax Number'), 
-            'company_email' => Yii::t('app', 'Company Email'),
-            'company_address' => Yii::t('app', 'Company Address'),
-             
+            'id' => 'م',
+            'name' => 'اسم المُستثمر',
+            'phone_number' => 'رقم الهاتف',
+            'logo' => 'الشعار',
+            'created_by' => 'أنشئ بواسطة',
+            'created_at' => 'تاريخ الإنشاء',
+            'updated_at' => 'تاريخ التحديث',
+            'is_deleted' => 'محذوف',
+            'is_primary_company' => 'شركة رئيسية',
+            'company_social_security_number' => 'رقم الضمان الاجتماعي',
+            'company_tax_number' => 'الرقم الضريبي',
+            'company_email' => 'البريد الإلكتروني',
+            'company_address' => 'العنوان',
+            'commercial_register' => 'السجل التجاري',
+            'trade_license' => 'رخصة المهن',
+            'total_shares' => 'إجمالي الأسهم',
+            'invested_capital' => 'رأس المال المستثمر',
+            'profit_share_ratio' => 'نسبة المُستثمر من الأرباح %',
+            'parent_share_ratio' => 'نسبة الشركة الأم من الأرباح %',
+            'capital_refundable' => 'رأس المال قابل للإعادة',
+            'portfolio_status' => 'حالة المحفظة',
+            'agreement_date' => 'تاريخ الاتفاق',
+            'agreement_notes' => 'شروط الاتفاق',
         ];
     }
 
@@ -137,5 +150,37 @@ class Companies extends \yii\db\ActiveRecord
     public function getPrimeryBankAccount()
     {
         return $this->hasOne(CompanyBanks::className(), ['company_id' => 'id']);
+    }
+
+    public function getCapitalTransactions()
+    {
+        return $this->hasMany(\backend\modules\capitalTransactions\models\CapitalTransactions::class, ['company_id' => 'id'])
+            ->orderBy(['transaction_date' => SORT_DESC, 'id' => SORT_DESC]);
+    }
+
+    public function getCapitalBalance()
+    {
+        $deposits = (float) \backend\modules\capitalTransactions\models\CapitalTransactions::find()
+            ->where(['company_id' => $this->id, 'transaction_type' => 'إيداع'])
+            ->sum('amount') ?: 0;
+        $withdrawals = (float) \backend\modules\capitalTransactions\models\CapitalTransactions::find()
+            ->where(['company_id' => $this->id])
+            ->andWhere(['in', 'transaction_type', ['سحب', 'إعادة_رأس_مال']])
+            ->sum('amount') ?: 0;
+        return $deposits - $withdrawals;
+    }
+
+    public function getCommercialRegisterList()
+    {
+        if (empty($this->commercial_register)) return [];
+        $decoded = json_decode($this->commercial_register, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    public function getTradeLicenseList()
+    {
+        if (empty($this->trade_license)) return [];
+        $decoded = json_decode($this->trade_license, true);
+        return is_array($decoded) ? $decoded : [];
     }
 }

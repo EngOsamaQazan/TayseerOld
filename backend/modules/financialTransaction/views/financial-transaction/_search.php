@@ -32,8 +32,8 @@ $hasAdvanced = !empty($model->created_by) || !empty($model->Restriction) || !emp
     <!-- الفلاتر الأساسية -->
     <div class="fin-filter-main">
         <div class="fin-f-field fin-f--grow">
-            <label><i class="fa fa-building-o"></i> الشركة</label>
-            <?= Html::activeDropDownList($model, 'company_id', $companies, ['prompt' => 'جميع الشركات', 'class' => 'fin-f-input']) ?>
+            <label><i class="fa fa-building-o"></i> المُستثمر</label>
+            <?= Html::activeDropDownList($model, 'company_id', $companies, ['prompt' => 'جميع المُستثمرين', 'class' => 'fin-f-input']) ?>
         </div>
         <div class="fin-f-field fin-f--sm">
             <label><i class="fa fa-exchange"></i> النوع</label>

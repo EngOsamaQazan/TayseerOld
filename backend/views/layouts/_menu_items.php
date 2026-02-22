@@ -4,7 +4,7 @@
  * ─────────────────────────────────────
  * لوحة التحكم → العملاء → العقود → المتابعة → المالية
  * → القانوني → التقارير → الموظفين → المخزون → الديوان
- * → المستثمرين → التقييم → الصلاحيات → الإعدادات
+ * → المستثمرين → الصلاحيات → الإعدادات
  */
 
 use yii\helpers\Url;
@@ -56,16 +56,23 @@ $mainMenuItems = [
 
     // ─── 8. إدارة المخزون ───
     ['label' => 'إدارة المخزون', 'icon' => 'cubes', 'url' => ['/inventoryItems/inventory-items/index'], 'privilege' => [Permissions::INVENTORY_ITEMS, Permissions::INVENTORY_INVOICES, Permissions::INVENTORY_SUPPLIERS, Permissions::INVENTORY_STOCK_LOCATIONS, Permissions::INVENTORY_ITEMS_QUANTITY, Permissions::INVENTORY_IEMS_QUERY]],
-    ['label' => 'فاتورة توريد جديدة (معالج)', 'icon' => 'file-text-o', 'url' => ['/inventoryInvoices/inventory-invoices/create-wizard'], 'privilege' => Permissions::INVENTORY_INVOICES],
 
-    // ─── 9. المستثمرين ───
-    ['label' => 'المستثمرين', 'icon' => 'building', 'url' => ['/companies/companies/index'], 'privilege' => Permissions::COMPAINES],
+    // ─── 9. الاستثمار ───
+    [
+        'label' => 'الاستثمار',
+        'icon'  => 'building',
+        'privilege' => Permissions::COMPAINES,
+        'items' => [
+            ['label' => 'المحافظ الاستثمارية', 'icon' => 'briefcase',      'url' => ['/companies/companies/index']],
+            ['label' => 'حركات رأس المال',    'icon' => 'exchange',        'url' => ['/capitalTransactions/capital-transactions/index']],
+            ['label' => 'المساهمين',           'icon' => 'users',           'url' => ['/shareholders/shareholders/index']],
+            ['label' => 'المصاريف المشتركة',   'icon' => 'share-alt',       'url' => ['/sharedExpenses/shared-expense/index']],
+            ['label' => 'توزيع الأرباح',       'icon' => 'pie-chart',       'url' => ['/profitDistribution/profit-distribution/index']],
+        ],
+    ],
 
     // ─── 10. قسم الديوان ───
     ['label' => 'قسم الديوان', 'icon' => 'archive', 'url' => ['/diwan/diwan/index'], 'privilege' => [Permissions::DIWAN, Permissions::DIWAN_REPORTS]],
-
-    // ─── 11. التقييم (الموديول غير مفعّل حالياً؛ الرابط يوجّه للوحة التحكم لتجنّب 404) ───
-    ['label' => 'التقييم', 'icon' => 'star-half-o', 'url' => ['/site/index'], 'privilege' => Permissions::DETERMINATION],
 
     ['label' => 'الإدارة والإعدادات', 'options' => ['class' => 'header']],
 

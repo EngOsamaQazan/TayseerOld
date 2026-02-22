@@ -496,8 +496,9 @@ $defaultAvatar = Yii::getAlias('@web') . '/img/default-avatar.png';
                                     </p>
                                 </div>
                                 <button class="perm-group-toggle" data-group-toggle="<?= $gKey ?>" type="button" title="تفعيل/تعطيل الكل"></button>
+                                <i class="fa fa-chevron-down perm-group-chevron" style="margin-right:auto;color:#94a3b8;font-size:12px;transition:transform .2s;transform:rotate(90deg)"></i>
                             </div>
-                            <div class="perm-group-body" data-group-body="<?= $gKey ?>">
+                            <div class="perm-group-body collapsed" data-group-body="<?= $gKey ?>" style="display:none">
                                 <?php foreach ($g['permissions'] as $perm):
                                     $isSub = (strpos($perm, ':') !== false);
                                     $subClass = $isSub ? 'perm-item--sub' : 'perm-item--parent';
@@ -825,7 +826,10 @@ $js = <<<'JSBLOCK'
     $(document).on('click', '[data-toggle-group]', function(e){
         if ($(e.target).closest('.perm-group-toggle').length) return;
         var gKey = $(this).data('toggle-group');
-        $('[data-group-body="' + gKey + '"]').slideToggle(200);
+        var $body = $('[data-group-body="' + gKey + '"]');
+        var $chevron = $(this).find('.perm-group-chevron');
+        $body.slideToggle(200);
+        $chevron.toggleClass('open');
     });
 
     /* تحديد الكل / إلغاء الكل */

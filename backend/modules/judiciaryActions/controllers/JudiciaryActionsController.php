@@ -47,6 +47,10 @@ class JudiciaryActionsController extends Controller
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $searchCounter = $searchModel->searchCounter(Yii::$app->request->queryParams);
 
+        if (Yii::$app->request->get('export') === 'csv') {
+            return $this->exportCsv($searchModel);
+        }
+
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
@@ -246,6 +250,52 @@ class JudiciaryActionsController extends Controller
             $model->allowed_statuses = null;
             $model->parent_request_ids = null;
         }
+    }
+
+    /**
+     * Export CSV (called from actionIndex when ?export=csv)
+     */
+    private function exportCsv($searchModel)
+    {
+        $natureLabels = JudiciaryActions::getNatureList();
+        $stageLabels  = JudiciaryActions::getActionTypeList();
+
+        $query = (new \yii\db\Query())
+            ->select(['id', 'name', 'action_nature', 'action_type'])
+            ->from('os_judiciary_actions')
+            ->where(['or', ['is_deleted' => 0], ['is_deleted' => null]])
+            ->orderBy(['id' => SORT_ASC]);
+
+        if (!empty($searchModel->name)) {
+            $query->andFilterWhere(['like', 'name', $searchModel->name]);
+        }
+        if (!empty($searchModel->action_nature)) {
+            $query->andFilterWhere(['action_nature' => $searchModel->action_nature]);
+        }
+
+        $rows = $query->all();
+
+        $filename = 'judiciary-actions-' . date('Y-m-d') . '.csv';
+        header('Content-Type: text/csv; charset=UTF-8');
+        header("Content-Disposition: attachment; filename=\"$filename\"");
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $handle = fopen('php://output', 'w');
+        fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+        fputcsv($handle, ['#', 'اسم الإجراء', 'الطبيعة', 'المرحلة'], ',', '"', '\\');
+
+        foreach ($rows as $r) {
+            fputcsv($handle, [
+                $r['id'],
+                $r['name'],
+                $natureLabels[$r['action_nature']] ?? $r['action_nature'],
+                $stageLabels[$r['action_type']] ?? $r['action_type'],
+            ], ',', '"', '\\');
+        }
+
+        fclose($handle);
+        Yii::$app->end();
     }
 
     /**

@@ -112,7 +112,7 @@ class CompaniesController extends Controller
         if ($request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
             return [
-                'title' => "Companies #" . $id,
+                'title' => "مُستثمر #" . $id,
                 'content' => $this->renderAjax('view', [
                     'model' => $this->findModel($id),
                 ]),
@@ -146,12 +146,13 @@ class CompaniesController extends Controller
             $model->created_by = Yii::$app->user->id;
             $model->logo = UploadedFile::getInstance($model, 'logo');
             if (!empty($model->logo)) {
-                if ($model->logo->saveAs('images/' . $model->logo->baseName . '.' . $model->logo->extension)) {
-                    $model->logo = 'images/' . $model->logo->baseName . '.' . $model->logo->extension;
-                    $model->created_by = Yii::$app->user->id;
-                    $model->save();
+                $logoPath = 'images/' . $model->logo->baseName . '.' . $model->logo->extension;
+                if ($model->logo->saveAs($logoPath)) {
+                    $model->logo = $logoPath;
                 }
             }
+
+            $this->handleDocumentUploads($model);
 
             $modelsCompanieBanks = Model::createMultiple(CompanyBanks::classname());
             Model::loadMultiple($modelsCompanieBanks, Yii::$app->request->post());
@@ -168,20 +169,17 @@ class CompaniesController extends Controller
 
                             if (!($companieBankFlag = $modelsCompanieBank->save())) {
                                 $transaction->rollBack();
-                                var_dump($modelsCompanieBank->getErrors());
                                 break;
                             }
                         }
 
                         if ($flag && $companieBankFlag) {
-
                             $transaction->commit();
                         }
                     }
 
                 } catch (Exception $e) {
                     $transaction->rollBack();
-                    var_dump($model->getErrors());
                 }
             }
 
@@ -212,18 +210,23 @@ class CompaniesController extends Controller
         $model = $this->findModel($id);
         $modelsCompanieBanks = CompanyBanks::find()->where(['company_id' => $id])->all();
         $logo = $model->logo;
+        $existingRegister = $model->commercial_register;
+        $existingLicense = $model->trade_license;
         $createdBy = $model->created_by;
         if ($model->load($request->post())) {
             $model->logo = UploadedFile::getInstance($model, 'logo');
             if (!empty($model->logo)) {
-                if ($model->logo->saveAs('images/' . $model->logo->baseName . '.' . $model->logo->extension)) {
-                    $model->logo = 'images/' . $model->logo->baseName . '.' . $model->logo->extension;
-                    $model->created_by = Yii::$app->user->id;
-                    $model->save();
+                $logoPath = 'images/' . $model->logo->baseName . '.' . $model->logo->extension;
+                if ($model->logo->saveAs($logoPath)) {
+                    $model->logo = $logoPath;
                 }
             } else {
                 $model->logo = $logo;
             }
+
+            $model->commercial_register = $existingRegister;
+            $model->trade_license = $existingLicense;
+            $this->handleDocumentUploads($model);
 
 
             $oldIDs = yii\helpers\ArrayHelper::map($modelsCompanieBanks, 'id', 'id');
@@ -386,6 +389,44 @@ class CompaniesController extends Controller
             return $model;
         } else {
             throw new NotFoundHttpException('The requested page does not exist.');
+        }
+    }
+
+    protected function handleDocumentUploads($model)
+    {
+        $uploadDir = 'uploads/investors/';
+        if (!is_dir($uploadDir)) {
+            FileHelper::createDirectory($uploadDir, 0775, true);
+        }
+
+        $regFiles = UploadedFile::getInstances($model, 'commercial_register_files');
+        if (!empty($regFiles)) {
+            $existing = $model->getCommercialRegisterList();
+            foreach ($regFiles as $file) {
+                $fname = uniqid('reg_') . '.' . $file->extension;
+                if ($file->saveAs($uploadDir . $fname)) {
+                    $existing[] = [
+                        'path' => $uploadDir . $fname,
+                        'name' => $file->baseName . '.' . $file->extension,
+                    ];
+                }
+            }
+            $model->commercial_register = json_encode($existing, JSON_UNESCAPED_UNICODE);
+        }
+
+        $licFiles = UploadedFile::getInstances($model, 'trade_license_files');
+        if (!empty($licFiles)) {
+            $existing = $model->getTradeLicenseList();
+            foreach ($licFiles as $file) {
+                $fname = uniqid('lic_') . '.' . $file->extension;
+                if ($file->saveAs($uploadDir . $fname)) {
+                    $existing[] = [
+                        'path' => $uploadDir . $fname,
+                        'name' => $file->baseName . '.' . $file->extension,
+                    ];
+                }
+            }
+            $model->trade_license = json_encode($existing, JSON_UNESCAPED_UNICODE);
         }
     }
 }

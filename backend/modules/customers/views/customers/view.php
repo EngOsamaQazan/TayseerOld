@@ -17,28 +17,25 @@ $this->registerCss('.content-header { display: none !important; } .content-wrapp
 $db = Yii::$app->db;
 $cid = $model->id;
 
-$contractsCount  = (int) $db->createCommand("SELECT COUNT(*) FROM os_contracts_customers WHERE customer_id=:cid", [':cid' => $cid])->queryScalar();
-$activeContracts = (int) $db->createCommand("SELECT COUNT(*) FROM os_contracts_customers cc INNER JOIN os_contracts c ON c.id=cc.contract_id WHERE cc.customer_id=:cid AND c.status='active'", [':cid' => $cid])->queryScalar();
-$totalPaid       = (float) $db->createCommand("SELECT COALESCE(SUM(i.amount),0) FROM os_income i INNER JOIN os_contracts_customers cc ON cc.contract_id=i.contract_id WHERE cc.customer_id=:cid", [':cid' => $cid])->queryScalar();
-$totalRemaining  = (float) $db->createCommand("SELECT COALESCE(SUM(c.total_value),0) FROM os_contracts c INNER JOIN os_contracts_customers cc ON cc.contract_id=c.id WHERE cc.customer_id=:cid AND c.status='active'", [':cid' => $cid])->queryScalar() - $totalPaid;
-$lastFollowUp    = $db->createCommand("SELECT MAX(f.date_time) FROM os_follow_up f INNER JOIN os_contracts_customers cc ON cc.contract_id=f.contract_id WHERE cc.customer_id=:cid", [':cid' => $cid])->queryScalar();
-$imageCount      = (int) $db->createCommand("SELECT COUNT(*) FROM os_ImageManager WHERE contractId=:cid AND groupName IN ('coustmers','customers','0','1','2','3','4','5','6','7','8','9')", [':cid' => $cid])->queryScalar();
+try { $contractsCount = (int) $db->createCommand("SELECT COUNT(*) FROM os_contracts_customers WHERE customer_id=:cid", [':cid' => $cid])->queryScalar(); } catch (\Exception $e) { $contractsCount = 0; }
+try { $activeContracts = (int) $db->createCommand("SELECT COUNT(*) FROM os_contracts_customers cc INNER JOIN os_contracts c ON c.id=cc.contract_id WHERE cc.customer_id=:cid AND c.status='active'", [':cid' => $cid])->queryScalar(); } catch (\Exception $e) { $activeContracts = 0; }
+try { $totalPaid = (float) $db->createCommand("SELECT COALESCE(SUM(i.amount),0) FROM os_income i INNER JOIN os_contracts_customers cc ON cc.contract_id=i.contract_id WHERE cc.customer_id=:cid", [':cid' => $cid])->queryScalar(); } catch (\Exception $e) { $totalPaid = 0; }
+try { $totalRemaining = (float) $db->createCommand("SELECT COALESCE(SUM(c.total_value),0) FROM os_contracts c INNER JOIN os_contracts_customers cc ON cc.contract_id=c.id WHERE cc.customer_id=:cid AND c.status='active'", [':cid' => $cid])->queryScalar() - $totalPaid; } catch (\Exception $e) { $totalRemaining = 0; }
+try { $lastFollowUp = $db->createCommand("SELECT MAX(f.date_time) FROM os_follow_up f INNER JOIN os_contracts_customers cc ON cc.contract_id=f.contract_id WHERE cc.customer_id=:cid", [':cid' => $cid])->queryScalar(); } catch (\Exception $e) { $lastFollowUp = null; }
+try { $imageCount = (int) $db->createCommand("SELECT COUNT(*) FROM os_ImageManager WHERE contractId=:cid AND groupName IN ('coustmers','customers','0','1','2','3','4','5','6','7','8','9')", [':cid' => $cid])->queryScalar(); } catch (\Exception $e) { $imageCount = 0; }
 
 $jobName = $model->jobs ? $model->jobs->name : '—';
 $cityName = '—';
 if ($model->city) {
-    $c = $db->createCommand("SELECT name FROM os_city WHERE id=:id", [':id' => $model->city])->queryScalar();
-    if ($c) $cityName = $c;
+    try { $c = $db->createCommand("SELECT name FROM os_city WHERE id=:id", [':id' => $model->city])->queryScalar(); if ($c) $cityName = $c; } catch (\Exception $e) {}
 }
 $citizenName = '—';
 if ($model->citizen) {
-    $c = $db->createCommand("SELECT name FROM os_citizen WHERE id=:id", [':id' => $model->citizen])->queryScalar();
-    if ($c) $citizenName = $c;
+    try { $c = $db->createCommand("SELECT name FROM os_citizen WHERE id=:id", [':id' => $model->citizen])->queryScalar(); if ($c) $citizenName = $c; } catch (\Exception $e) {}
 }
 $bankName = '—';
 if ($model->bank_name) {
-    $b = $db->createCommand("SELECT name FROM os_banks WHERE id=:id", [':id' => $model->bank_name])->queryScalar();
-    $bankName = $b ?: $model->bank_name;
+    try { $b = $db->createCommand("SELECT name FROM os_banks WHERE id=:id", [':id' => $model->bank_name])->queryScalar(); $bankName = $b ?: $model->bank_name; } catch (\Exception $e) { $bankName = $model->bank_name; }
 }
 
 $financials = null;
@@ -53,15 +50,17 @@ $employmentTypes = [
 $empType = $financials['employment_type'] ?? '';
 $empTypeLabel = $employmentTypes[$empType] ?? '—';
 
-$addresses = $db->createCommand("SELECT * FROM os_address WHERE customers_id=:cid AND is_deleted=0", [':cid' => $cid])->queryAll();
-$phones    = $db->createCommand("SELECT * FROM os_phone_numbers WHERE customers_id=:cid AND is_deleted=0", [':cid' => $cid])->queryAll();
+try { $addresses = $db->createCommand("SELECT * FROM os_address WHERE customers_id=:cid AND is_deleted=0", [':cid' => $cid])->queryAll(); } catch (\Exception $e) { $addresses = []; }
+try { $phones = $db->createCommand("SELECT * FROM os_phone_numbers WHERE customers_id=:cid AND is_deleted=0", [':cid' => $cid])->queryAll(); } catch (\Exception $e) { $phones = []; }
 
-$contracts = $db->createCommand(
-    "SELECT c.id, c.total_value, c.status, c.created_at
-     FROM os_contracts c INNER JOIN os_contracts_customers cc ON cc.contract_id=c.id
-     WHERE cc.customer_id=:cid ORDER BY c.id DESC LIMIT 10",
-    [':cid' => $cid]
-)->queryAll();
+try {
+    $contracts = $db->createCommand(
+        "SELECT c.id, c.total_value, c.status, c.created_at
+         FROM os_contracts c INNER JOIN os_contracts_customers cc ON cc.contract_id=c.id
+         WHERE cc.customer_id=:cid ORDER BY c.id DESC LIMIT 10",
+        [':cid' => $cid]
+    )->queryAll();
+} catch (\Exception $e) { $contracts = []; }
 
 $statusLabels = [
     'active' => ['نشط', '#059669', '#ecfdf5'],

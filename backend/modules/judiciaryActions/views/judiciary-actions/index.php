@@ -163,6 +163,10 @@ $natureStyles = [
     <div class="ja-header">
         <h1><i class="fa fa-gavel"></i> <?= $this->title ?></h1>
         <div style="display:flex;gap:8px">
+            <?= Html::a('<i class="fa fa-download"></i> تصدير CSV', ['index', 'export' => 'csv'] + Yii::$app->request->queryParams, [
+                'class' => 'btn btn-success',
+                'style' => 'border-radius:8px;font-size:13px;padding:8px 20px;font-weight:600',
+            ]) ?>
             <?= Html::a('<i class="fa fa-plus"></i> إضافة إجراء جديد', ['create'], [
                 'class' => 'btn btn-primary',
                 'role' => 'modal-remote',
