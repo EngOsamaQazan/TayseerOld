@@ -227,6 +227,12 @@ class ContractsSearch extends Contracts
     public function searchLegalDepartment($params)
     {
         $query = contracts::find()->innerJoinWith(['customersWithoutCondition as c'])->innerJoinWith(['seller as s'])->innerJoinWith('customersWithoutCondition as cc');
+
+        $query->leftJoin('os_jobs j', 'c.job_title = j.id');
+        $query->leftJoin('os_jobs_type jt', 'j.job_type = jt.id');
+
+        $paidSubquery = '(SELECT COALESCE(SUM(amount),0) FROM os_contract_installment WHERE contract_id = os_contracts.id)';
+
         if (!empty($params['ContractsSearch']['number_row'])) {
 
             $dataProvider = new ActiveDataProvider([
@@ -240,17 +246,36 @@ class ContractsSearch extends Contracts
                 'query' => $query,
             ]);
         }
+        $dataProvider->sort->defaultOrder = ['id' => SORT_DESC];
+
+        $dataProvider->sort->attributes['id'] = [
+            'asc' => ['os_contracts.id' => SORT_ASC],
+            'desc' => ['os_contracts.id' => SORT_DESC],
+        ];
+        $dataProvider->sort->attributes['total_value'] = [
+            'asc' => ['os_contracts.total_value' => SORT_ASC],
+            'desc' => ['os_contracts.total_value' => SORT_DESC],
+        ];
         $dataProvider->sort->attributes['seller_name'] = [
-            // The tables are the ones our relation are configured to
-            // in my case they are prefixed with "tbl_"
             'asc' => ['s.name' => SORT_ASC],
             'desc' => ['s.name' => SORT_DESC],
         ];
         $dataProvider->sort->attributes['customer_name'] = [
-            // The tables are the ones our relation are configured to
-            // in my case they are prefixed with "tbl_"
             'asc' => ['c.name' => SORT_ASC],
             'desc' => ['c.name' => SORT_DESC],
+        ];
+        $dataProvider->sort->attributes['job_name'] = [
+            'asc' => ['j.name' => SORT_ASC],
+            'desc' => ['j.name' => SORT_DESC],
+        ];
+        $dataProvider->sort->attributes['job_type_name'] = [
+            'asc' => ['jt.name' => SORT_ASC],
+            'desc' => ['jt.name' => SORT_DESC],
+        ];
+        $remainingExpr = "(os_contracts.total_value - $paidSubquery)";
+        $dataProvider->sort->attributes['remaining'] = [
+            'asc'  => [$remainingExpr => SORT_ASC],
+            'desc' => [$remainingExpr => SORT_DESC],
         ];
 
         $this->load($params);
@@ -290,12 +315,13 @@ class ContractsSearch extends Contracts
             $query->andFilterWhere(['=', 'os_contracts.type', $params['ContractsSearch']['type']]);
         }
         if (!empty($params['ContractsSearch']['job_title'])) {
-
             $query->andFilterWhere(['cc.job_title' => $params['ContractsSearch']['job_title']]);
+        }
+        if (!empty($params['ContractsSearch']['job_Type'])) {
+            $query->andFilterWhere(['j.job_type' => $params['ContractsSearch']['job_Type']]);
         }
         $query->andWhere(['os_contracts.status' => Contracts::STATUS_LEGAL_DEPARTMENT]);
 
-        $query->orderBy(['id' => SORT_DESC]);
         return $dataProvider;
     }
 

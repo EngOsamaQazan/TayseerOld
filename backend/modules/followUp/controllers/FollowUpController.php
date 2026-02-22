@@ -23,6 +23,7 @@ use common\models\Model;
 use yii\helpers\ArrayHelper;
 use backend\modules\contracts\models\Contracts;
 use backend\modules\notification\models\Notification;
+use backend\modules\feelings\models\Feelings;
 use common\components\customersInformation;
 use common\helper\Permissions;
 
@@ -759,12 +760,14 @@ class FollowUpController extends Controller
             ->limit(50)
             ->all();
 
+        $feelingsMap = ArrayHelper::map(Feelings::find()->select(['id', 'name'])->asArray()->all(), 'id', 'name');
+        $goalLabels = [1 => 'تحصيل', 2 => 'مصالحة', 3 => 'إنهاء عقد'];
+
         foreach ($followUps as $fu) {
             $type = 'call';
             if (!empty($fu->promise_to_pay_at)) {
                 $type = 'promise';
             }
-            $goalLabels = [1 => 'تحصيل', 2 => 'مصالحة', 3 => 'إنهاء عقد'];
 
             $events[] = [
                 'id' => 'fu-' . $fu->id,
@@ -772,7 +775,7 @@ class FollowUpController extends Controller
                 'datetime' => $fu->date_time ? date('Y/m/d H:i', strtotime($fu->date_time)) : '',
                 'content' => trim(
                     ($fu->notes ?: '') .
-                    ($fu->feeling ? ' | الانطباع: ' . $fu->feeling : '') .
+                    ($fu->feeling ? ' | الانطباع: ' . ($feelingsMap[$fu->feeling] ?? $fu->feeling) : '') .
                     (isset($goalLabels[$fu->connection_goal]) ? ' | الهدف: ' . $goalLabels[$fu->connection_goal] : '')
                 ),
                 'employee' => $fu->createdBy ? $fu->createdBy->username : '',

@@ -246,7 +246,7 @@
     var cid = $(this).data('contract-id'),
         uid = $(this).val();
     if (cid && uid) {
-      $.post('/contracts/contracts/change-followed-by', {
+      $.post('/contracts/contracts/chang-follow-up', {
         contract_id: cid,
         user_id: uid,
         _csrf: yii.getCsrfToken()
@@ -279,8 +279,7 @@
   /* ========== CSV EXPORT ========== */
   $(document).on('click', '#ctExportBtn', function () {
     var params = window.location.search;
-    var exportUrl = window.location.pathname.replace(/\/index$/, '') + '/index' + params +
-      (params ? '&' : '?') + 'export=csv';
+    var exportUrl = window.location.pathname + (params ? params + '&' : '?') + 'export=csv';
     window.location.href = exportUrl;
   });
 

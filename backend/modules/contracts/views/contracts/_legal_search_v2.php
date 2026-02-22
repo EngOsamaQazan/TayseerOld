@@ -16,8 +16,9 @@ $p     = Yii::$app->params;
 $d     = $p['time_duration'];
 $db    = Yii::$app->db;
 
-$users = $cache->getOrSet($p['key_users'], fn() => $db->createCommand($p['users_query'])->queryAll(), $d);
-$jobs  = $cache->getOrSet($p['key_jobs'], fn() => $db->createCommand($p['jobs_query'])->queryAll(), $d);
+$users    = $cache->getOrSet($p['key_users'], fn() => $db->createCommand($p['users_query'])->queryAll(), $d);
+$jobs     = $cache->getOrSet($p['key_jobs'], fn() => $db->createCommand($p['jobs_query'])->queryAll(), $d);
+$jobTypes = \backend\modules\jobs\models\JobsType::find()->select(['id', 'name'])->asArray()->all();
 
 /* عقود الدائرة القانونية للقائمة المنسدلة */
 $legalContracts = ArrayHelper::map(
@@ -133,6 +134,16 @@ $legalContracts = ArrayHelper::map(
         <?= $form->field($model, 'job_title', ['template' => '{input}'])->widget(Select2::class, [
             'data' => ArrayHelper::map($jobs, 'id', 'name'),
             'options' => ['placeholder' => 'الوظيفة', 'aria-label' => 'الوظيفة'],
+            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+        ]) ?>
+    </div>
+
+    <!-- نوع الوظيفة -->
+    <div class="ct-filter-group">
+        <label>نوع الوظيفة</label>
+        <?= $form->field($model, 'job_Type', ['template' => '{input}'])->widget(Select2::class, [
+            'data' => ArrayHelper::map($jobTypes, 'id', 'name'),
+            'options' => ['placeholder' => 'نوع الوظيفة', 'aria-label' => 'نوع الوظيفة'],
             'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
         ]) ?>
     </div>

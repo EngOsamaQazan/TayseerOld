@@ -395,17 +395,11 @@
         // AI
         // ═══════════════════════════════════════
         executeAIAction: function (actionType) {
-            // Special handling for judiciary actions
-            if (actionType === 'add_judiciary_action') {
-                // Switch to judiciary tab
-                this.switchTab('judiciary-actions');
-                this.toast('انتقل لتبويب الإجراءات القضائية', 'info');
-                return;
-            }
-            if (actionType === 'open_case') {
-                // Click the open case button if exists
-                var caseBtn = document.querySelector('[data-action="add_judiciary_action"]');
-                if (caseBtn) caseBtn.click();
+            if (actionType === 'add_judiciary_action' || actionType === 'open_case') {
+                var config = window.OCP_CONFIG || {};
+                if (config.urls && config.urls.createJudiciary) {
+                    window.open(config.urls.createJudiciary, '_blank');
+                }
                 return;
             }
 
@@ -451,10 +445,11 @@
             var action = btn.dataset.action;
             if (!action) return;
 
-            // Judiciary-specific CTA handling
             if (action === 'add_judiciary_action') {
-                this.switchTab('judiciary-actions');
-                this.toast('انتقل لتبويب الإجراءات القضائية', 'info');
+                var config = window.OCP_CONFIG || {};
+                if (config.urls && config.urls.createJudiciary) {
+                    window.open(config.urls.createJudiciary, '_blank');
+                }
                 return;
             }
 

@@ -135,10 +135,90 @@ class ContractsController extends Controller
         $dataProvider = $searchModel->searchLegalDepartment(Yii::$app->request->queryParams);
         $dataCount = $searchModel->searchLegalDepartmentCount(Yii::$app->request->queryParams);
 
-        return $this->render('index-legal-department', [
+        if (Yii::$app->request->get('show_all')) {
+            $dataProvider->setPagination(false);
+        }
+
+        if (Yii::$app->request->get('export') === 'csv') {
+            return $this->exportLegalCsv($dataProvider);
+        }
+
+        $referrer = Yii::$app->request->referrer ?: '';
+        $isIframe = strpos($referrer, '/judiciary') !== false || Yii::$app->request->get('_iframe');
+        $renderMethod = $isIframe ? 'renderAjax' : 'render';
+
+        return $this->$renderMethod('index-legal-department', [
             'searchModel'  => $searchModel,
             'dataProvider' => $dataProvider,
             'dataCount'    => $dataCount,
+        ]);
+    }
+
+    private function exportLegalCsv($dataProvider)
+    {
+        $dataProvider->setPagination(false);
+        $dataProvider->prepare(true);
+        $models = $dataProvider->getModels();
+
+        $jobsRows = \backend\modules\jobs\models\Jobs::find()->select(['id', 'name', 'job_type'])->asArray()->all();
+        $jobsMap = ArrayHelper::map($jobsRows, 'id', 'name');
+        $jobToTypeMap = ArrayHelper::map($jobsRows, 'id', 'job_type');
+        $jobTypesMap = ArrayHelper::map(
+            \backend\modules\jobs\models\JobsType::find()->select(['id', 'name'])->asArray()->all(), 'id', 'name'
+        );
+
+        $judiciaryMap = [];
+        $ids = ArrayHelper::getColumn($models, 'id');
+        if (!empty($ids)) {
+            $judRecords = \backend\modules\judiciary\models\Judiciary::find()
+                ->where(['contract_id' => $ids, 'is_deleted' => 0])
+                ->orderBy(['id' => SORT_DESC])
+                ->all();
+            foreach ($judRecords as $jud) {
+                if (!isset($judiciaryMap[$jud->contract_id])) {
+                    $judiciaryMap[$jud->contract_id] = $jud;
+                }
+            }
+        }
+
+        $handle = fopen('php://temp', 'r+');
+        fwrite($handle, "\xEF\xBB\xBF");
+        fputcsv($handle, ['#', 'الأطراف', 'الإجمالي', 'المتبقي', 'الوظيفة', 'نوع الوظيفة'], ',', '"', '\\');
+
+        foreach ($models as $m) {
+            $parties = $m->customersAndGuarantor;
+            $partyLines = [];
+            $firstCustomer = $parties[0] ?? null;
+            foreach ($parties as $p) {
+                $line = $p->name;
+                if ($p->id_number) $line .= ' (' . $p->id_number . ')';
+                $partyLines[] = $line;
+            }
+            $partiesText = implode(' | ', $partyLines) ?: '—';
+
+            $jud = $judiciaryMap[$m->id] ?? null;
+            $total = $m->total_value;
+            if ($jud) $total += ($jud->case_cost ?? 0) + ($jud->lawyer_cost ?? 0);
+            $paid = \backend\modules\contractInstallment\models\ContractInstallment::find()
+                ->where(['contract_id' => $m->id])->sum('amount') ?? 0;
+            $remaining = $total - $paid;
+            $jobId = ($firstCustomer && $firstCustomer->job_title) ? $firstCustomer->job_title : null;
+            $jobName = $jobId ? ($jobsMap[$jobId] ?? '') : '';
+            $jobTypeId = $jobId ? ($jobToTypeMap[$jobId] ?? null) : null;
+            $jobTypeName = $jobTypeId ? ($jobTypesMap[$jobTypeId] ?? '') : '';
+
+            fputcsv($handle, [
+                $m->id, $partiesText, $total, round($remaining), $jobName, $jobTypeName,
+            ], ',', '"', '\\');
+        }
+
+        rewind($handle);
+        $content = stream_get_contents($handle);
+        fclose($handle);
+
+        $filename = 'الدائرة_القانونية_' . date('Y-m-d') . '.csv';
+        return Yii::$app->response->sendContentAsFile($content, $filename, [
+            'mimeType' => 'text/csv',
         ]);
     }
 

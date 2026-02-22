@@ -49,7 +49,7 @@ $sortLink = function ($attribute, $label) use ($sort, $sortOrders) {
     return '<a href="' . Html::encode($url) . '">' . $label . $icon . '</a>';
 };
 
-$begin = $pagination->getOffset() + 1;
+$begin = $pagination ? $pagination->getOffset() + 1 : 1;
 $end   = $begin + count($models) - 1;
 
 /* Pre-fetch judiciary records for all contracts to avoid N+1 */
@@ -58,7 +58,6 @@ $judiciaryMap = [];
 if (!empty($contractIds)) {
     $judRecords = Judiciary::find()
         ->where(['contract_id' => $contractIds])
-        ->with(['court', 'lawyer'])
         ->orderBy(['id' => SORT_DESC])
         ->all();
     foreach ($judRecords as $jud) {
@@ -67,9 +66,18 @@ if (!empty($contractIds)) {
         }
     }
 }
+
+/* Pre-fetch jobs (id → name, id → job_type FK) and job types (id → name) */
+$jobsRows = \backend\modules\jobs\models\Jobs::find()->select(['id', 'name', 'job_type'])->asArray()->all();
+$jobsMap = ArrayHelper::map($jobsRows, 'id', 'name');
+$jobToTypeMap = ArrayHelper::map($jobsRows, 'id', 'job_type');
+$jobTypesMap = ArrayHelper::map(
+    \backend\modules\jobs\models\JobsType::find()->select(['id', 'name'])->asArray()->all(), 'id', 'name'
+);
 ?>
 
-<div class="ct-page ct-legal-page" role="main" aria-label="صفحة الدائرة القانونية">
+<?php $isIframe = Yii::$app->request->get('_iframe'); ?>
+<div class="ct-page ct-legal-page<?= $isIframe ? ' ct-iframe-mode' : '' ?>" role="main" aria-label="صفحة الدائرة القانونية">
 
     <!-- Flash messages -->
     <?php foreach (['success' => 'check-circle', 'error' => 'exclamation-circle', 'warning' => 'exclamation-triangle'] as $type => $icon): ?>
@@ -89,8 +97,19 @@ if (!empty($contractIds)) {
             <span class="ct-count" aria-label="إجمالي العقود"><?= number_format($dataCount) ?></span>
         </div>
         <div class="ct-hdr-actions">
-            <a href="<?= Url::to(['index']) ?>" class="ct-btn ct-btn-outline" aria-label="العودة لجميع العقود">
-                <i class="fa fa-arrow-right"></i> <span class="ct-hide-xs">جميع العقود</span>
+            <?php
+            $isShowAll = Yii::$app->request->get('show_all');
+            $showAllParams = Yii::$app->request->queryParams;
+            if ($isShowAll) {
+                unset($showAllParams['show_all']);
+            } else {
+                $showAllParams['show_all'] = 1;
+            }
+            $showAllUrl = Url::to(array_merge(['index-legal-department'], $showAllParams));
+            ?>
+            <a href="<?= $showAllUrl ?>" class="ct-btn ct-btn-outline" id="ctShowAllBtn" aria-label="<?= $isShowAll ? 'عرض مرقّم' : 'عرض الجميع' ?>">
+                <i class="fa fa-<?= $isShowAll ? 'list' : 'th-list' ?>"></i>
+                <span class="ct-hide-xs"><?= $isShowAll ? 'عرض مرقّم' : 'عرض الجميع' ?></span>
             </a>
             <button class="ct-btn ct-btn-outline ct-hide-sm" id="ctExportBtn" title="تصدير CSV">
                 <i class="fa fa-download"></i> <span class="ct-hide-xs">تصدير</span>
@@ -104,37 +123,45 @@ if (!empty($contractIds)) {
     <!-- ===== LEGAL SUMMARY CARDS ===== -->
     <?php
     $totalContracts = $dataCount;
-    $totalRemaining = 0;
-    $totalCaseCosts = 0;
-    $totalLawyerCosts = 0;
-    foreach ($models as $m) {
-        $jud = $judiciaryMap[$m->id] ?? null;
-        if ($jud) {
-            $totalCaseCosts += $jud->case_cost ?? 0;
-            $totalLawyerCosts += $jud->lawyer_cost ?? 0;
-        }
-    }
+    $withCase = (int) Judiciary::find()
+        ->innerJoin('os_contracts c2', 'c2.id = os_judiciary.contract_id')
+        ->where(['c2.status' => 'legal_department', 'c2.is_deleted' => 0, 'os_judiciary.is_deleted' => 0])
+        ->count('DISTINCT os_judiciary.contract_id');
+    $withoutCase = $totalContracts - $withCase;
+    $totalLegalCosts = (int) Yii::$app->db->createCommand(
+        'SELECT COALESCE(SUM(COALESCE(j.case_cost,0) + COALESCE(j.lawyer_cost,0)),0)
+         FROM os_judiciary j INNER JOIN os_contracts c2 ON c2.id = j.contract_id
+         WHERE c2.status = :st AND c2.is_deleted = 0 AND j.is_deleted = 0',
+        [':st' => 'legal_department']
+    )->queryScalar();
     ?>
     <div class="ct-legal-stats">
         <div class="ct-legal-stat-card">
             <div class="ct-legal-stat-icon" style="background:#FFF3E0;color:#E65100"><i class="fa fa-legal"></i></div>
             <div class="ct-legal-stat-body">
                 <span class="ct-legal-stat-value"><?= number_format($totalContracts) ?></span>
-                <span class="ct-legal-stat-label">عقد في الدائرة القانونية</span>
+                <span class="ct-legal-stat-label">إجمالي العقود</span>
+            </div>
+        </div>
+        <div class="ct-legal-stat-card">
+            <div class="ct-legal-stat-icon" style="background:#E8F5E9;color:#2E7D32"><i class="fa fa-check-circle"></i></div>
+            <div class="ct-legal-stat-body">
+                <span class="ct-legal-stat-value"><?= number_format($withCase) ?></span>
+                <span class="ct-legal-stat-label">لديها قضية مسجلة</span>
+            </div>
+        </div>
+        <div class="ct-legal-stat-card">
+            <div class="ct-legal-stat-icon" style="background:#FFF8E1;color:#F57F17"><i class="fa fa-exclamation-circle"></i></div>
+            <div class="ct-legal-stat-body">
+                <span class="ct-legal-stat-value"><?= number_format($withoutCase) ?></span>
+                <span class="ct-legal-stat-label">بدون قضية (بانتظار التسجيل)</span>
             </div>
         </div>
         <div class="ct-legal-stat-card">
             <div class="ct-legal-stat-icon" style="background:#FCE4EC;color:#C62828"><i class="fa fa-money"></i></div>
             <div class="ct-legal-stat-body">
-                <span class="ct-legal-stat-value"><?= number_format($totalCaseCosts) ?></span>
-                <span class="ct-legal-stat-label">تكاليف القضايا (الصفحة)</span>
-            </div>
-        </div>
-        <div class="ct-legal-stat-card">
-            <div class="ct-legal-stat-icon" style="background:#E8EAF6;color:#283593"><i class="fa fa-briefcase"></i></div>
-            <div class="ct-legal-stat-body">
-                <span class="ct-legal-stat-value"><?= number_format($totalLawyerCosts) ?></span>
-                <span class="ct-legal-stat-label">أتعاب المحاماة (الصفحة)</span>
+                <span class="ct-legal-stat-value"><?= number_format($totalLegalCosts) ?></span>
+                <span class="ct-legal-stat-label">إجمالي التكاليف القانونية</span>
             </div>
         </div>
     </div>
@@ -194,23 +221,27 @@ if (!empty($contractIds)) {
                             <input type="checkbox" id="ctSelectAll" title="تحديد الكل" style="cursor:pointer;width:18px;height:18px">
                         </th>
                         <th class="ct-th-id"><?= $sortLink('id', '#') ?></th>
-                        <th>العميل</th>
-                        <th><?= $sortLink('seller_id', 'البائع') ?></th>
-                        <th><?= $sortLink('Date_of_sale', 'تاريخ البيع') ?></th>
+                        <th><?= $sortLink('customer_name', 'الأطراف') ?></th>
                         <th><?= $sortLink('total_value', 'الإجمالي') ?></th>
-                        <th>المتبقي</th>
-                        <th>رقم القضية</th>
-                        <th>المحكمة</th>
-                        <th>المحامي</th>
-                        <th>تكاليف</th>
-                        <th>المتابع</th>
+                        <th><?= $sortLink('remaining', 'المتبقي') ?></th>
+                        <th><?= $sortLink('job_name', 'الوظيفة') ?></th>
+                        <th><?= $sortLink('job_type_name', 'نوع الوظيفة') ?></th>
                         <th style="text-align:center">إجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($models as $m):
-                        /* Customer names */
-                        $customerNames = implode('، ', ArrayHelper::map($m->customers, 'id', 'name')) ?: '—';
+                        /* Parties: names + national IDs */
+                        $allParties = $m->customersAndGuarantor;
+                        $partiesHtml = [];
+                        $firstCustomer = $allParties[0] ?? null;
+                        foreach ($allParties as $p) {
+                            $line = Html::encode($p->name);
+                            if ($p->id_number) $line .= ' <small style="color:#64748b">(' . Html::encode($p->id_number) . ')</small>';
+                            $partiesHtml[] = $line;
+                        }
+                        $partiesDisplay = implode('<br>', $partiesHtml) ?: '—';
+                        $partiesTitle = implode('، ', ArrayHelper::getColumn($allParties, 'name'));
 
                         /* Total with judiciary costs */
                         $jud = $judiciaryMap[$m->id] ?? null;
@@ -227,21 +258,19 @@ if (!empty($contractIds)) {
                         $paid = ContractInstallment::find()->where(['contract_id' => $m->id])->sum('amount') ?? 0;
                         $remaining = $totalForRemain - $paid;
 
-                        $sellerName = $m->seller->name ?? '—';
-                        $followName = $allUsers[$m->followed_by] ?? ($m->followedBy->username ?? '—');
+                        /* Job info from first customer: Customer.job_title → Jobs.id → Jobs.job_type → JobsType.id */
+                        $jobId = ($firstCustomer && $firstCustomer->job_title) ? $firstCustomer->job_title : null;
+                        $jobName = $jobId ? ($jobsMap[$jobId] ?? '—') : '—';
+                        $jobTypeId = $jobId ? ($jobToTypeMap[$jobId] ?? null) : null;
+                        $jobTypeName = $jobTypeId ? ($jobTypesMap[$jobTypeId] ?? '—') : '—';
 
-                        /* Judiciary details */
-                        $judNumber = $jud ? ($jud->judiciary_number . '/' . ($jud->year ?: '—')) : '—';
-                        $courtName = $jud && $jud->court ? $jud->court->name : '—';
-                        $lawyerName = $jud && $jud->lawyer ? $jud->lawyer->name : '—';
-                        $judCosts = $jud ? number_format(($jud->case_cost ?? 0) + ($jud->lawyer_cost ?? 0), 0) : '—';
                     ?>
                     <tr data-id="<?= $m->id ?>">
                         <td style="text-align:center;vertical-align:middle">
                             <?php if (!$jud): ?>
                             <input type="checkbox" class="ct-batch-check" value="<?= $m->id ?>"
                                    data-remaining="<?= round($remaining, 2) ?>"
-                                   data-customer="<?= Html::encode($customerNames) ?>"
+                                   data-customer="<?= Html::encode($partiesTitle) ?>"
                                    style="cursor:pointer;width:18px;height:18px">
                             <?php else: ?>
                             <span class="ct-text-muted" title="تم إنشاء القضية"><i class="fa fa-check-circle text-success" style="font-size:16px"></i></span>
@@ -250,14 +279,8 @@ if (!empty($contractIds)) {
                         <td class="ct-td-id" data-label="#">
                             <?= $m->id ?>
                         </td>
-                        <td class="ct-td-customer" data-label="العميل" title="<?= Html::encode($customerNames) ?>">
-                            <?= Html::encode($customerNames) ?>
-                        </td>
-                        <td class="ct-td-seller" data-label="البائع">
-                            <?= Html::encode($sellerName) ?>
-                        </td>
-                        <td class="ct-td-date" data-label="تاريخ البيع">
-                            <?= $m->Date_of_sale ?>
+                        <td class="ct-td-customer" data-label="الأطراف" title="<?= Html::encode($partiesTitle) ?>" style="white-space:normal;min-width:180px">
+                            <?= $partiesDisplay ?>
                         </td>
                         <td class="ct-td-money" data-label="الإجمالي">
                             <?= number_format($total, 0) ?>
@@ -265,32 +288,11 @@ if (!empty($contractIds)) {
                         <td class="ct-td-money ct-td-remain" data-label="المتبقي">
                             <?= number_format($remaining, 0) ?>
                         </td>
-                        <td class="ct-td-legal-num" data-label="رقم القضية">
-                            <?php if ($jud): ?>
-                                <span class="ct-legal-case-num"><?= Html::encode($judNumber) ?></span>
-                            <?php else: ?>
-                                <span class="ct-text-muted">—</span>
-                            <?php endif ?>
+                        <td data-label="الوظيفة">
+                            <?= Html::encode($jobName) ?>
                         </td>
-                        <td class="ct-td-court" data-label="المحكمة">
-                            <?= Html::encode($courtName) ?>
-                        </td>
-                        <td class="ct-td-lawyer" data-label="المحامي">
-                            <?= Html::encode($lawyerName) ?>
-                        </td>
-                        <td class="ct-td-money ct-td-costs" data-label="تكاليف">
-                            <?= $judCosts ?>
-                        </td>
-                        <td class="ct-td-follow" data-label="المتابع">
-                            <?php if ($isManager): ?>
-                                <?= Html::dropDownList('followedBy', $m->followed_by, $allUsers, [
-                                    'class' => 'ct-follow-select followUpUser',
-                                    'data-contract-id' => $m->id,
-                                    'prompt' => '-- اختر --',
-                                ]) ?>
-                            <?php else: ?>
-                                <?= Html::encode($followName) ?>
-                            <?php endif ?>
+                        <td data-label="نوع الوظيفة">
+                            <?= Html::encode($jobTypeName) ?>
                         </td>
                         <td class="ct-td-actions" data-label="">
                             <div class="ct-act-wrap">
@@ -352,7 +354,7 @@ if (!empty($contractIds)) {
     </div>
 
     <!-- ===== PAGINATION ===== -->
-    <?php if ($dataCount > 0): ?>
+    <?php if ($dataCount > 0 && $pagination): ?>
     <div class="ct-pagination-wrap">
         <?= LinkPager::widget([
             'pagination' => $pagination,
@@ -522,4 +524,91 @@ $('.ct-alert-close').on('click', function(){ $(this).closest('.ct-alert').fadeOu
 setTimeout(function(){ $('.ct-alert').fadeOut(500); }, 5000);
 JS
 );
+
+if (Yii::$app->request->get('_iframe')) {
+    $this->registerJs(<<<'IFRAME_JS'
+(function(){
+    function isSamePage(url) {
+        return url && (url.indexOf('index-legal-department') !== -1 || url.indexOf('legal-department') !== -1);
+    }
+    function ensureIframeParam(url) {
+        if (url && url.indexOf('_iframe') === -1) {
+            return url + (url.indexOf('?') !== -1 ? '&' : '?') + '_iframe=1';
+        }
+        return url;
+    }
+    function stripIframeParam(url) {
+        return url.replace(/([?&])_iframe=1&?/g, '$1').replace(/[?&]$/, '');
+    }
+
+    document.addEventListener('click', function(e) {
+        var link = e.target.closest('a[href]');
+        if (!link) return;
+        var href = link.getAttribute('href');
+        if (!href || href.charAt(0) === '#' || href.indexOf('javascript:') === 0) return;
+        if (link.getAttribute('role') === 'modal-remote') return;
+        if (link.hasAttribute('data-pjax')) return;
+
+        if (isSamePage(href)) {
+            link.setAttribute('href', ensureIframeParam(href));
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+        window.top.location.href = href;
+    }, true);
+
+    document.addEventListener('submit', function(e) {
+        var form = e.target;
+        var action = form.getAttribute('action') || '';
+        if (action && !isSamePage(action)) {
+            form.setAttribute('target', '_top');
+        } else if (!form.querySelector('input[name="_iframe"]')) {
+            var inp = document.createElement('input');
+            inp.type = 'hidden'; inp.name = '_iframe'; inp.value = '1';
+            form.appendChild(inp);
+        }
+    }, true);
+
+    new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+            for (var i = 0; i < m.addedNodes.length; i++) {
+                var node = m.addedNodes[i];
+                if (node.tagName === 'FORM' && !node.getAttribute('target')) {
+                    var action = node.getAttribute('action') || '';
+                    if (action && !isSamePage(action)) {
+                        node.setAttribute('target', '_top');
+                    }
+                }
+            }
+        });
+    }).observe(document.body, { childList: true });
+
+    $(document).off('click', '#ctExportBtn').on('click', '#ctExportBtn', function(e) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        var params = window.location.search;
+        var exportUrl = window.location.pathname +
+            (params ? params + '&' : '?') + 'export=csv';
+        window.top.location.href = stripIframeParam(exportUrl);
+    });
+
+    $(document).off('click', '.ct-chip-remove').on('click', '.ct-chip-remove', function(e) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        var param = $(this).data('param');
+        if (param === '__all') {
+            window.location.href = ensureIframeParam(window.location.pathname);
+            return;
+        }
+        var params = new URLSearchParams(window.location.search);
+        params.delete(param);
+        if (!params.has('_iframe')) params.set('_iframe', '1');
+        window.location.href = window.location.pathname + '?' + params.toString();
+    });
+})();
+IFRAME_JS
+    );
+}
 ?>

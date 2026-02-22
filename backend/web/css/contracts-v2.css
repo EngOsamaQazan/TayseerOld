@@ -1041,33 +1041,23 @@ body:has(.ct-page) .content-header {
 }
 
 /* ── Legal-specific table cells ── */
-.ct-td-legal-num { white-space: nowrap; }
-.ct-legal-case-num {
-    font-family: 'Courier New', monospace;
-    font-weight: 600;
-    font-size: 13px;
-    color: var(--ct-danger, #dc3545);
-    background: rgba(220,53,69,.08);
-    padding: 3px 8px;
-    border-radius: 6px;
-    letter-spacing: .5px;
-}
-.ct-td-court, .ct-td-lawyer {
-    font-size: 12.5px;
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.ct-td-costs {
-    font-weight: 600;
-    color: var(--ct-danger, #dc3545);
-}
-.ct-text-muted { color: var(--ct-muted); }
+.ct-text-muted { color: var(--ct-muted, #6c757d); }
 
+/* ── Party cell: multi-line names with IDs ── */
+.ct-td-customer {
+    line-height: 1.7;
+}
+.ct-td-customer small {
+    font-size: 11px;
+    font-weight: 400;
+    direction: ltr;
+    unicode-bidi: embed;
+}
+
+/* ── Legal stats responsive ── */
 @media (max-width: 768px) {
     .ct-legal-stats {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr;
         gap: 10px;
     }
     .ct-legal-stat-card {
@@ -1075,5 +1065,43 @@ body:has(.ct-page) .content-header {
     }
     .ct-legal-stat-value {
         font-size: 18px;
+    }
+}
+@media (max-width: 480px) {
+    .ct-legal-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Legal page in iframe: compact mode ── */
+.ct-legal-page.ct-iframe-mode {
+    padding: 16px;
+}
+.ct-iframe-mode .ct-page-hdr {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+}
+.ct-iframe-mode .ct-page-hdr h1 {
+    font-size: 20px;
+}
+.ct-iframe-mode .ct-legal-stats {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.ct-iframe-mode .ct-legal-stat-card {
+    padding: 12px 14px;
+}
+.ct-iframe-mode .ct-legal-stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+}
+.ct-iframe-mode .ct-legal-stat-value {
+    font-size: 18px;
+}
+@media (max-width: 768px) {
+    .ct-iframe-mode .ct-legal-stats {
+        grid-template-columns: 1fr 1fr;
     }
 }
