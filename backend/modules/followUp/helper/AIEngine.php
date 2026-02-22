@@ -171,6 +171,9 @@ class AIEngine
             'court_decision' => 'قرار قضائي',
             'general' => 'إجراء عام',
         ];
+        if ($stage === null) {
+            return '';
+        }
         return $labels[$stage] ?? $stage;
     }
 
