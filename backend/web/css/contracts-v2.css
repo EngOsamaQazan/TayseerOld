@@ -178,10 +178,27 @@ body:has(.ct-page) .content-header {
   gap: 14px 18px;
   align-items: end;
 }
+.ct-legal-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ct-lf-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: end;
+}
+.ct-lf-date-pair {
+  display: flex;
+  gap: 8px;
+  align-items: end;
+}
+.ct-lf-date-pair .ct-filter-group { min-width: 120px; }
 .ct-filter-group {
   display: flex;
   flex-direction: column;
-  min-width: 0; /* prevent grid overflow */
+  min-width: 0;
 }
 /* العميل — يأخذ عمودين على الشاشات الكبيرة فقط */
 .ct-filter-customer {
@@ -786,6 +803,8 @@ body:has(.ct-page) .content-header {
     grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
+  .ct-lf-row { flex-direction: column; }
+  .ct-lf-date-pair { flex: 1 1 100%; }
   .ct-filter-body {
     padding: 16px;
   }
@@ -1034,6 +1053,13 @@ body:has(.ct-page) .content-header {
     justify-content: center;
     font-size: 20px;
     flex-shrink: 0;
+}
+.ct-legal-stat-icon i.fa {
+    display: inline-block !important;
+    font-family: FontAwesome !important;
+    font-style: normal;
+    font-size: inherit;
+    visibility: visible !important;
 }
 .ct-legal-stat-body {
     display: flex;
