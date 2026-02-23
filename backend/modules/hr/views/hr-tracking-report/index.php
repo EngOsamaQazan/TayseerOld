@@ -11,6 +11,16 @@ $onLeave = (int)($todayStats['on_leave'] ?? 0);
 $avgWork = (int)($todayStats['avg_work_min'] ?? 0);
 $avgLate = (int)($todayStats['avg_late_min'] ?? 0);
 
+echo $this->render('@backend/modules/hr/views/_section_tabs', [
+    'group' => 'reports',
+    'tabs'  => [
+        ['label' => 'لوحة التحليلات', 'icon' => 'fa-bar-chart',       'url' => ['/hr/hr-tracking-report/index']],
+        ['label' => 'التقرير الشهري', 'icon' => 'fa-calendar',         'url' => ['/hr/hr-tracking-report/monthly']],
+        ['label' => 'الانضباط',       'icon' => 'fa-star-half-o',      'url' => ['/hr/hr-tracking-report/punctuality']],
+        ['label' => 'المخالفات',      'icon' => 'fa-shield',           'url' => ['/hr/hr-tracking-report/violations']],
+    ],
+]);
+
 $methodLabels = [
     'geofence_auto' => 'تلقائي (Geofence)',
     'manual' => 'يدوي',

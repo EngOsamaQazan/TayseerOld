@@ -15,6 +15,16 @@ foreach ($data as $row) {
 unset($v);
 ?>
 
+<?= $this->render('@backend/modules/hr/views/_section_tabs', [
+    'group' => 'reports',
+    'tabs'  => [
+        ['label' => 'لوحة التحليلات', 'icon' => 'fa-bar-chart',       'url' => ['/hr/hr-tracking-report/index']],
+        ['label' => 'التقرير الشهري', 'icon' => 'fa-calendar',         'url' => ['/hr/hr-tracking-report/monthly']],
+        ['label' => 'الانضباط',       'icon' => 'fa-star-half-o',      'url' => ['/hr/hr-tracking-report/punctuality']],
+        ['label' => 'المخالفات',      'icon' => 'fa-shield',           'url' => ['/hr/hr-tracking-report/violations']],
+    ],
+]) ?>
+
 <style>
 .rp-page{padding:20px}
 .rp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}

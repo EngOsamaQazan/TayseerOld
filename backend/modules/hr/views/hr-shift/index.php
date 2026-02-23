@@ -11,6 +11,16 @@ $dayNames = [
 ];
 ?>
 
+<?= $this->render('@backend/modules/hr/views/_section_tabs', [
+    'group' => 'tracking',
+    'tabs'  => [
+        ['label' => 'سجل الحضور',    'icon' => 'fa-calendar-check-o', 'url' => ['/hr/hr-tracking-api/attendance-board']],
+        ['label' => 'التتبع المباشر', 'icon' => 'fa-crosshairs',       'url' => ['/hr/hr-tracking-api/live-map']],
+        ['label' => 'الورديات',       'icon' => 'fa-clock-o',          'url' => ['/hr/hr-shift/index']],
+        ['label' => 'مناطق العمل',    'icon' => 'fa-map-pin',          'url' => ['/hr/hr-work-zone/index']],
+    ],
+]) ?>
+
 <style>
 .hr-page { padding: 20px; }
 .hr-page-header {

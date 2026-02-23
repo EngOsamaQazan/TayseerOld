@@ -9,6 +9,15 @@ use kartik\grid\GridView;
 
 $this->title = 'مسيرات الرواتب';
 
+echo $this->render('@backend/modules/hr/views/_section_tabs', [
+    'group' => 'payroll',
+    'tabs'  => [
+        ['label' => 'مسيرات الرواتب',   'icon' => 'fa-money',       'url' => ['/hr/hr-payroll/index']],
+        ['label' => 'العلاوات السنوية', 'icon' => 'fa-line-chart',  'url' => ['/hr/hr-payroll/increments']],
+        ['label' => 'السلف والقروض',    'icon' => 'fa-credit-card', 'url' => ['/hr/hr-loan/index']],
+    ],
+]);
+
 $arabicMonths = [
     1  => 'يناير',  2  => 'فبراير', 3  => 'مارس',
     4  => 'أبريل',  5  => 'مايو',   6  => 'يونيو',

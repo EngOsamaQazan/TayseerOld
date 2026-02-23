@@ -10,6 +10,15 @@ use yii\helpers\Url;
 
 $this->title = 'العلاوات السنوية';
 
+echo $this->render('@backend/modules/hr/views/_section_tabs', [
+    'group' => 'payroll',
+    'tabs'  => [
+        ['label' => 'مسيرات الرواتب',   'icon' => 'fa-money',       'url' => ['/hr/hr-payroll/index']],
+        ['label' => 'العلاوات السنوية', 'icon' => 'fa-line-chart',  'url' => ['/hr/hr-payroll/increments']],
+        ['label' => 'السلف والقروض',    'icon' => 'fa-credit-card', 'url' => ['/hr/hr-loan/index']],
+    ],
+]);
+
 $statusMap = [
     'pending'   => ['label' => 'بانتظار', 'class' => 'label-warning'],
     'approved'  => ['label' => 'معتمدة',  'class' => 'label-info'],
