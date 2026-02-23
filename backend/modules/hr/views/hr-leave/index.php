@@ -244,28 +244,28 @@ $csrfToken = Yii::$app->request->csrfToken;
             <div class="hr-kpi-card__icon"><i class="fa fa-file-text"></i></div>
             <div class="hr-kpi-card__body">
                 <span class="hr-kpi-card__label">إجمالي الطلبات</span>
-                <span class="hr-kpi-card__value"><?= number_format($kpis['total']) ?></span>
+                <span class="hr-kpi-card__value"><?= number_format($kpis['total'] ?? 0) ?></span>
             </div>
         </div>
         <div class="hr-kpi-card" style="--kpi-accent: var(--hr-warning, #f39c12)">
             <div class="hr-kpi-card__icon"><i class="fa fa-clock-o"></i></div>
             <div class="hr-kpi-card__body">
                 <span class="hr-kpi-card__label">قيد المراجعة</span>
-                <span class="hr-kpi-card__value"><?= number_format($kpis['pending']) ?></span>
+                <span class="hr-kpi-card__value"><?= number_format($kpis['pending'] ?? 0) ?></span>
             </div>
         </div>
         <div class="hr-kpi-card" style="--kpi-accent: var(--hr-success, #27ae60)">
             <div class="hr-kpi-card__icon"><i class="fa fa-check-circle"></i></div>
             <div class="hr-kpi-card__body">
                 <span class="hr-kpi-card__label">موافق عليها</span>
-                <span class="hr-kpi-card__value"><?= number_format($kpis['approved']) ?></span>
+                <span class="hr-kpi-card__value"><?= number_format($kpis['approved'] ?? 0) ?></span>
             </div>
         </div>
         <div class="hr-kpi-card" style="--kpi-accent: var(--hr-danger, #e74c3c)">
             <div class="hr-kpi-card__icon"><i class="fa fa-times-circle"></i></div>
             <div class="hr-kpi-card__body">
                 <span class="hr-kpi-card__label">مرفوضة</span>
-                <span class="hr-kpi-card__value"><?= number_format($kpis['rejected']) ?></span>
+                <span class="hr-kpi-card__value"><?= number_format($kpis['rejected'] ?? 0) ?></span>
             </div>
         </div>
     </div>
