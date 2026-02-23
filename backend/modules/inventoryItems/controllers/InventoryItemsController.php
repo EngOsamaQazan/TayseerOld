@@ -837,6 +837,14 @@ class InventoryItemsController extends Controller
                 ];
             }
             if ($model->load($request->post()) && $model->save()) {
+                StockMovement::record($model->item_id, StockMovement::TYPE_IN, 1, [
+                    'reference_type' => 'serial_create',
+                    'reference_id'   => $model->id,
+                    'supplier_id'    => $model->supplier_id ?? null,
+                    'company_id'     => $model->company_id ?? null,
+                    'unit_cost'      => $model->purchase_price ?? null,
+                    'notes'          => 'إضافة رقم تسلسلي: ' . $model->serial_number,
+                ]);
                 return [
                     'forceReload' => '#serial-datatable-pjax',
                     'title'       => 'إضافة رقم تسلسلي',
@@ -854,6 +862,14 @@ class InventoryItemsController extends Controller
         }
 
         if ($model->load($request->post()) && $model->save()) {
+            StockMovement::record($model->item_id, StockMovement::TYPE_IN, 1, [
+                'reference_type' => 'serial_create',
+                'reference_id'   => $model->id,
+                'supplier_id'    => $model->supplier_id ?? null,
+                'company_id'     => $model->company_id ?? null,
+                'unit_cost'      => $model->purchase_price ?? null,
+                'notes'          => 'إضافة رقم تسلسلي: ' . $model->serial_number,
+            ]);
             return $this->redirect(['serial-numbers']);
         }
         return $this->render('_serial_form', ['model' => $model]);
@@ -977,12 +993,12 @@ class InventoryItemsController extends Controller
         $oldStatus = $model->status;
         $model->status = $status;
 
-        // تحديث تاريخ البيع إذا تغيرت الحالة لمباع
         if ($status === InventorySerialNumber::STATUS_SOLD && $oldStatus !== InventorySerialNumber::STATUS_SOLD) {
             $model->sold_at = time();
         }
 
         if ($model->save(false)) {
+            $this->recordSerialStatusMovement($model, $oldStatus, $status);
             return ['success' => true, 'message' => 'تم تغيير الحالة بنجاح'];
         }
         return ['success' => false, 'message' => 'حدث خطأ أثناء الحفظ'];
@@ -998,6 +1014,46 @@ class InventoryItemsController extends Controller
             return $model;
         }
         throw new NotFoundHttpException('الرقم التسلسلي غير موجود.');
+    }
+
+    /**
+     * تسجيل حركة مخزون عند تغيير حالة السيريال يدوياً
+     */
+    private function recordSerialStatusMovement($model, $oldStatus, $newStatus)
+    {
+        $statusLabels = InventorySerialNumber::getStatusList();
+        $oldLabel = $statusLabels[$oldStatus] ?? $oldStatus;
+        $newLabel = $statusLabels[$newStatus] ?? $newStatus;
+
+        if ($newStatus === 'sold' && $oldStatus !== 'sold') {
+            StockMovement::record($model->item_id, StockMovement::TYPE_OUT, 1, [
+                'reference_type' => 'serial_status_change',
+                'reference_id'   => $model->id,
+                'company_id'     => $model->company_id ?? null,
+                'notes'          => "تغيير حالة سيريال {$model->serial_number}: {$oldLabel} → {$newLabel}",
+            ]);
+        } elseif ($oldStatus === 'sold' && $newStatus !== 'sold') {
+            StockMovement::record($model->item_id, StockMovement::TYPE_RETURN, 1, [
+                'reference_type' => 'serial_status_change',
+                'reference_id'   => $model->id,
+                'company_id'     => $model->company_id ?? null,
+                'notes'          => "تغيير حالة سيريال {$model->serial_number}: {$oldLabel} → {$newLabel}",
+            ]);
+        } elseif ($newStatus === 'defective' && $oldStatus !== 'defective') {
+            StockMovement::record($model->item_id, StockMovement::TYPE_OUT, 1, [
+                'reference_type' => 'serial_defective',
+                'reference_id'   => $model->id,
+                'company_id'     => $model->company_id ?? null,
+                'notes'          => "جهاز معطّل: {$model->serial_number}",
+            ]);
+        } elseif ($oldStatus === 'defective' && $newStatus === 'available') {
+            StockMovement::record($model->item_id, StockMovement::TYPE_RETURN, 1, [
+                'reference_type' => 'serial_repaired',
+                'reference_id'   => $model->id,
+                'company_id'     => $model->company_id ?? null,
+                'notes'          => "إصلاح جهاز: {$model->serial_number}",
+            ]);
+        }
     }
 
     /* ═══ مساعدات ═══ */

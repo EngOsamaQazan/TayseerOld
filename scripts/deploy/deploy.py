@@ -69,6 +69,13 @@ def main():
     for site in SITES:
         deploy_site(ssh, site)
 
+    print(f"\n  Restarting Apache to clear PHP opcache...")
+    code, _, _ = run_cmd(ssh, "systemctl restart apache2")
+    if code == 0:
+        print("  Apache restarted — opcache cleared!")
+    else:
+        print("  WARNING: Apache restart failed, opcache may serve stale files")
+
     print(f"\n{'='*60}")
     print("  ALL DEPLOYMENTS COMPLETE!")
     print(f"{'='*60}")

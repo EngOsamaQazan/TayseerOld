@@ -23,6 +23,7 @@ use backend\modules\inventoryItemQuantities\models\InventoryItemQuantities;
 use backend\modules\inventoryStockLocations\models\InventoryStockLocations;
 use backend\modules\contractDocumentFile\models\ContractDocumentFile;
 use backend\modules\notification\models\Notification;
+use backend\modules\inventoryItems\models\StockMovement;
 use backend\modules\companies\models\Companies;
 use backend\modules\contracts\models\PromissoryNote;
 use common\helper\Permissions;
@@ -665,13 +666,18 @@ class ContractsController extends Controller
             $ci->code = $serial->serial_number;
             $ci->save(false);
 
-            // تحديث حالة السيريال إلى "مباع"
             $serial->status = InventorySerialNumber::STATUS_SOLD;
             $serial->contract_id = $model->id;
             $serial->sold_at = time();
             $serial->save(false);
 
-            // تحديث كمية المخزون
+            StockMovement::record($serial->item_id, StockMovement::TYPE_OUT, 1, [
+                'reference_type' => 'contract_sale',
+                'reference_id'   => $model->id,
+                'company_id'     => $model->company_id,
+                'notes'          => 'بيع عبر عقد #' . $model->id . ' — سيريال: ' . $serial->serial_number,
+            ]);
+
             $this->deductInventoryQuantity($model, $serial->item_id);
         }
     }
@@ -709,11 +715,20 @@ class ContractsController extends Controller
 
         $toRelease = array_diff($oldSerialIds, $newSerialIds);
         foreach ($toRelease as $sid) {
+            $releasedSerial = InventorySerialNumber::findOne($sid);
             $this->releaseSerial($sid);
             ContractInventoryItem::deleteAll([
                 'contract_id' => $model->id,
                 'serial_number_id' => $sid,
             ]);
+            if ($releasedSerial) {
+                StockMovement::record($releasedSerial->item_id, StockMovement::TYPE_RETURN, 1, [
+                    'reference_type' => 'contract_update_release',
+                    'reference_id'   => $model->id,
+                    'company_id'     => $model->company_id,
+                    'notes'          => 'إرجاع من عقد #' . $model->id . ' — سيريال: ' . $releasedSerial->serial_number,
+                ]);
+            }
         }
 
         $toAdd = array_diff($newSerialIds, $oldSerialIds);
@@ -732,6 +747,13 @@ class ContractsController extends Controller
             $serial->contract_id = $model->id;
             $serial->sold_at = time();
             $serial->save(false);
+
+            StockMovement::record($serial->item_id, StockMovement::TYPE_OUT, 1, [
+                'reference_type' => 'contract_sale',
+                'reference_id'   => $model->id,
+                'company_id'     => $model->company_id,
+                'notes'          => 'بيع عبر عقد #' . $model->id . ' — سيريال: ' . $serial->serial_number,
+            ]);
 
             $this->deductInventoryQuantity($model, $serial->item_id);
         }
