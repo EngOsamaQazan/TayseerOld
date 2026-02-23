@@ -54,11 +54,34 @@ if (!isset($branches)) {
 if (!isset($shifts)) {
     try {
         $shifts = ArrayHelper::map(
-            (new Query())->select(['id', 'name'])->from('{{%hr_work_shift}}')->where(['is_deleted' => 0])->all(),
-            'id', 'name'
+            (new Query())->select(['id', 'title'])->from('{{%work_shift}}')->where(['is_active' => 1])->all(),
+            'id', 'title'
         );
     } catch (\Exception $e) { $shifts = []; }
 }
+
+if (!isset($workZones)) {
+    try {
+        $workZones = ArrayHelper::map(
+            (new Query())->select(['id', 'name'])->from('{{%hr_work_zone}}')->where(['is_active' => 1])->orderBy(['name' => SORT_ASC])->all(),
+            'id', 'name'
+        );
+    } catch (\Exception $e) { $workZones = []; }
+}
+
+$employeeTypes = [
+    'office'  => 'مكتبي',
+    'field'   => 'ميداني',
+    'sales'   => 'مبيعات',
+    'hybrid'  => 'مختلط',
+];
+
+$trackingModes = [
+    'geofence_only' => 'سياج جغرافي فقط (تسجيل دخول/خروج تلقائي)',
+    'continuous'    => 'تتبع مستمر (موظفين ميدانيين)',
+    'on_task'       => 'تتبع أثناء المهام فقط',
+    'disabled'      => 'معطّل',
+];
 
 if (!isset($cities)) {
     try {
@@ -682,14 +705,45 @@ $formAction = Url::to($isNewRecord ? ['create'] : ['update', 'id' => $model->isN
         </div>
 
         <!-- ═══════════════════════════════════════════
-             القسم 4: بيانات ميدانية (موظف فقط)
+             القسم 4: التتبع ومنطقة العمل (موظف فقط)
              ═══════════════════════════════════════════ -->
         <div class="hr-form-section hr-employee-only" style="<?= $isEmployeeSelected ? '' : 'display:none' ?>">
             <div class="hr-form-section-header">
                 <i class="fa fa-map-marker"></i>
-                <span>بيانات ميدانية</span>
+                <span>التتبع ومنطقة العمل</span>
             </div>
             <div class="hr-form-section-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="hr-form-label" for="emp-type">نوع الموظف</label>
+                            <?= Html::activeDropDownList($model, 'employee_type', $employeeTypes, [
+                                'class' => 'form-control hr-form-input',
+                                'id' => 'emp-type',
+                                'onchange' => 'onEmployeeTypeChange(this.value)',
+                            ]) ?>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="hr-form-label" for="emp-wzone">منطقة العمل (Geofence)</label>
+                            <?= Html::activeDropDownList($model, 'work_zone_id', $workZones, [
+                                'class' => 'form-control hr-form-input',
+                                'prompt' => '— اختر منطقة العمل —',
+                                'id' => 'emp-wzone',
+                            ]) ?>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="hr-form-label" for="emp-tracking">وضع التتبع</label>
+                            <?= Html::activeDropDownList($model, 'tracking_mode', $trackingModes, [
+                                'class' => 'form-control hr-form-input',
+                                'id' => 'emp-tracking',
+                            ]) ?>
+                        </div>
+                    </div>
+                </div>
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group">
@@ -713,6 +767,12 @@ $formAction = Url::to($isNewRecord ? ['create'] : ['update', 'id' => $model->isN
                                 'prompt' => '— اختر الدور —',
                                 'id' => 'emp-frole',
                             ]) ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="margin-top:8px">
+                    <div class="col-md-12">
+                        <div id="emp-type-hint" class="hr-type-hint" style="display:none; padding:10px 14px; border-radius:8px; font-size:12px; background:#f0f9ff; color:#0c4a6e; border:1px solid #bae6fd;">
                         </div>
                     </div>
                 </div>
@@ -822,6 +882,33 @@ $formAction = Url::to($isNewRecord ? ['create'] : ['update', 'id' => $model->isN
             if (wrapper) wrapper.style.display = this.checked ? '' : 'none';
         });
     }
+
+    // ─── منطق نوع الموظف وتوصيات التتبع ───
+    window.onEmployeeTypeChange = function(val) {
+        var tracking = document.getElementById('emp-tracking');
+        var hint = document.getElementById('emp-type-hint');
+        var cb = document.getElementById('is-field-staff-checkbox');
+        var msgs = {
+            'office':  'موظف مكتبي: سيتم تسجيل الدخول/الخروج تلقائياً عند دخول/مغادرة منطقة العمل.',
+            'field':   'موظف ميداني: يُنصح بتفعيل التتبع المستمر لمتابعة التنقلات الميدانية.',
+            'sales':   'موظف مبيعات: تتبع أثناء المهام لضمان زيارة العملاء المحددين.',
+            'hybrid':  'موظف مختلط: سياج جغرافي للمكتب + تتبع أثناء المهام الخارجية.',
+        };
+        if (hint && msgs[val]) {
+            hint.textContent = msgs[val];
+            hint.style.display = '';
+        }
+        if (tracking && !tracking.dataset.manuallySet) {
+            var defaults = { 'office': 'geofence_only', 'field': 'continuous', 'sales': 'on_task', 'hybrid': 'geofence_only' };
+            if (defaults[val]) tracking.value = defaults[val];
+        }
+        if (cb && (val === 'field' || val === 'sales')) {
+            cb.checked = true;
+            cb.dispatchEvent(new Event('change'));
+        }
+    };
+    var trackSel = document.getElementById('emp-tracking');
+    if (trackSel) trackSel.addEventListener('change', function(){ this.dataset.manuallySet = '1'; });
 
     // ─── تشغيل toggle الأقسام عند التحميل ───
     toggleHrSections();

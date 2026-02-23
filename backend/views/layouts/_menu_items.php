@@ -49,6 +49,8 @@ $mainMenuItems = [
             ['label' => 'السلف والقروض',     'icon' => 'credit-card',       'url' => ['/hr/hr-loan/index']],
             ['label' => 'تقييمات الأداء',     'icon' => 'star-half-o',       'url' => ['/hr/hr-evaluation/index']],
             ['label' => 'نظام الحضور والانصراف', 'icon' => 'map-marker', 'url' => ['/hr/hr-field/index']],
+            ['label' => 'الورديات',          'icon' => 'clock-o',           'url' => ['/hr/hr-shift/index']],
+            ['label' => 'مناطق العمل',       'icon' => 'map-pin',           'url' => ['/hr/hr-work-zone/index']],
             ['label' => 'إدارة الإجازات',    'icon' => 'calendar-check-o',  'url' => ['/hr/hr-leave/index']],
             ['label' => 'تقارير HR',         'icon' => 'bar-chart',         'url' => ['/hr/hr-report/index']],
         ],

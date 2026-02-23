@@ -569,6 +569,8 @@ return [
                     'hr/documents'   => 'hr-document',
                     'hr/reports'     => 'hr-report',
                     'hr/leaves'      => 'hr-leave',
+                    'hr/shifts'      => 'hr-shift',
+                    'hr/work-zones'  => 'hr-work-zone',
                 ];
                 foreach ($hrControllers as $shortUrl => $controllerId) {
                     $rules["{$shortUrl}/<action:[\\w-]+>/<id:\\d+>"] = "hr/{$controllerId}/<action>";

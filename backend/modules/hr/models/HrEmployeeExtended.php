@@ -31,6 +31,9 @@ use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
  * @property int|null $grade_id
  * @property int|null $branch_id
  * @property int|null $shift_id
+ * @property string $employee_type  office|field|sales|hybrid
+ * @property int|null $work_zone_id
+ * @property string $tracking_mode  geofence_only|continuous|on_task|disabled
  * @property int|null $is_field_staff
  * @property string|null $field_role
  * @property string|null $termination_reason
@@ -87,7 +90,11 @@ class HrEmployeeExtended extends ActiveRecord
     {
         return [
             [['user_id'], 'required'],
-            [['user_id', 'city_id', 'bank_id', 'grade_id', 'branch_id', 'shift_id', 'is_field_staff', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'updated_by'], 'integer'],
+            [['user_id', 'city_id', 'bank_id', 'grade_id', 'branch_id', 'shift_id', 'work_zone_id', 'is_field_staff', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'updated_by'], 'integer'],
+            [['employee_type'], 'in', 'range' => ['office', 'field', 'sales', 'hybrid']],
+            [['employee_type'], 'default', 'value' => 'office'],
+            [['tracking_mode'], 'in', 'range' => ['geofence_only', 'continuous', 'on_task', 'disabled']],
+            [['tracking_mode'], 'default', 'value' => 'geofence_only'],
             [['basic_salary'], 'number'],
             [['date_of_birth', 'contract_start', 'contract_end', 'probation_end'], 'safe'],
             [['employee_code', 'national_id', 'social_security_no', 'tax_number'], 'string', 'max' => 20],
@@ -127,6 +134,9 @@ class HrEmployeeExtended extends ActiveRecord
             'grade_id' => Yii::t('app', 'الدرجة الوظيفية'),
             'branch_id' => Yii::t('app', 'الفرع'),
             'shift_id' => Yii::t('app', 'الوردية'),
+            'employee_type' => Yii::t('app', 'نوع الموظف'),
+            'work_zone_id' => Yii::t('app', 'منطقة العمل'),
+            'tracking_mode' => Yii::t('app', 'وضع التتبع'),
             'termination_reason' => Yii::t('app', 'سبب إنهاء الخدمة'),
             'is_field_staff' => Yii::t('app', 'موظف ميداني'),
             'field_role' => Yii::t('app', 'الدور الميداني'),
@@ -165,6 +175,22 @@ class HrEmployeeExtended extends ActiveRecord
     public function getShift()
     {
         return $this->hasOne(HrWorkShift::class, ['id' => 'shift_id']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getWorkZone()
+    {
+        return $this->hasOne(HrWorkZone::class, ['id' => 'work_zone_id']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getAttendanceLogs()
+    {
+        return $this->hasMany(HrAttendanceLog::class, ['user_id' => 'user_id']);
     }
 
     /**
