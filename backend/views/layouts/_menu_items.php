@@ -41,21 +41,33 @@ $mainMenuItems = [
         'icon'  => 'id-card',
         'privilege' => [Permissions::EMPLOYEE, Permissions::JOBS, Permissions::HOLIDAYS, Permissions::LEAVE_POLICY, Permissions::LEAVE_TYPES, Permissions::WORKDAYS, Permissions::LEAVE_REQUEST, Permissions::EMPLOYEE_NOTIFICATIONS],
         'items' => [
-            ['label' => 'لوحة تحكم HR',      'icon' => 'tachometer',        'url' => ['/hr/hr-dashboard/index']],
-            ['label' => 'سجل الموظفين',      'icon' => 'users',             'url' => ['/hr/hr-employee/index']],
-            ['label' => 'العلاوات السنوية',  'icon' => 'line-chart',        'url' => ['/hr/hr-payroll/increments']],
-            ['label' => 'الحضور والانصراف',   'icon' => 'clock-o',           'url' => ['/hr/hr-attendance/index']],
-            ['label' => 'مسيرات الرواتب',    'icon' => 'money',             'url' => ['/hr/hr-payroll/index']],
-            ['label' => 'السلف والقروض',     'icon' => 'credit-card',       'url' => ['/hr/hr-loan/index']],
-            ['label' => 'تقييمات الأداء',     'icon' => 'star-half-o',       'url' => ['/hr/hr-evaluation/index']],
-            ['label' => 'نظام الحضور والانصراف', 'icon' => 'map-marker', 'url' => ['/hr/hr-field/index']],
-            ['label' => 'الورديات',          'icon' => 'clock-o',           'url' => ['/hr/hr-shift/index']],
-            ['label' => 'مناطق العمل',       'icon' => 'map-pin',           'url' => ['/hr/hr-work-zone/index']],
-            ['label' => 'التتبع المباشر',   'icon' => 'crosshairs',        'url' => ['/hr/hr-tracking-api/live-map']],
-            ['label' => 'سجل الحضور الموحّد', 'icon' => 'calendar-check-o', 'url' => ['/hr/hr-tracking-api/attendance-board']],
-            ['label' => 'تحليلات الحضور',   'icon' => 'bar-chart',         'url' => ['/hr/hr-tracking-report/index']],
-            ['label' => 'إدارة الإجازات',    'icon' => 'calendar-check-o',  'url' => ['/hr/hr-leave/index']],
-            ['label' => 'تقارير HR',         'icon' => 'bar-chart',         'url' => ['/hr/hr-report/index']],
+            ['label' => 'لوحة تحكم HR',  'icon' => 'tachometer', 'url' => ['/hr/hr-dashboard/index']],
+            ['label' => 'سجل الموظفين',  'icon' => 'users',      'url' => ['/hr/hr-employee/index']],
+
+            [
+                'label' => 'الحضور والتتبع',
+                'icon'  => 'clock-o',
+                'items' => [
+                    ['label' => 'سجل الحضور',    'icon' => 'calendar-check-o', 'url' => ['/hr/hr-tracking-api/attendance-board']],
+                    ['label' => 'التتبع المباشر', 'icon' => 'crosshairs',       'url' => ['/hr/hr-tracking-api/live-map']],
+                    ['label' => 'الورديات',       'icon' => 'clock-o',          'url' => ['/hr/hr-shift/index']],
+                    ['label' => 'مناطق العمل',    'icon' => 'map-pin',          'url' => ['/hr/hr-work-zone/index']],
+                ],
+            ],
+
+            [
+                'label' => 'الرواتب والمالية',
+                'icon'  => 'money',
+                'items' => [
+                    ['label' => 'مسيرات الرواتب',   'icon' => 'money',       'url' => ['/hr/hr-payroll/index']],
+                    ['label' => 'العلاوات السنوية', 'icon' => 'line-chart',  'url' => ['/hr/hr-payroll/increments']],
+                    ['label' => 'السلف والقروض',    'icon' => 'credit-card', 'url' => ['/hr/hr-loan/index']],
+                ],
+            ],
+
+            ['label' => 'إدارة الإجازات', 'icon' => 'calendar',    'url' => ['/hr/hr-leave/index']],
+            ['label' => 'تقييمات الأداء',  'icon' => 'star-half-o', 'url' => ['/hr/hr-evaluation/index']],
+            ['label' => 'التقارير',        'icon' => 'bar-chart',   'url' => ['/hr/hr-report/index']],
         ],
     ],
 
