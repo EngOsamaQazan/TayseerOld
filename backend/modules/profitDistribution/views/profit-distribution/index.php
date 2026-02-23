@@ -15,6 +15,17 @@ $this->params['breadcrumbs'][] = $this->title;
 $this->registerCssFile('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css', ['position' => \yii\web\View::POS_HEAD]);
 $this->registerCss('.content-header { display: none !important; }');
 
+echo $this->render('@backend/views/_section_tabs', [
+    'group' => 'investment',
+    'tabs'  => [
+        ['label' => 'المحافظ الاستثمارية', 'icon' => 'fa-briefcase',  'url' => ['/companies/companies/index']],
+        ['label' => 'حركات رأس المال',    'icon' => 'fa-exchange',    'url' => ['/capitalTransactions/capital-transactions/index']],
+        ['label' => 'المساهمين',           'icon' => 'fa-users',       'url' => ['/shareholders/shareholders/index']],
+        ['label' => 'المصاريف المشتركة',   'icon' => 'fa-share-alt',   'url' => ['/sharedExpenses/shared-expense/index']],
+        ['label' => 'توزيع الأرباح',       'icon' => 'fa-pie-chart',   'url' => ['/profitDistribution/profit-distribution/index']],
+    ],
+]);
+
 $models = $dataProvider->getModels();
 $pagination = $dataProvider->getPagination();
 $totalCount = $dataProvider->getTotalCount();

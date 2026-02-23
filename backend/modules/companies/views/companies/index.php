@@ -22,6 +22,17 @@ $totalCount = $dataProvider->getTotalCount();
 $canCreate = Permissions::can(Permissions::COMP_CREATE);
 $canUpdate = Permissions::can(Permissions::COMP_UPDATE);
 $canDelete = Permissions::can(Permissions::COMP_DELETE);
+
+echo $this->render('@backend/views/_section_tabs', [
+    'group' => 'investment',
+    'tabs'  => [
+        ['label' => 'المحافظ الاستثمارية', 'icon' => 'fa-briefcase',  'url' => ['/companies/companies/index']],
+        ['label' => 'حركات رأس المال',    'icon' => 'fa-exchange',    'url' => ['/capitalTransactions/capital-transactions/index']],
+        ['label' => 'المساهمين',           'icon' => 'fa-users',       'url' => ['/shareholders/shareholders/index']],
+        ['label' => 'المصاريف المشتركة',   'icon' => 'fa-share-alt',   'url' => ['/sharedExpenses/shared-expense/index']],
+        ['label' => 'توزيع الأرباح',       'icon' => 'fa-pie-chart',   'url' => ['/profitDistribution/profit-distribution/index']],
+    ],
+]);
 ?>
 
 <style>
