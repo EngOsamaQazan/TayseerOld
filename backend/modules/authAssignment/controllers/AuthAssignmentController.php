@@ -11,12 +11,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\filters\AccessControl;
+use backend\helpers\ExportTrait;
 
 /**
  * AuthAssignmentController implements the CRUD actions for AuthAssignment model.
  */
 class AuthAssignmentController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -31,7 +33,7 @@ class AuthAssignmentController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','update','create','delete'],
+                        'actions' => ['logout', 'index','update','create','delete','export-excel','export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -284,6 +286,33 @@ class AuthAssignmentController extends Controller
             return $this->redirect(['index']);
         }
 
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new AuthAssignmentSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'صلاحيات المستخدمين',
+            'filename' => 'auth_assignments',
+            'headers' => ['#', 'الصلاحية', 'المستخدم'],
+            'keys' => ['#', 'item_name', 'user_id'],
+            'widths' => [8, 30, 20],
+        ]);
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new AuthAssignmentSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'صلاحيات المستخدمين',
+            'filename' => 'auth_assignments',
+            'headers' => ['#', 'الصلاحية', 'المستخدم'],
+            'keys' => ['#', 'item_name', 'user_id'],
+        ], 'pdf');
     }
 
     /**

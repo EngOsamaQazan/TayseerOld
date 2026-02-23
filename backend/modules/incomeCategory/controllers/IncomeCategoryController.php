@@ -10,12 +10,14 @@ use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
+use backend\helpers\ExportTrait;
 
 /**
  * IncomeCategoryController implements the CRUD actions for IncomeCategory model.
  */
 class IncomeCategoryController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -255,6 +257,33 @@ class IncomeCategoryController extends Controller
             return $this->redirect(['index']);
         }
        
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new IncomeCategorySearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'تصنيفات الدخل',
+            'filename' => 'income_categories',
+            'headers' => ['#', 'الاسم', 'أنشئ بواسطة', 'آخر تحديث بواسطة', 'محذوف', 'الوصف'],
+            'keys' => ['#', 'name', 'created_by', 'last_updated_by', 'is_deleted', 'description'],
+            'widths' => [8, 22, 16, 18, 12, 30],
+        ]);
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new IncomeCategorySearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'تصنيفات الدخل',
+            'filename' => 'income_categories',
+            'headers' => ['#', 'الاسم', 'أنشئ بواسطة', 'آخر تحديث بواسطة', 'محذوف', 'الوصف'],
+            'keys' => ['#', 'name', 'created_by', 'last_updated_by', 'is_deleted', 'description'],
+        ], 'pdf');
     }
 
     /**

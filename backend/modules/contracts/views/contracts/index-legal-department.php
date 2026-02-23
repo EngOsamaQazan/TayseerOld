@@ -10,6 +10,7 @@ use yii\helpers\ArrayHelper;
 use yii\widgets\LinkPager;
 use yii\bootstrap\Modal;
 use common\helper\Permissions;
+use backend\widgets\ExportButtons;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use backend\modules\followUp\helper\ContractCalculations;
 use backend\modules\judiciary\models\Judiciary;
@@ -112,9 +113,12 @@ $jobTypesMap = ArrayHelper::map(
                 <i class="fa fa-<?= $isShowAll ? 'list' : 'th-list' ?>"></i>
                 <span class="ct-hide-xs"><?= $isShowAll ? 'عرض مرقّم' : 'عرض الجميع' ?></span>
             </a>
-            <button class="ct-btn ct-btn-outline ct-hide-sm" id="ctExportBtn" title="تصدير CSV">
-                <i class="fa fa-download"></i> <span class="ct-hide-xs">تصدير</span>
-            </button>
+            <?= ExportButtons::widget([
+                'excelRoute' => ['export-legal-excel'],
+                'pdfRoute' => ['export-legal-pdf'],
+                'excelBtnClass' => 'ct-btn ct-btn-outline ct-hide-sm',
+                'pdfBtnClass' => 'ct-btn ct-btn-outline ct-hide-sm',
+            ]) ?>
             <button class="ct-btn ct-btn-ghost ct-show-sm" id="ctFilterToggle" aria-label="فتح الفلاتر">
                 <i class="fa fa-sliders" style="font-size:18px"></i>
             </button>

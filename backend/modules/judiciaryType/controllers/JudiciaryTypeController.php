@@ -11,11 +11,13 @@ use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
+use backend\helpers\ExportTrait;
 
 /**
  * JudiciaryTypeController implements the CRUD actions for JudiciaryType model.
  */
 class JudiciaryTypeController extends Controller {
+    use ExportTrait;
 
     /**
      * @inheritdoc
@@ -31,7 +33,7 @@ class JudiciaryTypeController extends Controller {
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','update','create','delete','view'],
+                        'actions' => ['logout', 'index','update','create','delete','view','export-excel','export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -267,6 +269,33 @@ class JudiciaryTypeController extends Controller {
              */
             return $this->redirect(['index']);
         }
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new JudiciaryTypeSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'أنواع القضاء',
+            'filename' => 'judiciary_types',
+            'headers' => ['#', 'الاسم'],
+            'keys' => ['#', 'name'],
+            'widths' => [8, 40],
+        ]);
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new JudiciaryTypeSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'أنواع القضاء',
+            'filename' => 'judiciary_types',
+            'headers' => ['#', 'الاسم'],
+            'keys' => ['#', 'name'],
+        ], 'pdf');
     }
 
     /**

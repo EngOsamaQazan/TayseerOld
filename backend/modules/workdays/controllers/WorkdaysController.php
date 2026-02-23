@@ -11,12 +11,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\filters\AccessControl;
+use backend\helpers\ExportTrait;
 
 /**
  * WorkdaysController implements the CRUD actions for Workdays model.
  */
 class WorkdaysController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -31,7 +33,7 @@ class WorkdaysController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'export-excel', 'export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -61,6 +63,33 @@ class WorkdaysController extends Controller
         ]);
     }
 
+
+    public function actionExportExcel()
+    {
+        $searchModel = new WorkdaysSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'أيام العمل',
+            'filename' => 'workdays',
+            'headers'  => ['#', 'اسم اليوم', 'وقت البداية', 'وقت النهاية', 'الحالة', 'أنشأ بواسطة'],
+            'keys'     => ['#', 'day_name', 'start_at', 'end_at', 'status', 'createdBy.username'],
+            'widths'   => [8, 20, 18, 18, 15, 20],
+        ], 'excel');
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new WorkdaysSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'أيام العمل',
+            'filename' => 'workdays',
+            'headers'  => ['#', 'اسم اليوم', 'وقت البداية', 'وقت النهاية', 'الحالة', 'أنشأ بواسطة'],
+            'keys'     => ['#', 'day_name', 'start_at', 'end_at', 'status', 'createdBy.username'],
+        ], 'pdf');
+    }
 
     /**
      * Displays a single Workdays model.

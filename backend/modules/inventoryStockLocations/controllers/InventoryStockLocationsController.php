@@ -11,11 +11,14 @@ use yii\web\Response;
 use backend\modules\inventoryStockLocations\models\InventoryStockLocationsSearch;
 use backend\modules\inventoryStockLocations\models\InventoryStockLocations;
 use Yii;
+use backend\helpers\ExportTrait;
+
 /**
  * Default controller for the `reports` module
  */
 class InventoryStockLocationsController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -30,7 +33,7 @@ class InventoryStockLocationsController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','update','create','delete','view'],
+                        'actions' => ['logout', 'index','update','create','delete','view','export-excel','export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -62,6 +65,45 @@ class InventoryStockLocationsController extends Controller
         ]);
     }
 
+
+    public function actionExportExcel()
+    {
+        $searchModel = new InventoryStockLocationsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig());
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new InventoryStockLocationsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig(), 'pdf');
+    }
+
+    protected function getExportConfig()
+    {
+        return [
+            'title' => 'مواقع التخزين',
+            'filename' => 'stock_locations',
+            'headers' => ['#', 'اسم الموقع', 'الشركة', 'أنشئ بواسطة', 'آخر تعديل بواسطة'],
+            'keys' => [
+                '#',
+                'locations_name',
+                function ($model) {
+                    return $model->company ? $model->company->name : '—';
+                },
+                function ($model) {
+                    return $model->createdBy ? $model->createdBy->username : '—';
+                },
+                function ($model) {
+                    return $model->updateBy ? $model->updateBy->username : '—';
+                },
+            ],
+            'widths' => [6, 28, 24, 20, 20],
+        ];
+    }
 
     /**
      * Displays a single InventoryStockLocations model.

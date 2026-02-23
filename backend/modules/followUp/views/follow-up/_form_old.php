@@ -15,6 +15,7 @@ use yii\widgets\Pjax;
 use common\helper\LoanContract;
 use yii\helpers\ArrayHelper;
 use common\helper\Permissions;
+use backend\widgets\ExportButtons;
 /* @var $this yii\web\View */
 /* @var $model common\models\FollowUp */
 /* @var $form yii\widgets\ActiveForm */
@@ -1009,35 +1010,38 @@ CrudAsset::register($this);
                                 ],
                             ],
                         ],
-                        'toolbar' => [
-                            [
-                                'content' =>
-                                Html::a('<i class="glyphicon glyphicon-plus"></i>', ['/phoneNumbers/phone-numbers/create?contract_id=' . $value->customer->name . '&customers_id=' . $value->customer->id], ['role' => 'modal-remote', 'title' => 'Create new Phone Numbers', 'class' => 'btn btn-default']) .
-                                    '{toggleData}' .
-                                    '{export}'
-                            ],
-                        ],
-                        'striped' => false,
-                        'condensed' => false,
-                        'responsive' => false,
-                        'export' => false,
-                        'panel' => [
-                            'type' => false,
-                            'heading' => false,
-                            'before' => '<h4>' . $value->customer->name . '</h4>',
-                            'after' => false,
-                            'footer' => false
-                        ]
-                    ]);
-                ?>
+                'toolbar' => [
+                    [
+                        'content' =>
+                        Html::a('<i class="glyphicon glyphicon-plus"></i>', ['/phoneNumbers/phone-numbers/create?contract_id=' . $value->customer->name . '&customers_id=' . $value->customer->id], ['role' => 'modal-remote', 'title' => 'Create new Phone Numbers', 'class' => 'btn btn-default']) .
+                            '{toggleData}' .
+                            ExportButtons::widget([
+                                'excelRoute' => ['export-phone-numbers-excel', 'contract_id' => $contract_id],
+                                'pdfRoute' => ['export-phone-numbers-pdf', 'contract_id' => $contract_id],
+                            ])
+                    ],
+                ],
+                'striped' => false,
+                'condensed' => false,
+                'responsive' => false,
+                'export' => false,
+                'panel' => [
+                    'type' => false,
+                    'heading' => false,
+                    'before' => '<h4>' . $value->customer->name . '</h4>',
+                    'after' => false,
+                    'footer' => false
+                ]
+            ]);
+        ?>
 
-                <?php
-                }
-                ?>
+        <?php
+        }
+        ?>
 
-            </div>
         </div>
     </div>
+</div>
     <div class="collapse" id="loanschalling">
         <div class="card card-body">
             <?php
@@ -1126,7 +1130,10 @@ CrudAsset::register($this);
                         'content' =>
                         Html::a('<i class="glyphicon glyphicon-plus"></i>', ['/loanScheduling/loan-scheduling/create-from-follow-up?contract_id=' . $contract_model->id], ['role' => 'modal-remote', 'title' => 'Create new Phone Numbers', 'class' => 'btn btn-default']) .
                             '{toggleData}' .
-                            '{export}'
+                            ExportButtons::widget([
+                                'excelRoute' => ['export-loan-scheduling-excel', 'contract_id' => $contract_id],
+                                'pdfRoute' => ['export-loan-scheduling-pdf', 'contract_id' => $contract_id],
+                            ])
                     ],
                 ],
                 'striped' => false,

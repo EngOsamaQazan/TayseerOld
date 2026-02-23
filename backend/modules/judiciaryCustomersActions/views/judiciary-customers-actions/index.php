@@ -8,6 +8,7 @@ use yii\helpers\Html;
 use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset;
+use backend\widgets\ExportButtons;
 
 CrudAsset::register($this);
 $this->title = 'إجراءات العملاء القضائية';
@@ -60,7 +61,11 @@ $this->params['breadcrumbs'][] = $this->title;
                     'content' =>
                         Html::a('<i class="fa fa-plus"></i> إضافة إجراء', ['create'], ['class' => 'btn btn-success', 'role' => 'modal-remote']) .
                         Html::a('<i class="fa fa-refresh"></i>', [''], ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'تحديث']) .
-                        '{toggleData}{export}'
+                        ExportButtons::widget([
+                            'excelRoute' => ['export-excel'],
+                            'pdfRoute' => ['export-pdf'],
+                        ]) .
+                        '{toggleData}'
                 ],
             ],
             'striped' => true,

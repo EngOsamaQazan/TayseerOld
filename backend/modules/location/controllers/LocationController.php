@@ -11,12 +11,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\filters\AccessControl;
+use backend\helpers\ExportTrait;
 
 /**
  * LocationController implements the CRUD actions for Location model.
  */
 class LocationController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -31,7 +33,7 @@ class LocationController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','update','create','delete'],
+                        'actions' => ['logout', 'index','update','create','delete','export-excel','export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -265,6 +267,35 @@ class LocationController extends Controller
             return $this->redirect(['index']);
         }
        
+    }
+
+    public function actionExportExcel() {
+        $searchModel = new LocationSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'المواقع',
+            'filename' => 'locations',
+            'headers' => ['#', 'الموقع', 'الوصف', 'الحالة', 'أنشئ بواسطة'],
+            'keys' => ['#', 'location', 'description', 'status', function($model) {
+                return $model->createdBy->username ?? '';
+            }],
+            'widths' => [8, 25, 30, 14, 20],
+        ]);
+    }
+
+    public function actionExportPdf() {
+        $searchModel = new LocationSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'المواقع',
+            'filename' => 'locations',
+            'headers' => ['#', 'الموقع', 'الوصف', 'الحالة', 'أنشئ بواسطة'],
+            'keys' => ['#', 'location', 'description', 'status', function($model) {
+                return $model->createdBy->username ?? '';
+            }],
+        ], 'pdf');
     }
 
     /**

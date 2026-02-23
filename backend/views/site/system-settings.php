@@ -43,26 +43,20 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                     </div>
                     <span class="sys-nav-count">20</span>
                 </a>
-                <a href="#" class="sys-nav-item <?= $activeTab === 'google_cloud' ? 'active' : '' ?>" data-tab="google_cloud">
-                    <div class="sys-nav-icon"><i class="fa fa-eye"></i></div>
+                <a href="#" class="sys-nav-item <?= in_array($activeTab, ['google_cloud', 'google_maps', 'google_apis']) ? 'active' : '' ?>" data-tab="google_apis">
+                    <div class="sys-nav-icon"><i class="fa fa-google"></i></div>
                     <div class="sys-nav-text">
-                        <span class="sys-nav-label">تحليل الوثائق بالذكاء الاصطناعي</span>
-                        <span class="sys-nav-sub">تصنيف الصور والمستندات تلقائياً</span>
+                        <span class="sys-nav-label">خدمات Google</span>
+                        <span class="sys-nav-sub">Vision API · Maps API · التكاليف</span>
                     </div>
-                    <?php if (!empty($googleCloud['enabled']) && $googleCloud['enabled'] === '1'): ?>
+                    <?php
+                    $gcActive = !empty($googleCloud['enabled']) && $googleCloud['enabled'] === '1';
+                    $gmActive = !empty($googleMaps['configured']);
+                    ?>
+                    <?php if ($gcActive && $gmActive): ?>
                         <span class="sys-nav-badge active"><i class="fa fa-check-circle"></i></span>
-                    <?php else: ?>
-                        <span class="sys-nav-badge inactive"><i class="fa fa-times-circle"></i></span>
-                    <?php endif; ?>
-                </a>
-                <a href="#" class="sys-nav-item <?= $activeTab === 'google_maps' ? 'active' : '' ?>" data-tab="google_maps">
-                    <div class="sys-nav-icon"><i class="fa fa-map"></i></div>
-                    <div class="sys-nav-text">
-                        <span class="sys-nav-label">خريطة Google</span>
-                        <span class="sys-nav-sub">مفتاح API لخريطة تتبع الموظفين</span>
-                    </div>
-                    <?php if (!empty($googleMaps['configured'])): ?>
-                        <span class="sys-nav-badge active"><i class="fa fa-check-circle"></i></span>
+                    <?php elseif ($gcActive || $gmActive): ?>
+                        <span class="sys-nav-badge" style="background:#f59e0b;color:#fff"><i class="fa fa-adjust"></i></span>
                     <?php else: ?>
                         <span class="sys-nav-badge inactive"><i class="fa fa-times-circle"></i></span>
                     <?php endif; ?>
@@ -96,8 +90,28 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                 </div>
             <?php endforeach; ?>
 
-            <!-- ═══════════ Google Cloud Tab ═══════════ -->
-            <div class="sys-tab-content <?= $activeTab === 'google_cloud' ? 'active' : '' ?>" id="tab-google_cloud">
+            <!-- ═══════════ Google APIs Tab (merged with inner tabs) ═══════════ -->
+            <div class="sys-tab-content <?= in_array($activeTab, ['google_cloud', 'google_maps', 'google_apis']) ? 'active' : '' ?>" id="tab-google_apis">
+
+                <?php
+                    $innerTab = 'vision';
+                    if ($activeTab === 'google_maps') $innerTab = 'maps';
+                ?>
+                <!-- Inner Tabs Bar -->
+                <div class="g-inner-tabs">
+                    <button type="button" class="g-inner-tab <?= $innerTab === 'vision' ? 'active' : '' ?>" data-inner="vision">
+                        <i class="fa fa-eye"></i> Vision API
+                    </button>
+                    <button type="button" class="g-inner-tab <?= $innerTab === 'maps' ? 'active' : '' ?>" data-inner="maps">
+                        <i class="fa fa-map"></i> Maps API
+                    </button>
+                    <button type="button" class="g-inner-tab" data-inner="costs">
+                        <i class="fa fa-line-chart"></i> التكاليف والإحصائيات
+                    </button>
+                </div>
+
+                <!-- ── Inner Panel: Vision API ── -->
+                <div class="g-inner-panel <?= $innerTab === 'vision' ? 'active' : '' ?>" id="g-panel-vision">
                 <form method="post" action="<?= Url::to(['system-settings']) ?>" id="gc-settings-form">
                     <?= Html::hiddenInput(Yii::$app->request->csrfParam, Yii::$app->request->csrfToken) ?>
                     <input type="hidden" name="settings_tab" value="google_cloud">
@@ -635,22 +649,30 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                     </div>
                                 </div>
 
-                                <!-- Auto-parse JSON box -->
+                                <!-- JSON Upload / Paste -->
                                 <div class="gc-auto-parse">
                                     <div class="gc-auto-parse-header">
                                         <i class="fa fa-magic"></i>
-                                        <strong>استخراج تلقائي من ملف JSON</strong>
+                                        <strong>استيراد بيانات الاعتماد من ملف JSON</strong>
                                         <span class="gc-optional-badge">اختياري</span>
                                     </div>
                                     <div class="gc-auto-parse-body">
-                                        <p>الصق محتوى ملف JSON كاملاً هنا وسيتم ملء الحقول تلقائياً:</p>
-                                        <textarea id="gc-json-paste" class="gc-json-paste-area" dir="ltr" rows="5" placeholder='الصق محتوى ملف JSON هنا... مثال:
-{
-  "type": "service_account",
-  "project_id": "...",
-  "client_email": "...",
-  "private_key": "-----BEGIN RSA..."
-}'></textarea>
+                                        <div class="json-upload-zone" id="gc-json-dropzone">
+                                            <input type="file" id="gc-json-file" accept=".json,application/json" class="json-upload-input">
+                                            <div class="json-upload-content">
+                                                <i class="fa fa-cloud-upload json-upload-icon"></i>
+                                                <p class="json-upload-title">اسحب ملف JSON هنا أو اضغط للاختيار</p>
+                                                <p class="json-upload-hint">ملف Service Account الذي تم تنزيله من Google Cloud Console</p>
+                                            </div>
+                                            <div class="json-upload-success" id="gc-upload-success" style="display:none">
+                                                <i class="fa fa-check-circle"></i>
+                                                <span id="gc-upload-filename"></span>
+                                            </div>
+                                        </div>
+                                        <div class="json-upload-divider">
+                                            <span>أو الصق المحتوى يدوياً</span>
+                                        </div>
+                                        <textarea id="gc-json-paste" class="gc-json-paste-area" dir="ltr" rows="4" placeholder='الصق محتوى ملف JSON هنا...'></textarea>
                                         <button type="button" class="gc-parse-btn" onclick="parseJsonCredentials()">
                                             <i class="fa fa-magic"></i> استخراج البيانات
                                         </button>
@@ -683,6 +705,23 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                             <span class="sys-card-badge"><i class="fa fa-lock"></i> مشفّرة</span>
                         </div>
                         <div class="sys-card-body">
+                            <!-- JSON File Upload -->
+                            <div class="json-upload-zone" id="gc-json-dropzone-main">
+                                <input type="file" id="gc-json-file-main" accept=".json,application/json" class="json-upload-input">
+                                <div class="json-upload-content" id="gc-upload-content-main">
+                                    <i class="fa fa-cloud-upload json-upload-icon"></i>
+                                    <p class="json-upload-title">ارفع ملف Service Account JSON</p>
+                                    <p class="json-upload-hint">اسحب الملف هنا أو اضغط للاختيار — سيتم ملء جميع الحقول تلقائياً</p>
+                                </div>
+                                <div class="json-upload-success" id="gc-upload-success-main" style="display:none">
+                                    <i class="fa fa-check-circle"></i>
+                                    <span id="gc-upload-filename-main"></span>
+                                </div>
+                            </div>
+                            <div id="gc-parse-result-main" class="gc-parse-result" style="display:none;margin-top:8px"></div>
+                            <div class="json-upload-divider">
+                                <span>أو أدخل البيانات يدوياً</span>
+                            </div>
                             <div class="sys-form-grid">
                                 <div class="sys-field">
                                     <label class="sys-label" for="gc_project_id">
@@ -802,15 +841,14 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                         </button>
                     </div>
                 </form>
-            </div>
+                </div><!-- /g-panel-vision -->
 
-            <!-- ═══════════ Google Maps Tab (نفس فكرة وتصميم تحليل الوثائق) ═══════════ -->
-            <div class="sys-tab-content <?= $activeTab === 'google_maps' ? 'active' : '' ?>" id="tab-google_maps">
+                <!-- ── Inner Panel: Maps API ── -->
+                <div class="g-inner-panel <?= $innerTab === 'maps' ? 'active' : '' ?>" id="g-panel-maps">
                 <form method="post" action="<?= Url::to(['system-settings']) ?>">
                     <?= Html::hiddenInput(Yii::$app->request->csrfParam, Yii::$app->request->csrfToken) ?>
                     <input type="hidden" name="settings_tab" value="google_maps">
 
-                    <!-- حالة الاتصال / التكوين -->
                     <div class="sys-card sys-status-card">
                         <div class="sys-card-header">
                             <div class="sys-card-title">
@@ -856,6 +894,22 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                        autocomplete="off">
                                 <p class="sys-field-hint">احصل على المفتاح من <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a> — فعّل «Maps JavaScript API» ثم أنشئ مفتاح API.</p>
                             </div>
+
+                            <div class="json-upload-divider">
+                                <span>أو استورد من ملف JSON</span>
+                            </div>
+                            <div class="json-upload-zone json-upload-zone-sm" id="gm-json-dropzone">
+                                <input type="file" id="gm-json-file" accept=".json,application/json" class="json-upload-input">
+                                <div class="json-upload-content">
+                                    <i class="fa fa-cloud-upload json-upload-icon"></i>
+                                    <p class="json-upload-title">اسحب ملف JSON يحتوي على API Key</p>
+                                    <p class="json-upload-hint">يبحث عن حقل api_key أو key أو maps_api_key</p>
+                                </div>
+                                <div class="json-upload-success" id="gm-upload-success" style="display:none">
+                                    <i class="fa fa-check-circle"></i>
+                                    <span id="gm-upload-filename"></span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -900,6 +954,185 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                         </div>
                     </div>
                 </form>
+                </div><!-- /g-panel-maps -->
+
+                <!-- ── Inner Panel: Costs & Statistics ── -->
+                <div class="g-inner-panel" id="g-panel-costs">
+
+                    <!-- ╌╌╌╌╌ Vision API Stats ╌╌╌╌╌ -->
+                    <div class="sys-card cost-api-card">
+                        <div class="sys-card-header">
+                            <div class="sys-card-title">
+                                <span class="cost-api-icon" style="background:linear-gradient(135deg,#ea4335,#fbbc04)"><i class="fa fa-eye"></i></span>
+                                Vision API — <?= date('F Y') ?>
+                            </div>
+                            <div class="cost-src-tabs">
+                                <button type="button" class="cost-src-tab active" data-cost-group="vision" data-cost-src="local">
+                                    <i class="fa fa-database"></i> رصد النظام
+                                </button>
+                                <button type="button" class="cost-src-tab" data-cost-group="vision" data-cost-src="google">
+                                    <i class="fa fa-google"></i> Google Cloud
+                                </button>
+                            </div>
+                        </div>
+                        <div class="sys-card-body">
+                            <!-- Vision: Local -->
+                            <div class="cost-src-panel" data-cost-group="vision" data-cost-panel="local">
+                                <div class="sys-stats-grid">
+                                    <div class="sys-stat-box">
+                                        <div class="sys-stat-value"><?= number_format($usageStats['total_requests']) ?></div>
+                                        <div class="sys-stat-label">إجمالي الطلبات</div>
+                                    </div>
+                                    <div class="sys-stat-box success">
+                                        <div class="sys-stat-value"><?= number_format($usageStats['success_count'] ?? 0) ?></div>
+                                        <div class="sys-stat-label">ناجحة</div>
+                                    </div>
+                                    <div class="sys-stat-box danger">
+                                        <div class="sys-stat-value"><?= number_format($usageStats['fail_count'] ?? 0) ?></div>
+                                        <div class="sys-stat-label">فاشلة</div>
+                                    </div>
+                                    <div class="sys-stat-box info">
+                                        <div class="sys-stat-value">$<?= number_format($usageStats['total_cost'], 4) ?></div>
+                                        <div class="sys-stat-label">التكلفة (تقدير)</div>
+                                    </div>
+                                </div>
+                                <div class="sys-usage-bar-wrapper">
+                                    <div class="sys-usage-bar-header">
+                                        <span>الاستخدام الشهري</span>
+                                        <span><?= $usageStats['total_requests'] ?> / <?= number_format($usageStats['monthly_limit']) ?></span>
+                                    </div>
+                                    <div class="sys-usage-bar">
+                                        <div class="sys-usage-bar-fill <?= $usageStats['usage_percent'] > 80 ? 'warning' : '' ?> <?= $usageStats['usage_percent'] > 95 ? 'danger' : '' ?>"
+                                             style="width: <?= min($usageStats['usage_percent'], 100) ?>%"></div>
+                                    </div>
+                                    <div class="sys-usage-bar-footer">
+                                        <span>المتبقي: <?= number_format($usageStats['remaining']) ?> طلب مجاني</span>
+                                        <span><?= $usageStats['usage_percent'] ?>%</span>
+                                    </div>
+                                </div>
+                                <div class="cost-free-tier-note">
+                                    <i class="fa fa-gift"></i> Google تمنح <strong>1,000 طلب/شهر مجاناً</strong> لـ Vision API — بعدها $1.50 لكل 1,000 طلب
+                                </div>
+                            </div>
+                            <!-- Vision: Google Cloud -->
+                            <div class="cost-src-panel" data-cost-group="vision" data-cost-panel="google" style="display:none">
+                                <div class="sys-stats-grid">
+                                    <div class="sys-stat-box">
+                                        <div class="sys-stat-value" id="v-gc-total">—</div>
+                                        <div class="sys-stat-label">طلبات Google</div>
+                                    </div>
+                                    <div class="sys-stat-box success">
+                                        <div class="sys-stat-value" id="v-gc-free">—</div>
+                                        <div class="sys-stat-label">مجانية (Free Tier)</div>
+                                    </div>
+                                    <div class="sys-stat-box" style="border-right-color:#fbbc04">
+                                        <div class="sys-stat-value" id="v-gc-billable">—</div>
+                                        <div class="sys-stat-label">قابلة للفوترة</div>
+                                    </div>
+                                    <div class="sys-stat-box info">
+                                        <div class="sys-stat-value" id="v-gc-cost">—</div>
+                                        <div class="sys-stat-label">التكلفة الفعلية</div>
+                                    </div>
+                                </div>
+                                <div class="sys-usage-bar-wrapper">
+                                    <div class="sys-usage-bar-header">
+                                        <span>Vision API — Free Tier</span>
+                                        <span id="v-gc-bar-label">— / 1,000</span>
+                                    </div>
+                                    <div class="sys-usage-bar">
+                                        <div class="sys-usage-bar-fill" id="v-gc-bar" style="width:0%"></div>
+                                    </div>
+                                    <div class="sys-usage-bar-footer">
+                                        <span id="v-gc-remaining-label">المتبقي: —</span>
+                                        <span id="v-gc-pct">0%</span>
+                                    </div>
+                                </div>
+                                <div id="v-gc-status" class="cost-gc-status">
+                                    <i class="fa fa-spinner fa-spin"></i> جاري الاتصال بـ Google Cloud...
+                                </div>
+                                <div id="v-gc-breakdown"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ╌╌╌╌╌ Maps API Stats ╌╌╌╌╌ -->
+                    <div class="sys-card cost-api-card">
+                        <div class="sys-card-header">
+                            <div class="sys-card-title">
+                                <span class="cost-api-icon" style="background:linear-gradient(135deg,#34a853,#4285f4)"><i class="fa fa-map"></i></span>
+                                Maps API — <?= date('F Y') ?>
+                            </div>
+                            <div class="cost-src-tabs">
+                                <button type="button" class="cost-src-tab active" data-cost-group="maps" data-cost-src="info">
+                                    <i class="fa fa-info-circle"></i> معلومات
+                                </button>
+                                <button type="button" class="cost-src-tab" data-cost-group="maps" data-cost-src="google">
+                                    <i class="fa fa-google"></i> Google Cloud
+                                </button>
+                            </div>
+                        </div>
+                        <div class="sys-card-body">
+                            <!-- Maps: Info -->
+                            <div class="cost-src-panel" data-cost-group="maps" data-cost-panel="info">
+                                <div class="cost-maps-info">
+                                    <div class="cost-maps-services">
+                                        <h4><i class="fa fa-list"></i> الخدمات المستخدمة</h4>
+                                        <div class="cost-service-row">
+                                            <span class="cost-service-name"><i class="fa fa-map"></i> Maps JavaScript API</span>
+                                            <span class="cost-service-free">28,000 تحميل/شهر مجاناً</span>
+                                        </div>
+                                        <div class="cost-service-row">
+                                            <span class="cost-service-name"><i class="fa fa-search"></i> Places API</span>
+                                            <span class="cost-service-free">بحسب الجلسات — $0 أول $200</span>
+                                        </div>
+                                        <div class="cost-service-row">
+                                            <span class="cost-service-name"><i class="fa fa-map-marker"></i> Geocoding API</span>
+                                            <span class="cost-service-free">40,000 طلب/شهر — $5 لكل 1,000 إضافي</span>
+                                        </div>
+                                    </div>
+                                    <div class="cost-free-tier-note">
+                                        <i class="fa fa-gift"></i> Google تمنح <strong>رصيد $200/شهر مجاناً</strong> لجميع خدمات Maps — يكفي غالبية الاستخدامات
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Maps: Google Cloud -->
+                            <div class="cost-src-panel" data-cost-group="maps" data-cost-panel="google" style="display:none">
+                                <div class="sys-stats-grid">
+                                    <div class="sys-stat-box">
+                                        <div class="sys-stat-value" id="m-gc-total">—</div>
+                                        <div class="sys-stat-label">إجمالي الطلبات</div>
+                                    </div>
+                                    <div class="sys-stat-box success">
+                                        <div class="sys-stat-value" id="m-gc-free-credit">$200</div>
+                                        <div class="sys-stat-label">الرصيد المجاني/شهر</div>
+                                    </div>
+                                    <div class="sys-stat-box" style="border-right-color:#fbbc04">
+                                        <div class="sys-stat-value" id="m-gc-used">—</div>
+                                        <div class="sys-stat-label">المستهلك</div>
+                                    </div>
+                                    <div class="sys-stat-box info">
+                                        <div class="sys-stat-value" id="m-gc-remaining">—</div>
+                                        <div class="sys-stat-label">المتبقي من الرصيد</div>
+                                    </div>
+                                </div>
+                                <div class="sys-usage-bar-wrapper">
+                                    <div class="sys-usage-bar-header">
+                                        <span>استهلاك الرصيد المجاني ($200)</span>
+                                        <span id="m-gc-bar-label">$0 / $200</span>
+                                    </div>
+                                    <div class="sys-usage-bar">
+                                        <div class="sys-usage-bar-fill" id="m-gc-bar" style="width:0%"></div>
+                                    </div>
+                                </div>
+                                <div id="m-gc-status" class="cost-gc-status">
+                                    <i class="fa fa-spinner fa-spin"></i> جاري الاتصال بـ Google Cloud...
+                                </div>
+                                <div id="m-gc-breakdown"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- /g-panel-costs -->
             </div>
 
             <!-- ═══════════ General Settings Tab ═══════════ -->
@@ -1168,6 +1401,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
 
 <?php
 $testUrl = Url::to(['test-google-connection']);
+$googleStatsUrl = Url::to(['/customers/smart-media/google-stats']);
 $js = <<<JS
 // دليل خريطة Google — طيّ/فتح
 window.toggleGmGuide = function() {
@@ -1276,58 +1510,242 @@ window.goToStep = function(step) {
     $('#setup-guide')[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
-// Parse JSON credentials
+// ═══ Shared: read a JSON file via FileReader ═══
+function readJsonFile(file, callback) {
+    if (!file) return;
+    if (file.type && file.type !== 'application/json' && !file.name.endsWith('.json')) {
+        callback(null, 'الملف ليس بصيغة JSON');
+        return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            var data = JSON.parse(e.target.result);
+            callback(data, null, file.name);
+        } catch (err) {
+            callback(null, 'صيغة JSON غير صالحة — تأكد أن الملف صحيح');
+        }
+    };
+    reader.onerror = function() { callback(null, 'تعذّر قراءة الملف'); };
+    reader.readAsText(file);
+}
+
+// Fill Vision API fields from parsed data object
+function fillVisionFields(data, resultDiv) {
+    var filled = 0;
+    if (!resultDiv) resultDiv = $('#gc-parse-result');
+    if (data.project_id) { $('#gc_project_id').val(data.project_id).css('border-color', '#28a745'); filled++; }
+    if (data.client_email) { $('#gc_client_email').val(data.client_email).css('border-color', '#28a745'); filled++; }
+    if (data.private_key) { $('#gc_private_key').val(data.private_key).css('border-color', '#28a745'); filled++; }
+    if (filled === 0) {
+        resultDiv.html('<div class="gc-parse-error"><i class="fa fa-exclamation-circle"></i> لم يتم العثور على حقول service account في الملف (project_id, client_email, private_key)</div>').show();
+        return;
+    }
+    resultDiv.html(
+        '<div class="gc-parse-success"><i class="fa fa-check-circle"></i> تم استخراج ' + filled + ' حقول بنجاح! تحقق من البيانات أدناه ثم اضغط "حفظ الإعدادات"</div>'
+    ).show();
+    setTimeout(function() { $('#gc_project_id, #gc_client_email, #gc_private_key').css('border-color', ''); }, 3000);
+}
+
+// ═══ Vision API: File upload handler (supports multiple dropzones) ═══
+function initVisionDropzone(dropId, fileId, contentId, successId, filenameId, resultId) {
+    var dropzone = document.getElementById(dropId);
+    var fileInput = document.getElementById(fileId);
+    if (!dropzone || !fileInput) return;
+
+    dropzone.addEventListener('click', function(e) {
+        if (e.target === fileInput) return;
+        fileInput.click();
+    });
+    dropzone.addEventListener('dragover', function(e) { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', function() { dropzone.classList.remove('dragover'); });
+    dropzone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) handle(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', function() { if (this.files.length) handle(this.files[0]); });
+
+    function handle(file) {
+        var resDiv = resultId ? $('#' + resultId) : $('#gc-parse-result');
+        readJsonFile(file, function(data, err, name) {
+            if (err) {
+                resDiv.html('<div class="gc-parse-error"><i class="fa fa-exclamation-circle"></i> ' + err + '</div>').show();
+                return;
+            }
+            var contentEl = document.getElementById(contentId);
+            if (contentEl) contentEl.style.display = 'none';
+            $('#' + successId).show().find('#' + filenameId).text(name);
+            fillVisionFields(data, resDiv);
+        });
+    }
+}
+initVisionDropzone('gc-json-dropzone-main', 'gc-json-file-main', 'gc-upload-content-main', 'gc-upload-success-main', 'gc-upload-filename-main', 'gc-parse-result-main');
+initVisionDropzone('gc-json-dropzone', 'gc-json-file', 'gc-json-dropzone', 'gc-upload-success', 'gc-upload-filename', null);
+
+// ═══ Vision API: Paste handler (existing) ═══
 window.parseJsonCredentials = function() {
     var jsonText = $('#gc-json-paste').val().trim();
     var resultDiv = $('#gc-parse-result');
-    
     if (!jsonText) {
         resultDiv.html('<div class="gc-parse-error"><i class="fa fa-exclamation-circle"></i> الصق محتوى ملف JSON أولاً</div>').show();
         return;
     }
-    
     try {
-        var data = JSON.parse(jsonText);
-        var filled = 0;
-        
-        if (data.project_id) {
-            $('#gc_project_id').val(data.project_id).css('border-color', '#28a745');
-            filled++;
-        }
-        if (data.client_email) {
-            $('#gc_client_email').val(data.client_email).css('border-color', '#28a745');
-            filled++;
-        }
-        if (data.private_key) {
-            $('#gc_private_key').val(data.private_key).css('border-color', '#28a745');
-            filled++;
-        }
-        
-        resultDiv.html(
-            '<div class="gc-parse-success">' +
-            '<i class="fa fa-check-circle"></i> تم استخراج ' + filled + ' حقول بنجاح! تحقق من البيانات أدناه ثم اضغط "حفظ الإعدادات"' +
-            '</div>'
-        ).show();
-        
-        // Flash green on filled fields
-        setTimeout(function() {
-            $('#gc_project_id, #gc_client_email, #gc_private_key').css('border-color', '');
-        }, 3000);
-        
+        fillVisionFields(JSON.parse(jsonText));
     } catch (e) {
         resultDiv.html('<div class="gc-parse-error"><i class="fa fa-exclamation-circle"></i> صيغة JSON غير صالحة — تأكد من نسخ المحتوى كاملاً</div>').show();
     }
 };
 
+// ═══ Maps API: File upload handler ═══
+(function() {
+    var dropzone = document.getElementById('gm-json-dropzone');
+    var fileInput = document.getElementById('gm-json-file');
+    if (!dropzone || !fileInput) return;
+
+    dropzone.addEventListener('click', function(e) {
+        if (e.target === fileInput) return;
+        fileInput.click();
+    });
+    dropzone.addEventListener('dragover', function(e) { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', function() { dropzone.classList.remove('dragover'); });
+    dropzone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) handleMapsFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', function() { if (this.files.length) handleMapsFile(this.files[0]); });
+
+    function handleMapsFile(file) {
+        readJsonFile(file, function(data, err, name) {
+            var keyField = $('#gm_api_key');
+            if (err) {
+                keyField.css('border-color', '#dc3545');
+                setTimeout(function() { keyField.css('border-color', ''); }, 3000);
+                return;
+            }
+            var key = data.api_key || data.key || data.maps_api_key || data.google_maps_api_key || data.apiKey || null;
+            if (!key && typeof data === 'object') {
+                for (var k in data) {
+                    if (typeof data[k] === 'string' && data[k].indexOf('AIza') === 0) { key = data[k]; break; }
+                }
+            }
+            if (key) {
+                keyField.val(key).css('border-color', '#28a745');
+                $('#gm-upload-success').show().find('#gm-upload-filename').text(name);
+                dropzone.querySelector('.json-upload-content').style.display = 'none';
+                setTimeout(function() { keyField.css('border-color', ''); }, 3000);
+            } else {
+                keyField.css('border-color', '#dc3545');
+                var hint = $('<div class="gc-parse-error" style="margin-top:8px"><i class="fa fa-exclamation-circle"></i> لم يتم العثور على مفتاح API في الملف (api_key, key, maps_api_key)</div>');
+                $(dropzone).after(hint);
+                setTimeout(function() { keyField.css('border-color', ''); hint.fadeOut(function() { hint.remove(); }); }, 4000);
+            }
+        });
+    }
+})();
+
 // Copy JSON value to field
 window.copyJsonValue = function(el, fieldId) {
-    // This is for the mockup — just highlight the target field
     var field = $('#' + fieldId);
     field.css({ 'border-color': '#4285f4', 'box-shadow': '0 0 0 3px rgba(66,133,244,0.3)' });
     setTimeout(function() {
         field.css({ 'border-color': '', 'box-shadow': '' });
     }, 2000);
 };
+
+// ═══ Inner tabs within Google APIs section ═══
+$('.g-inner-tab').on('click', function() {
+    var panel = $(this).data('inner');
+    $('.g-inner-tab').removeClass('active');
+    $(this).addClass('active');
+    $('.g-inner-panel').removeClass('active');
+    $('#g-panel-' + panel).addClass('active');
+});
+
+// ═══ Cost tab: source toggle (local / google / info) ═══
+$('.cost-src-tab').on('click', function() {
+    var group = $(this).data('cost-group');
+    var src = $(this).data('cost-src');
+    $('.cost-src-tab[data-cost-group="' + group + '"]').removeClass('active');
+    $(this).addClass('active');
+    $('[data-cost-group="' + group + '"].cost-src-panel').hide();
+    $('[data-cost-group="' + group + '"][data-cost-panel="' + src + '"]').show();
+    if (src === 'google' && !window['_gc_' + group + '_loaded']) {
+        window['_gc_' + group + '_loaded'] = true;
+        loadCostStats();
+    }
+});
+
+var _costStatsCache = null;
+function loadCostStats() {
+    if (_costStatsCache) { fillCostPanels(_costStatsCache); return; }
+    $('#v-gc-status, #m-gc-status').html('<i class="fa fa-spinner fa-spin"></i> جاري الاتصال بـ Google Cloud...');
+    $.ajax({
+        url: '{$googleStatsUrl}',
+        method: 'GET',
+        timeout: 25000,
+        dataType: 'json',
+        success: function(data) {
+            _costStatsCache = data;
+            fillCostPanels(data);
+        },
+        error: function(xhr) {
+            var msg = '<i class="fa fa-exclamation-triangle" style="color:#e74c3c"></i> فشل الاتصال (' + xhr.status + ')';
+            $('#v-gc-status, #m-gc-status').html(msg);
+        }
+    });
+}
+
+function fillCostPanels(data) {
+    // --- Vision ---
+    if (data && data.google) {
+        var g = data.google;
+        var u = g.usage || {};
+        var total = u.total_requests || 0;
+        var free = u.free_tier_used || Math.min(total, 1000);
+        var billable = u.billable_requests || 0;
+        var cost = u.estimated_cost || 0;
+        var remaining = u.free_remaining || Math.max(0, 1000 - total);
+        var pct = Math.min(100, (total / 1000) * 100);
+
+        $('#v-gc-total').text(total.toLocaleString());
+        $('#v-gc-free').text(free.toLocaleString());
+        $('#v-gc-billable').text(billable.toLocaleString());
+        $('#v-gc-cost').text('$' + cost.toFixed(4));
+        $('#v-gc-bar-label').text(total.toLocaleString() + ' / 1,000');
+        $('#v-gc-bar').css('width', pct + '%');
+        if (pct > 80) $('#v-gc-bar').addClass('warning');
+        if (pct > 95) $('#v-gc-bar').addClass('danger');
+        $('#v-gc-remaining-label').text('المتبقي: ' + remaining.toLocaleString() + ' مجاني');
+        $('#v-gc-pct').text(Math.round(pct) + '%');
+
+        var statusHtml = '<i class="fa fa-check-circle" style="color:#27ae60"></i> بيانات حقيقية من Google Cloud';
+        if (g.billing_enabled) statusHtml += ' — <span style="color:#27ae60">الفوترة مفعّلة</span>';
+        $('#v-gc-status').html(statusHtml);
+
+        if (u.breakdown && u.breakdown.length > 0) {
+            var tbl = '<table class="cost-breakdown-tbl"><tr><th>الوظيفة</th><th>الطلبات</th><th>الحالة</th></tr>';
+            u.breakdown.forEach(function(b) {
+                tbl += '<tr><td>' + (b.method || '—') + '</td><td>' + (b.count || 0) + '</td><td>' + (b.status || '—') + '</td></tr>';
+            });
+            tbl += '</table>';
+            $('#v-gc-breakdown').html(tbl);
+        }
+    } else {
+        $('#v-gc-status').html('<i class="fa fa-exclamation-triangle" style="color:#e74c3c"></i> لا توجد بيانات — تأكد من إعداد Google Cloud credentials');
+    }
+
+    // --- Maps: estimate from $200 free credit ---
+    // Maps billing is estimated; actual data comes from Google Cloud Billing
+    $('#m-gc-total').text('—');
+    $('#m-gc-used').text('$0');
+    $('#m-gc-remaining').text('$200');
+    $('#m-gc-bar-label').text('$0 / $200');
+    $('#m-gc-bar').css('width', '0%');
+    $('#m-gc-status').html('<i class="fa fa-info-circle" style="color:#4285f4"></i> بيانات Maps API التفصيلية تتوفر عبر <a href="https://console.cloud.google.com/billing" target="_blank" rel="noopener">Google Cloud Billing Console</a>');
+}
 
 // Test connection
 window.testGoogleConnection = function() {

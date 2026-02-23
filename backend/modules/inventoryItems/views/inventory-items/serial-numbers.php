@@ -8,6 +8,7 @@ use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset;
 use backend\modules\inventoryItems\models\InventorySerialNumber;
+use backend\widgets\ExportButtons;
 
 $this->title = 'الأرقام التسلسلية — إدارة المخزون';
 CrudAsset::register($this);
@@ -163,7 +164,12 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
             'filterModel' => $searchModel,
             'columns' => require(__DIR__ . '/_serial_columns.php'),
             'summary' => '<span style="font-size:13px;color:#64748b"><i class="fa fa-barcode"></i> عرض <b>{begin}-{end}</b> من <b>{totalCount}</b> رقم تسلسلي</span>',
-            'toolbar' => [['content' => '{toggleData}{export}']],
+            'toolbar' => [['content' =>
+                ExportButtons::widget([
+                    'excelRoute' => ['export-serials-excel'],
+                    'pdfRoute'   => ['export-serials-pdf'],
+                ]) . ' {toggleData}'
+            ]],
             'striped' => true,
             'condensed' => true,
             'responsive' => true,

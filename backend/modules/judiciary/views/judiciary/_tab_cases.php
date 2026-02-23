@@ -7,6 +7,7 @@ use yii\helpers\Html;
 use yii\widgets\Pjax;
 use kartik\grid\GridView;
 use common\helper\Permissions;
+use backend\widgets\ExportButtons;
 ?>
 
 <?= $this->render('_search', ['model' => $searchModel]) ?>
@@ -31,7 +32,11 @@ use common\helper\Permissions;
                           Html::a('<i class="fa fa-plus"></i> إضافة إجراء', ['/judiciaryCustomersActions/judiciary-customers-actions/create'], ['class' => 'btn btn-success', 'role' => 'modal-remote'])
                         : '') .
                     Html::a('<i class="fa fa-refresh"></i>', [''], ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'تحديث']) .
-                    '{toggleData}{export}'
+                    '{toggleData}' .
+                    ExportButtons::widget([
+                        'excelRoute' => '/judiciary/judiciary/export-cases-excel',
+                        'pdfRoute'   => '/judiciary/judiciary/export-cases-pdf',
+                    ])
             ],
         ],
         'striped' => true,

@@ -8,6 +8,7 @@ use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset;
 use common\helper\Permissions;
+use backend\widgets\ExportButtons;
 
 $this->title = 'إدارة المخزون';
 CrudAsset::register($this);
@@ -54,7 +55,13 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
             'dataProvider' => $dataProvider,
             'columns' => require(__DIR__ . '/_columns.php'),
             'summary' => '<span style="font-size:13px;color:#64748b"><i class="fa fa-table"></i> عرض <b>{begin}-{end}</b> من <b>{totalCount}</b> أمر شراء</span>',
-            'toolbar' => [['content' => '{toggleData}{export}']],
+            'toolbar' => [['content' =>
+                '{toggleData}' .
+                ExportButtons::widget([
+                    'excelRoute' => ['export-excel'],
+                    'pdfRoute' => ['export-pdf'],
+                ])
+            ]],
             'striped' => true,
             'condensed' => true,
             'responsive' => true,

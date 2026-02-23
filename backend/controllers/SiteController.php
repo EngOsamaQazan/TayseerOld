@@ -297,7 +297,7 @@ class SiteController extends Controller
                 $keyToSave = $newKey !== '' ? $newKey : $existingKey;
                 SystemSettings::set('google_maps', 'api_key', $keyToSave, true, 'Google Maps API Key');
                 Yii::$app->session->setFlash('success', $keyToSave !== '' ? 'تم حفظ مفتاح Google Maps بنجاح' : 'تم مسح مفتاح Google Maps');
-                return $this->redirect(['system-settings', 'tab' => 'google_maps']);
+                return $this->redirect(['system-settings', 'tab' => 'google_apis']);
             }
 
             if ($tab === 'google_cloud') {
@@ -324,7 +324,7 @@ class SiteController extends Controller
                     Yii::$app->session->setFlash('error', 'حدث خطأ أثناء حفظ الإعدادات');
                 }
 
-                return $this->redirect(['system-settings', 'tab' => 'google_cloud']);
+                return $this->redirect(['system-settings', 'tab' => 'google_apis']);
             }
         }
 
@@ -389,9 +389,9 @@ class SiteController extends Controller
             $stats = (new Query())
                 ->select([
                     'total_requests' => 'COUNT(*)',
-                    'success_count'  => 'SUM(CASE WHEN status = "success" THEN 1 ELSE 0 END)',
-                    'fail_count'     => 'SUM(CASE WHEN status = "error" THEN 1 ELSE 0 END)',
-                    'total_cost'     => 'COALESCE(SUM(cost), 0)',
+                    'success_count'  => "SUM(CASE WHEN request_status = 'success' THEN 1 ELSE 0 END)",
+                    'fail_count'     => "SUM(CASE WHEN request_status = 'error' THEN 1 ELSE 0 END)",
+                    'total_cost'     => 'COALESCE(SUM(cost_estimate), 0)',
                 ])
                 ->from('{{%vision_api_usage}}')
                 ->where(['>=', 'created_at', $month . '-01 00:00:00'])

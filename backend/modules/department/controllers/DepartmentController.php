@@ -11,12 +11,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\filters\AccessControl;
+use backend\helpers\ExportTrait;
 
 /**
  * DepartmentController implements the CRUD actions for Department model.
  */
 class DepartmentController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -31,7 +33,7 @@ class DepartmentController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','update','create','delete'],
+                        'actions' => ['logout', 'index','update','create','delete','export-excel','export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -265,6 +267,35 @@ class DepartmentController extends Controller
             return $this->redirect(['index']);
         }
        
+    }
+
+    public function actionExportExcel() {
+        $searchModel = new DepartmentSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'الأقسام',
+            'filename' => 'departments',
+            'headers' => ['#', 'العنوان', 'الوصف', 'المسؤول', 'الحالة'],
+            'keys' => ['#', 'title', 'description', function($model) {
+                return $model->leadBy->username ?? '';
+            }, 'status'],
+            'widths' => [8, 25, 30, 20, 14],
+        ]);
+    }
+
+    public function actionExportPdf() {
+        $searchModel = new DepartmentSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'الأقسام',
+            'filename' => 'departments',
+            'headers' => ['#', 'العنوان', 'الوصف', 'المسؤول', 'الحالة'],
+            'keys' => ['#', 'title', 'description', function($model) {
+                return $model->leadBy->username ?? '';
+            }, 'status'],
+        ], 'pdf');
     }
 
     /**

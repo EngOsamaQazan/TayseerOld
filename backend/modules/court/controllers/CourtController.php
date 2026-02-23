@@ -10,11 +10,13 @@ use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
+use backend\helpers\ExportTrait;
 
 /**
  * CourtController implements the CRUD actions for Court model.
  */
 class CourtController extends Controller {
+    use ExportTrait;
 
     /**
      * @inheritdoc
@@ -242,6 +244,35 @@ class CourtController extends Controller {
              */
             return $this->redirect(['index']);
         }
+    }
+
+    public function actionExportExcel() {
+        $searchModel = new CourtSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'المحاكم',
+            'filename' => 'courts',
+            'headers' => ['#', 'الاسم', 'المدينة', 'العنوان', 'رقم الهاتف', 'أنشئ بواسطة'],
+            'keys' => ['#', 'name', function($model) {
+                return \common\components\City::findMyCity($model->city);
+            }, 'adress', 'phone_number', 'created_by'],
+            'widths' => [8, 25, 20, 30, 18, 18],
+        ]);
+    }
+
+    public function actionExportPdf() {
+        $searchModel = new CourtSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'المحاكم',
+            'filename' => 'courts',
+            'headers' => ['#', 'الاسم', 'المدينة', 'العنوان', 'رقم الهاتف', 'أنشئ بواسطة'],
+            'keys' => ['#', 'name', function($model) {
+                return \common\components\City::findMyCity($model->city);
+            }, 'adress', 'phone_number', 'created_by'],
+        ], 'pdf');
     }
 
     /**

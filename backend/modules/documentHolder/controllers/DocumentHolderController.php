@@ -15,12 +15,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\web\UploadedFile;
+use backend\helpers\ExportTrait;
 
 /**
  * DocumentHolderController implements the CRUD actions for DocumentHolder model.
  */
 class DocumentHolderController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -35,7 +37,7 @@ class DocumentHolderController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'archives', 'find-type', 'manager-approved', 'employee-approved', 'manager-document-holder','find-list-user'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'archives', 'find-type', 'manager-approved', 'employee-approved', 'manager-document-holder','find-list-user', 'export-excel', 'export-pdf', 'export-manager-excel', 'export-manager-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -218,6 +220,92 @@ class DocumentHolderController extends Controller
             return $this->redirect(['index']);
         }
 
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new DocumentHolderSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'حامل الوثائق',
+            'filename' => 'document_holders',
+            'headers' => ['#', 'موافقة المدير', 'موافقة الموظف', 'السبب', 'رقم العقد', 'الحالة', 'النوع'],
+            'keys' => [
+                '#',
+                'approvedByManager.username',
+                function ($model) { return empty($model->approved_by_employee) ? 'لا' : 'نعم'; },
+                'reason',
+                'contract_id',
+                'status',
+                'type',
+            ],
+            'widths' => [8, 20, 20, 30, 15, 15, 20],
+        ]);
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new DocumentHolderSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'حامل الوثائق',
+            'filename' => 'document_holders',
+            'headers' => ['#', 'موافقة المدير', 'موافقة الموظف', 'السبب', 'رقم العقد', 'الحالة', 'النوع'],
+            'keys' => [
+                '#',
+                'approvedByManager.username',
+                function ($model) { return empty($model->approved_by_employee) ? 'لا' : 'نعم'; },
+                'reason',
+                'contract_id',
+                'status',
+                'type',
+            ],
+        ], 'pdf');
+    }
+
+    public function actionExportManagerExcel()
+    {
+        $searchModel = new DocumentHolderSearch();
+        $dataProvider = $searchModel->managerSearch(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'حامل الوثائق - المدير',
+            'filename' => 'document_holders_manager',
+            'headers' => ['#', 'موافقة المدير', 'موافقة الموظف', 'السبب', 'رقم العقد', 'الحالة', 'النوع'],
+            'keys' => [
+                '#',
+                'approvedByManager.username',
+                function ($model) { return empty($model->approved_by_employee) ? 'لا' : 'نعم'; },
+                'reason',
+                'contract_id',
+                'status',
+                'type',
+            ],
+            'widths' => [8, 20, 20, 30, 15, 15, 20],
+        ]);
+    }
+
+    public function actionExportManagerPdf()
+    {
+        $searchModel = new DocumentHolderSearch();
+        $dataProvider = $searchModel->managerSearch(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'حامل الوثائق - المدير',
+            'filename' => 'document_holders_manager',
+            'headers' => ['#', 'موافقة المدير', 'موافقة الموظف', 'السبب', 'رقم العقد', 'الحالة', 'النوع'],
+            'keys' => [
+                '#',
+                'approvedByManager.username',
+                function ($model) { return empty($model->approved_by_employee) ? 'لا' : 'نعم'; },
+                'reason',
+                'contract_id',
+                'status',
+                'type',
+            ],
+        ], 'pdf');
     }
 
     /**

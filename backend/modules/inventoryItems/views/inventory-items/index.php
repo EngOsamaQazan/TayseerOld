@@ -11,6 +11,7 @@ use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset;
 use common\helper\Permissions;
+use backend\widgets\ExportButtons;
 
 $this->title = 'إدارة المخزون';
 
@@ -124,7 +125,12 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
             'columns' => require(__DIR__ . '/_columns.php'),
             'summary' => '<span style="font-size:13px;color:#64748b"><i class="fa fa-table"></i> عرض <b>{begin}-{end}</b> من <b>{totalCount}</b> صنف</span>',
             'toolbar' => [
-                ['content' => '{toggleData}{export}'],
+                ['content' =>
+                    ExportButtons::widget([
+                        'excelRoute' => ['export-excel'],
+                        'pdfRoute'   => ['export-pdf'],
+                    ]) . ' {toggleData}'
+                ],
             ],
             'striped' => true,
             'condensed' => true,

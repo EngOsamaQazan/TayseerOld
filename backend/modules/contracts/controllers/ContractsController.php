@@ -27,9 +27,12 @@ use backend\modules\inventoryItems\models\StockMovement;
 use backend\modules\companies\models\Companies;
 use backend\modules\contracts\models\PromissoryNote;
 use common\helper\Permissions;
+use backend\helpers\ExportTrait;
 
 class ContractsController extends Controller
 {
+    use ExportTrait;
+
     public function behaviors()
     {
         return [
@@ -40,7 +43,8 @@ class ContractsController extends Controller
                     ['actions' => ['logout'], 'allow' => true, 'roles' => ['@']],
                     [
                         'actions' => ['index', 'view', 'index-legal-department', 'legal-department',
-                            'print-preview', 'print-first-page', 'print-second-page'],
+                            'print-preview', 'print-first-page', 'print-second-page',
+                            'export-excel', 'export-pdf', 'export-legal-excel', 'export-legal-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -226,6 +230,207 @@ class ContractsController extends Controller
     public function actionLegalDepartment()
     {
         return $this->actionIndexLegalDepartment();
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+     *  تصدير — Export
+     * ══════════════════════════════════════════════════════════════ */
+
+    public function actionExportExcel()
+    {
+        return $this->exportContractsIndex('excel');
+    }
+
+    public function actionExportPdf()
+    {
+        return $this->exportContractsIndex('pdf');
+    }
+
+    public function actionExportLegalExcel()
+    {
+        return $this->exportLegalDepartment('excel');
+    }
+
+    public function actionExportLegalPdf()
+    {
+        return $this->exportLegalDepartment('pdf');
+    }
+
+    private function exportContractsIndex(string $format)
+    {
+        $searchModel = new ContractsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        $dataProvider->query->with(['customers', 'seller', 'followedBy']);
+        $dataProvider->pagination = false;
+        $models = $dataProvider->getModels();
+
+        $contractIds = ArrayHelper::getColumn($models, 'id');
+        $pre = $this->preloadContractExportData($contractIds);
+
+        $statusLabels = [
+            'active' => 'نشط', 'pending' => 'معلّق', 'judiciary' => 'قضاء',
+            'legal_department' => 'قانوني', 'settlement' => 'تسوية', 'finished' => 'منتهي',
+            'canceled' => 'ملغي', 'refused' => 'مرفوض',
+        ];
+
+        return $this->exportArrayData($models, [
+            'title' => 'العقود',
+            'filename' => 'contracts',
+            'headers' => ['#', 'البائع', 'العميل', 'المستحق', 'التاريخ', 'الإجمالي', 'الحالة', 'المتبقي', 'المتابع'],
+            'keys' => [
+                'id',
+                function ($m) { return $m->seller->name ?? '—'; },
+                function ($m) {
+                    return implode('، ', ArrayHelper::map($m->customers, 'id', 'name')) ?: '—';
+                },
+                function ($m) {
+                    $calc = new \backend\modules\followUp\helper\ContractCalculations($m->id);
+                    return $calc->deservedAmount();
+                },
+                'Date_of_sale',
+                function ($m) use ($pre) {
+                    $judRows = $pre['judByContract'][$m->id] ?? [];
+                    $total = (float)$m->total_value;
+                    if ($m->status === 'judiciary' && !empty($judRows)) {
+                        $total += (float)$judRows[0]['case_cost'] + (float)$judRows[0]['lawyer_cost'];
+                    }
+                    return $total;
+                },
+                function ($m) use ($statusLabels) {
+                    return $statusLabels[$m->status] ?? $m->status;
+                },
+                function ($m) use ($pre) {
+                    $judRows = $pre['judByContract'][$m->id] ?? [];
+                    $caseCosts = (float)($pre['expByContract'][$m->id] ?? 0);
+                    $paid = (float)($pre['paidByContract'][$m->id] ?? 0);
+                    $totalForRemain = (float)$m->total_value;
+                    if (!empty($judRows)) {
+                        $lawyerSum = 0;
+                        foreach ($judRows as $j) $lawyerSum += (float)$j['lawyer_cost'];
+                        $totalForRemain += $caseCosts + $lawyerSum;
+                    }
+                    return $totalForRemain - $paid;
+                },
+                function ($m) { return $m->followedBy->username ?? '—'; },
+            ],
+            'widths' => [8, 16, 22, 14, 14, 14, 12, 14, 14],
+        ], $format);
+    }
+
+    private function exportLegalDepartment(string $format)
+    {
+        $searchModel = new ContractsSearch();
+        $dataProvider = $searchModel->searchLegalDepartment(Yii::$app->request->queryParams);
+        $dataProvider->pagination = false;
+        $models = $dataProvider->getModels();
+
+        $jobsRows = \backend\modules\jobs\models\Jobs::find()->select(['id', 'name', 'job_type'])->asArray()->all();
+        $jobsMap = ArrayHelper::map($jobsRows, 'id', 'name');
+        $jobToTypeMap = ArrayHelper::map($jobsRows, 'id', 'job_type');
+        $jobTypesMap = ArrayHelper::map(
+            \backend\modules\jobs\models\JobsType::find()->select(['id', 'name'])->asArray()->all(), 'id', 'name'
+        );
+
+        $ids = ArrayHelper::getColumn($models, 'id');
+        $judiciaryMap = [];
+        if (!empty($ids)) {
+            $judRecords = \backend\modules\judiciary\models\Judiciary::find()
+                ->where(['contract_id' => $ids, 'is_deleted' => 0])
+                ->orderBy(['id' => SORT_DESC])
+                ->all();
+            foreach ($judRecords as $jud) {
+                if (!isset($judiciaryMap[$jud->contract_id])) {
+                    $judiciaryMap[$jud->contract_id] = $jud;
+                }
+            }
+        }
+
+        return $this->exportArrayData($models, [
+            'title' => 'الدائرة القانونية',
+            'filename' => 'legal_department',
+            'headers' => ['#', 'الأطراف', 'الإجمالي', 'المتبقي', 'الوظيفة', 'نوع الوظيفة'],
+            'keys' => [
+                'id',
+                function ($m) {
+                    $parties = $m->customersAndGuarantor;
+                    $lines = [];
+                    foreach ($parties as $p) {
+                        $line = $p->name;
+                        if ($p->id_number) $line .= ' (' . $p->id_number . ')';
+                        $lines[] = $line;
+                    }
+                    return implode(' | ', $lines) ?: '—';
+                },
+                function ($m) use ($judiciaryMap) {
+                    $jud = $judiciaryMap[$m->id] ?? null;
+                    $total = (float)$m->total_value;
+                    if ($jud) $total += ($jud->case_cost ?? 0) + ($jud->lawyer_cost ?? 0);
+                    return $total;
+                },
+                function ($m) use ($judiciaryMap) {
+                    $jud = $judiciaryMap[$m->id] ?? null;
+                    $totalForRemain = (float)$m->total_value;
+                    if ($jud) {
+                        $caseCosts = \backend\modules\expenses\models\Expenses::find()
+                            ->where(['contract_id' => $m->id, 'category_id' => 4])->sum('amount') ?? 0;
+                        $totalForRemain += $caseCosts + ($jud->lawyer_cost ?? 0);
+                    }
+                    $paid = \backend\modules\contractInstallment\models\ContractInstallment::find()
+                        ->where(['contract_id' => $m->id])->sum('amount') ?? 0;
+                    return $totalForRemain - $paid;
+                },
+                function ($m) use ($jobsMap) {
+                    $firstCustomer = ($m->customersAndGuarantor)[0] ?? null;
+                    $jobId = ($firstCustomer && $firstCustomer->job_title) ? $firstCustomer->job_title : null;
+                    return $jobId ? ($jobsMap[$jobId] ?? '—') : '—';
+                },
+                function ($m) use ($jobsMap, $jobToTypeMap, $jobTypesMap) {
+                    $firstCustomer = ($m->customersAndGuarantor)[0] ?? null;
+                    $jobId = ($firstCustomer && $firstCustomer->job_title) ? $firstCustomer->job_title : null;
+                    $jobTypeId = $jobId ? ($jobToTypeMap[$jobId] ?? null) : null;
+                    return $jobTypeId ? ($jobTypesMap[$jobTypeId] ?? '—') : '—';
+                },
+            ],
+            'widths' => [8, 30, 14, 14, 16, 16],
+        ], $format);
+    }
+
+    private function preloadContractExportData(array $contractIds): array
+    {
+        $pre = ['judByContract' => [], 'expByContract' => [], 'paidByContract' => []];
+        if (empty($contractIds)) return $pre;
+
+        $db = Yii::$app->db;
+        $idList = implode(',', array_map('intval', $contractIds));
+
+        $judRows = $db->createCommand(
+            "SELECT contract_id, id, case_cost, lawyer_cost
+             FROM os_judiciary WHERE contract_id IN ($idList) AND is_deleted=0
+             ORDER BY id DESC"
+        )->queryAll();
+        foreach ($judRows as $j) {
+            $pre['judByContract'][$j['contract_id']][] = $j;
+        }
+
+        $pre['expByContract'] = ArrayHelper::map(
+            $db->createCommand(
+                "SELECT contract_id, COALESCE(SUM(amount),0) as total
+                 FROM os_expenses WHERE contract_id IN ($idList) AND category_id=4
+                 GROUP BY contract_id"
+            )->queryAll(),
+            'contract_id', 'total'
+        );
+
+        $pre['paidByContract'] = ArrayHelper::map(
+            $db->createCommand(
+                "SELECT contract_id, COALESCE(SUM(amount),0) as total
+                 FROM os_income WHERE contract_id IN ($idList)
+                 GROUP BY contract_id"
+            )->queryAll(),
+            'contract_id', 'total'
+        );
+
+        return $pre;
     }
 
     /* ══════════════════════════════════════════════════════════════

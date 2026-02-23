@@ -11,12 +11,15 @@ use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
+use backend\helpers\ExportHelper;
+use backend\helpers\ExportTrait;
 
 /**
  * JudiciaryCustomersActionsController implements the CRUD actions for JudiciaryCustomersActions model.
  */
 class JudiciaryCustomersActionsController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -31,7 +34,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'view', 'create-followup-judicary-custamer-action', 'update-followup-judicary-custamer-action'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'view', 'create-followup-judicary-custamer-action', 'update-followup-judicary-custamer-action', 'export-excel', 'export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -544,6 +547,54 @@ class JudiciaryCustomersActionsController extends Controller
             */
             return $this->redirect(['index']);
         }
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new JudiciaryCustomersActionsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig());
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new JudiciaryCustomersActionsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig(), 'pdf');
+    }
+
+    protected function getExportConfig()
+    {
+        return [
+            'title' => 'إجراءات العملاء القضائية',
+            'filename' => 'judiciary-customers-actions',
+            'orientation' => 'L',
+            'headers' => ['#', 'القضية', 'المحكوم عليه', 'الإجراء', 'ملاحظات', 'المنشئ', 'المحامي', 'المحكمة', 'العقد', 'تاريخ الإجراء'],
+            'keys' => [
+                '#',
+                function ($model) {
+                    $jud = $model->judiciary;
+                    return $jud ? ($jud->judiciary_number . '/' . $jud->year) : '#' . $model->judiciary_id;
+                },
+                'customers.name',
+                'judiciaryActions.name',
+                'note',
+                'createdBy.username',
+                function ($model) {
+                    return \common\helper\FindJudicary::findLawyerJudicary($model->judiciary_id);
+                },
+                function ($model) {
+                    return \common\helper\FindJudicary::findCourtJudicary($model->judiciary_id);
+                },
+                function ($model) {
+                    return \common\helper\FindJudicary::findJudiciaryContract($model->judiciary_id) ?: '—';
+                },
+                'action_date',
+            ],
+            'widths' => [6, 14, 20, 20, 28, 14, 18, 18, 10, 14],
+        ];
     }
 
     /**

@@ -11,6 +11,7 @@ use yii\widgets\LinkPager;
 use yii\widgets\ActiveForm;
 use kartik\date\DatePicker;
 use kartik\select2\Select2;
+use backend\widgets\ExportButtons;
 
 /* Assets */
 $this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' . time());
@@ -136,7 +137,13 @@ a.fur-id-link:hover{text-decoration:underline}
             <?php if ($isNoContact): ?>
                 <a href="<?= Url::to(['index']) ?>" class="ct-btn ct-btn-outline"><i class="fa fa-arrow-right"></i> <span class="ct-hide-xs">تقرير المتابعة</span></a>
             <?php endif ?>
-            <button class="ct-btn ct-btn-outline ct-hide-sm" id="ctExportBtn" title="تصدير"><i class="fa fa-download"></i> <span class="ct-hide-xs">تصدير</span></button>
+            <?= ExportButtons::widget([
+                'excelRoute' => ['export-excel'],
+                'pdfRoute' => ['export-pdf'],
+                'excelBtnClass' => 'ct-btn ct-btn-outline ct-hide-sm',
+                'pdfBtnClass' => 'ct-btn ct-btn-outline ct-hide-sm',
+                'passQueryParams' => true,
+            ]) ?>
             <button class="ct-btn ct-btn-ghost ct-show-sm" id="ctFilterToggle" aria-label="فتح الفلاتر"><i class="fa fa-sliders" style="font-size:18px"></i></button>
         </div>
     </div>

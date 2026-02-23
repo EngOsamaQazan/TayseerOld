@@ -11,12 +11,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\filters\AccessControl;
+use backend\helpers\ExportTrait;
 
 /**
  * ItemsController implements the CRUD actions for Items model.
  */
 class ItemsController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -31,7 +33,7 @@ class ItemsController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','update','create','delete'],
+                        'actions' => ['logout', 'index','update','create','delete','export-excel','export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -265,6 +267,40 @@ class ItemsController extends Controller
             return $this->redirect(['index']);
         }
        
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new ItemsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig());
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new ItemsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig(), 'pdf');
+    }
+
+    protected function getExportConfig()
+    {
+        return [
+            'title' => 'الأصناف',
+            'headers' => ['#', 'الاسم', 'التكلفة', 'السعر', 'رقم الفاتورة', 'ملاحظات'],
+            'keys' => [
+                '#',
+                'name',
+                'cost',
+                'price',
+                'invoice_number',
+                'notes',
+            ],
+            'widths' => [6, 28, 14, 14, 18, 30],
+            'filename' => 'items',
+        ];
     }
 
     /**

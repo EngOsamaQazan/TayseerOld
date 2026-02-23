@@ -6,6 +6,7 @@ use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset;
 use johnitvn\ajaxcrud\BulkButtonWidget;
+use backend\widgets\ExportButtons;
 
 /* @var $this yii\web\View */
 /* @var $searchModel app\models\IncomeSearch */
@@ -48,7 +49,10 @@ exit();
                             Html::a('<i class="glyphicon glyphicon-plus"></i>', ['create'], ['role' => 'modal-remote', 'title' => 'Create new Installments', 'class' => 'btn btn-default']) .
                             Html::a('<i class="glyphicon glyphicon-repeat"></i>', [''], ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'Reset Grid']) .
                             '{toggleData}' .
-                            '{export}'
+                            ExportButtons::widget([
+                                'excelRoute' => ['export-excel', 'customer_id' => $customer_id],
+                                'pdfRoute' => ['export-pdf', 'customer_id' => $customer_id],
+                            ])
                         ],
                     ],
                     'striped' => true,

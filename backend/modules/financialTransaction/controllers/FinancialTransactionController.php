@@ -23,9 +23,11 @@ use backend\modules\financialTransaction\helpers\BankStatementAnalyzer;
 use backend\modules\contracts\models\Contracts;
 use backend\modules\companyBanks\models\CompanyBanks;
 use common\helper\Permissions;
+use backend\helpers\ExportTrait;
 
 class FinancialTransactionController extends Controller
 {
+    use ExportTrait;
     /* ═══════════════════════════════════════════════
        صلاحيات الوصول والأفعال المسموحة
        ═══════════════════════════════════════════════ */
@@ -38,7 +40,7 @@ class FinancialTransactionController extends Controller
                     ['actions' => ['login', 'error'], 'allow' => true],
                     /* ═══ عرض ═══ */
                     [
-                        'actions' => ['index', 'view', 'find-notes'],
+                        'actions' => ['index', 'view', 'find-notes', 'export-excel', 'export-pdf'],
                         'allow'   => true,
                         'roles'   => [Permissions::FIN_VIEW],
                     ],
@@ -792,6 +794,75 @@ class FinancialTransactionController extends Controller
     /* ╔═══════════════════════════════════════════════╗
        ║  دوال مساعدة خاصة                            ║
        ╚═══════════════════════════════════════════════╝ */
+
+    public function actionExportExcel()
+    {
+        $searchModel  = new FinancialTransactionSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'الحركات المالية',
+            'filename' => 'financial_transactions',
+            'headers' => ['#', 'البيان', 'المبلغ', 'النوع', 'التصنيف', 'نوع الدخل', 'رقم العقد', 'الشركة', 'التاريخ', 'ملاحظات'],
+            'keys' => [
+                '#',
+                function ($model) {
+                    return !empty($model->description) ? $model->description : $model->bank_description;
+                },
+                'amount',
+                function ($model) {
+                    return $model->type == 1 ? 'Income' : 'Outcome';
+                },
+                'category.name',
+                function ($model) {
+                    if ($model->income_type) {
+                        $cat = \backend\modules\incomeCategory\models\IncomeCategory::findOne($model->income_type);
+                        return $cat ? $cat->name : $model->income_type;
+                    }
+                    return '';
+                },
+                'contract_id',
+                'company.name',
+                'date',
+                'notes',
+            ],
+            'widths' => [8, 28, 14, 12, 16, 16, 14, 16, 14, 20],
+        ]);
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel  = new FinancialTransactionSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'الحركات المالية',
+            'filename' => 'financial_transactions',
+            'headers' => ['#', 'البيان', 'المبلغ', 'النوع', 'التصنيف', 'نوع الدخل', 'رقم العقد', 'الشركة', 'التاريخ', 'ملاحظات'],
+            'keys' => [
+                '#',
+                function ($model) {
+                    return !empty($model->description) ? $model->description : $model->bank_description;
+                },
+                'amount',
+                function ($model) {
+                    return $model->type == 1 ? 'Income' : 'Outcome';
+                },
+                'category.name',
+                function ($model) {
+                    if ($model->income_type) {
+                        $cat = \backend\modules\incomeCategory\models\IncomeCategory::findOne($model->income_type);
+                        return $cat ? $cat->name : $model->income_type;
+                    }
+                    return '';
+                },
+                'contract_id',
+                'company.name',
+                'date',
+                'notes',
+            ],
+        ], 'pdf');
+    }
 
     /**
      * البحث عن نموذج حركة مالية أو رمي 404

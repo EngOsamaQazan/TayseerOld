@@ -40,7 +40,8 @@
         "php-amqplib/php-amqplib": "^3.7",
         "yiisoft/yii2-redis": "~2.0.0",
         "chillerlan/php-qrcode": "^5.0",
-        "borales/yii2-phone-input": "*"
+        "borales/yii2-phone-input": "*",
+        "mpdf/mpdf": "^8.2"
     },
     "require-dev": {
         "yiisoft/yii2-debug": "~2.1.0",

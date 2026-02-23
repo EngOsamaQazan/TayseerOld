@@ -28,10 +28,12 @@ use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\data\ActiveDataProvider;
 use common\helper\Permissions;
+use backend\helpers\ExportTrait;
 
 
 class InventoryItemsController extends Controller
 {
+    use ExportTrait;
     public function behaviors()
     {
         return [
@@ -44,6 +46,10 @@ class InventoryItemsController extends Controller
                             'index', 'items', 'view', 'movements', 'settings',
                             'search-items', 'item-query',
                             'serial-numbers', 'serial-view',
+                            'export-excel', 'export-pdf',
+                            'export-items-excel', 'export-items-pdf',
+                            'export-serials-excel', 'export-serials-pdf',
+                            'export-query-excel', 'export-query-pdf',
                         ],
                         'allow' => true,
                         'roles' => ['@'],
@@ -1054,6 +1060,146 @@ class InventoryItemsController extends Controller
                 'notes'          => "إصلاح جهاز: {$model->serial_number}",
             ]);
         }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  التصدير — Export Actions
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionExportExcel()
+    {
+        $searchModel  = new InventoryItemsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->getIndexExportConfig());
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel  = new InventoryItemsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->getIndexExportConfig(), 'pdf');
+    }
+
+    public function actionExportItemsExcel()
+    {
+        $searchModel  = new InventoryItemsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->getIndexExportConfig());
+    }
+
+    public function actionExportItemsPdf()
+    {
+        $searchModel  = new InventoryItemsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->getIndexExportConfig(), 'pdf');
+    }
+
+    public function actionExportSerialsExcel()
+    {
+        $searchModel  = new InventorySerialNumberSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->getSerialsExportConfig());
+    }
+
+    public function actionExportSerialsPdf()
+    {
+        $searchModel  = new InventorySerialNumberSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->getSerialsExportConfig(), 'pdf');
+    }
+
+    public function actionExportQueryExcel()
+    {
+        $searchModel  = new InventoryItemsSearch();
+        $dataProvider = $searchModel->itemQuery(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->getQueryExportConfig());
+    }
+
+    public function actionExportQueryPdf()
+    {
+        $searchModel  = new InventoryItemsSearch();
+        $dataProvider = $searchModel->itemQuery(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->getQueryExportConfig(), 'pdf');
+    }
+
+    protected function getIndexExportConfig()
+    {
+        return [
+            'title'    => 'أصناف المخزون',
+            'filename' => 'inventory_items',
+            'headers'  => ['#', 'اسم الصنف', 'الباركود', 'المخزون', 'السعر', 'الحالة', 'أنشئ بواسطة', 'التاريخ'],
+            'widths'   => [6, 30, 20, 12, 14, 14, 18, 14],
+            'keys'     => [
+                '#',
+                'item_name',
+                'item_barcode',
+                function ($model) {
+                    return $model->getTotalStock();
+                },
+                function ($model) {
+                    return $model->unit_price ? number_format($model->unit_price, 2) : '';
+                },
+                function ($model) {
+                    return $model->getStatusLabel();
+                },
+                function ($model) {
+                    return $model->createdBy ? $model->createdBy->username : '';
+                },
+                function ($model) {
+                    return $model->created_at ? date('Y-m-d', $model->created_at) : '';
+                },
+            ],
+        ];
+    }
+
+    protected function getSerialsExportConfig()
+    {
+        return [
+            'title'    => 'الأرقام التسلسلية',
+            'filename' => 'serial_numbers',
+            'headers'  => ['#', 'الرقم التسلسلي', 'الصنف', 'الحالة', 'المورد', 'الموقع', 'ملاحظات', 'التاريخ'],
+            'widths'   => [6, 24, 24, 14, 18, 18, 24, 14],
+            'keys'     => [
+                '#',
+                'serial_number',
+                function ($model) {
+                    return $model->item ? $model->item->item_name : '';
+                },
+                function ($model) {
+                    $statuses = InventorySerialNumber::getStatusList();
+                    return $statuses[$model->status] ?? $model->status;
+                },
+                function ($model) {
+                    return $model->supplier ? $model->supplier->name : '';
+                },
+                function ($model) {
+                    return $model->location ? $model->location->locations_name : '';
+                },
+                function ($model) {
+                    return $model->note ?? '';
+                },
+                function ($model) {
+                    return $model->created_at ? date('Y-m-d', $model->created_at) : '';
+                },
+            ],
+        ];
+    }
+
+    protected function getQueryExportConfig()
+    {
+        return [
+            'title'    => 'استعلام الأصناف والكميات المتبقية',
+            'filename' => 'item_query',
+            'headers'  => ['#', 'اسم الصنف', 'الكمية المتبقية'],
+            'widths'   => [6, 30, 18],
+            'keys'     => [
+                '#',
+                'item_name',
+                function ($model) {
+                    return $model->remaining_amount;
+                },
+            ],
+        ];
     }
 
     /* ═══ مساعدات ═══ */

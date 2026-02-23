@@ -20,12 +20,14 @@ use backend\modules\customers\models\CustomersDocument;
 use yii\filters\AccessControl;
 use backend\modules\customers\components\RiskEngine;
 use common\helper\Permissions;
+use backend\helpers\ExportTrait;
 
 /**
  * Default controller for the `reports` module
  */
 class CustomersController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -45,6 +47,14 @@ class CustomersController extends Controller
                         'roles' => ['@'],
                         'matchCallback' => function ($rule, $action) {
                             return Permissions::can(Permissions::CUST_VIEW);
+                        },
+                    ],
+                    [
+                        'actions' => ['export-excel', 'export-pdf'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function ($rule, $action) {
+                            return Permissions::can(Permissions::CUST_EXPORT);
                         },
                     ],
                     [
@@ -472,6 +482,80 @@ class CustomersController extends Controller
              */
             return $this->redirect(['index']);
         }
+    }
+
+    public function actionExportExcel()
+    {
+        if (!Permissions::can(Permissions::CUST_EXPORT)) {
+            throw new \yii\web\ForbiddenHttpException('غير مصرح');
+        }
+        $searchModel = new CustomersSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'العملاء',
+            'headers' => ['#', 'الاسم', 'الهاتف', 'الرقم الوطني', 'مشتكى عليه', 'العقود', 'الوظيفة'],
+            'keys' => [
+                '#',
+                'name',
+                'primary_phone_number',
+                'id_number',
+                function ($m) {
+                    $exists = \backend\modules\judiciary\models\Judiciary::find()
+                        ->innerJoin('os_contracts_customers cc', 'os_judiciary.contract_id = cc.contract_id')
+                        ->where(['cc.customer_id' => $m->id])
+                        ->exists();
+                    return $exists ? 'نعم' : 'لا';
+                },
+                function ($m) {
+                    $contracts = \backend\modules\customers\models\ContractsCustomers::find()
+                        ->select('contract_id')
+                        ->where(['customer_id' => $m->id])
+                        ->column();
+                    return implode(', ', $contracts);
+                },
+                'jobs.name',
+            ],
+            'widths' => [6, 25, 18, 18, 12, 20, 20],
+            'filename' => 'العملاء',
+        ]);
+    }
+
+    public function actionExportPdf()
+    {
+        if (!Permissions::can(Permissions::CUST_EXPORT)) {
+            throw new \yii\web\ForbiddenHttpException('غير مصرح');
+        }
+        $searchModel = new CustomersSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'العملاء',
+            'headers' => ['#', 'الاسم', 'الهاتف', 'الرقم الوطني', 'مشتكى عليه', 'العقود', 'الوظيفة'],
+            'keys' => [
+                '#',
+                'name',
+                'primary_phone_number',
+                'id_number',
+                function ($m) {
+                    $exists = \backend\modules\judiciary\models\Judiciary::find()
+                        ->innerJoin('os_contracts_customers cc', 'os_judiciary.contract_id = cc.contract_id')
+                        ->where(['cc.customer_id' => $m->id])
+                        ->exists();
+                    return $exists ? 'نعم' : 'لا';
+                },
+                function ($m) {
+                    $contracts = \backend\modules\customers\models\ContractsCustomers::find()
+                        ->select('contract_id')
+                        ->where(['customer_id' => $m->id])
+                        ->column();
+                    return implode(', ', $contracts);
+                },
+                'jobs.name',
+            ],
+            'widths' => [6, 25, 18, 18, 12, 20, 20],
+            'filename' => 'العملاء',
+        ], 'pdf');
     }
 
     /**

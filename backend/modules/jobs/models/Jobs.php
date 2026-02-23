@@ -72,12 +72,13 @@ class Jobs extends \yii\db\ActiveRecord
             [['latitude', 'longitude'], 'number'],
             [['notes'], 'string'],
             [['name', 'address_city', 'address_area', 'address_building', 'email', 'website'], 'string', 'max' => 255],
+            [['postal_code', 'plus_code'], 'string', 'max' => 20],
             [['address_street'], 'string', 'max' => 500],
             [['email'], 'email'],
             [['website'], 'url', 'defaultScheme' => 'https'],
             [['status'], 'default', 'value' => self::STATUS_ACTIVE],
             [['is_deleted'], 'default', 'value' => 0],
-            [['address_city', 'address_area', 'address_street', 'address_building', 'latitude', 'longitude', 'email', 'website', 'notes'], 'safe'],
+            [['address_city', 'address_area', 'address_street', 'address_building', 'postal_code', 'plus_code', 'latitude', 'longitude', 'email', 'website', 'notes'], 'safe'],
         ];
     }
 
@@ -94,6 +95,8 @@ class Jobs extends \yii\db\ActiveRecord
             'address_area' => Yii::t('app', 'المنطقة/الحي'),
             'address_street' => Yii::t('app', 'الشارع/العنوان التفصيلي'),
             'address_building' => Yii::t('app', 'المبنى/الطابق'),
+            'postal_code' => Yii::t('app', 'الرمز البريدي'),
+            'plus_code' => Yii::t('app', 'Plus Code'),
             'latitude' => Yii::t('app', 'خط العرض'),
             'longitude' => Yii::t('app', 'خط الطول'),
             'email' => Yii::t('app', 'البريد الإلكتروني'),

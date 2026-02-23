@@ -12,6 +12,7 @@ use johnitvn\ajaxcrud\CrudAsset;
 use johnitvn\ajaxcrud\BulkButtonWidget;
 use common\helper\LoanContract;
 use  backend\modules\contractInstallment\models\ContractInstallment;
+use backend\widgets\ExportButtons;
 /* @var $this yii\web\View */
 /* @var $searchModel backend\modules\models\CourtSearch */
 /* @var $dataProvider yii\data\ActiveDataProvider */
@@ -35,7 +36,7 @@ CrudAsset::register($this);
                     Html::a('<i class="glyphicon glyphicon-repeat"></i>', [''],
                         ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'Reset Grid']) .
                     '{toggleData}' .
-                    '{export}'
+                    ExportButtons::widget(['excelRoute' => 'export-excel', 'pdfRoute' => 'export-pdf'])
                 ],
             ],
             'striped' => true,

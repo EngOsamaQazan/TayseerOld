@@ -11,12 +11,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\filters\AccessControl;
+use backend\helpers\ExportTrait;
 
 /**
  * LeavePolicyController implements the CRUD actions for LeavePolicy model.
  */
 class LeavePolicyController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -31,7 +33,7 @@ class LeavePolicyController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'export-excel', 'export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -61,6 +63,55 @@ class LeavePolicyController extends Controller
         ]);
     }
 
+
+    public function actionExportExcel()
+    {
+        $searchModel = new LeavePolicySearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'سياسات الإجازات',
+            'filename' => 'leave_policies',
+            'headers'  => ['#', 'السنة', 'نوع الإجازة', 'إجمالي الأيام', 'الوصف', 'القسم'],
+            'keys'     => [
+                '#', 'year',
+                function ($model) {
+                    $type = \common\models\LeaveTypes::findOne($model->leave_type);
+                    return $type ? $type->title : '';
+                },
+                'total_days', 'description',
+                function ($model) {
+                    $dept = \backend\modules\department\models\Department::findOne($model->department);
+                    return $dept ? $dept->title : '';
+                },
+            ],
+            'widths'   => [8, 12, 20, 15, 25, 20],
+        ], 'excel');
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new LeavePolicySearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'سياسات الإجازات',
+            'filename' => 'leave_policies',
+            'headers'  => ['#', 'السنة', 'نوع الإجازة', 'إجمالي الأيام', 'الوصف', 'القسم'],
+            'keys'     => [
+                '#', 'year',
+                function ($model) {
+                    $type = \common\models\LeaveTypes::findOne($model->leave_type);
+                    return $type ? $type->title : '';
+                },
+                'total_days', 'description',
+                function ($model) {
+                    $dept = \backend\modules\department\models\Department::findOne($model->department);
+                    return $dept ? $dept->title : '';
+                },
+            ],
+        ], 'pdf');
+    }
 
     /**
      * Displays a single LeavePolicy model.

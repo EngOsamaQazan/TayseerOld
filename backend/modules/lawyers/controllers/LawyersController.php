@@ -12,11 +12,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use backend\modules\LawyersImage\models\LawyersImage;
+use backend\helpers\ExportTrait;
+
 /**
  * LawyersController implements the CRUD actions for Lawyers model.
  */
 class LawyersController extends Controller
 {
+    use ExportTrait;
 
     /**
      * @inheritdoc
@@ -32,7 +35,7 @@ class LawyersController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','update','create','delete','view'],
+                        'actions' => ['logout', 'index','update','create','delete','view','export-excel','export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -271,6 +274,47 @@ class LawyersController extends Controller
              */
             return $this->redirect(['index']);
         }
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new LawyersSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'المحامون',
+            'filename' => 'lawyers',
+            'headers' => ['#', 'الاسم', 'العنوان', 'رقم الهاتف', 'الحالة', 'أنشئ بواسطة'],
+            'keys' => [
+                '#',
+                'name',
+                'address',
+                'phone_number',
+                function ($model) { return ($model->status == 0) ? 'نشط' : 'غير نشط'; },
+                'createdBy.username',
+            ],
+            'widths' => [8, 25, 25, 20, 15, 20],
+        ]);
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new LawyersSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'المحامون',
+            'filename' => 'lawyers',
+            'headers' => ['#', 'الاسم', 'العنوان', 'رقم الهاتف', 'الحالة', 'أنشئ بواسطة'],
+            'keys' => [
+                '#',
+                'name',
+                'address',
+                'phone_number',
+                function ($model) { return ($model->status == 0) ? 'نشط' : 'غير نشط'; },
+                'createdBy.username',
+            ],
+        ], 'pdf');
     }
 
     /**

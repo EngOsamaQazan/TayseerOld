@@ -8,6 +8,7 @@ use kartik\grid\GridView;
 use yii\bootstrap\Modal;
 use yii\helpers\ArrayHelper;
 use backend\modules\jobs\models\JobsType;
+use backend\widgets\ExportButtons;
 
 $this->title = 'جهات العمل';
 $this->params['breadcrumbs'][] = $this->title;
@@ -43,7 +44,13 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
             'pjax' => true,
             'pjaxSettings' => ['options' => ['id' => 'crud-datatable-pjax']],
             'columns' => require(__DIR__ . '/_columns.php'),
-            'toolbar' => [['content' => '{toggleData}{export}']],
+            'toolbar' => [['content' =>
+                '{toggleData}' .
+                ExportButtons::widget([
+                    'excelRoute' => ['export-excel'],
+                    'pdfRoute' => ['export-pdf'],
+                ])
+            ]],
             'striped' => true,
             'condensed' => true,
             'responsive' => true,

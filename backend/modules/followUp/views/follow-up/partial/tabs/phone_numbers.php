@@ -5,6 +5,7 @@ use yii\helpers\Url;
 use yii\helpers\Html;
 use kartik\grid\GridView;
 use backend\modules\customers\models\ContractsCustomers;
+use backend\widgets\ExportButtons;
 ?>
 
 
@@ -233,7 +234,10 @@ use backend\modules\customers\models\ContractsCustomers;
                         'content' =>
                         Html::a('<i class="glyphicon glyphicon-plus"></i>', ['/phoneNumbers/phone-numbers/create?contract_id=' . $value->customer->name . '&customers_id=' . $value->customer->id], ['role' => 'modal-remote', 'title' => 'Create new Phone Numbers', 'class' => 'btn btn-default']) .
                             '{toggleData}' .
-                            '{export}'
+                            ExportButtons::widget([
+                                'excelRoute' => ['/followUp/follow-up/export-phone-numbers-excel', 'contract_id' => $contract_id],
+                                'pdfRoute' => ['/followUp/follow-up/export-phone-numbers-pdf', 'contract_id' => $contract_id],
+                            ])
                     ],
                 ],
                 'striped' => false,

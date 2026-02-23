@@ -31,9 +31,11 @@ use yii\helpers\ArrayHelper;
 use backend\modules\inventorySuppliers\models\InventorySuppliers;
 use backend\modules\companies\models\Companies;
 use common\helper\Permissions;
+use backend\helpers\ExportTrait;
 
 class InventoryInvoicesController extends Controller
 {
+    use ExportTrait;
     /* مصلح: كان بدون AccessControl */
     public function behaviors()
     {
@@ -43,7 +45,7 @@ class InventoryInvoicesController extends Controller
                 'rules' => [
                     ['actions' => ['login', 'error'], 'allow' => true],
                     [
-                        'actions' => ['index', 'view'],
+                        'actions' => ['index', 'view', 'export-excel', 'export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -115,6 +117,57 @@ class InventoryInvoicesController extends Controller
             'dataProvider' => $dataProvider,
             'isVendor'     => $isVendor,
         ]);
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new InventoryInvoicesSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig());
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new InventoryInvoicesSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig(), 'pdf');
+    }
+
+    protected function getExportConfig()
+    {
+        return [
+            'title' => 'أوامر الشراء',
+            'filename' => 'purchase_orders',
+            'headers' => ['#', 'رقم الأمر', 'موقع التخزين', 'المورد', 'الشركة', 'نوع الدفع', 'المبلغ', 'التاريخ', 'بواسطة'],
+            'keys' => [
+                '#',
+                'id',
+                function ($model) {
+                    return $model->stockLocation ? $model->stockLocation->locations_name : '—';
+                },
+                function ($model) {
+                    return $model->suppliers ? $model->suppliers->name : '—';
+                },
+                function ($model) {
+                    return $model->company ? $model->company->name : '—';
+                },
+                function ($model) {
+                    return $model->getTypeLabel();
+                },
+                function ($model) {
+                    return $model->total_amount ? number_format($model->total_amount, 2) : '—';
+                },
+                function ($model) {
+                    return $model->date ?: ($model->created_at ? date('Y-m-d', $model->created_at) : '—');
+                },
+                function ($model) {
+                    return $model->createdBy ? $model->createdBy->username : '—';
+                },
+            ],
+            'widths' => [6, 12, 22, 22, 22, 14, 16, 14, 16],
+        ];
     }
 
     /**

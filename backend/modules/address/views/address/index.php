@@ -5,6 +5,7 @@ use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset; 
 use johnitvn\ajaxcrud\BulkButtonWidget;
+use backend\widgets\ExportButtons;
 
 /* @var $this yii\web\View */
 /* @var $searchModel app\models\addressSearch */
@@ -31,7 +32,7 @@ CrudAsset::register($this);
                     Html::a('<i class="glyphicon glyphicon-repeat"></i>', [''],
                     ['data-pjax'=>1, 'class'=>'btn btn-default', 'title'=>'Reset Grid']).
                     '{toggleData}'.
-                    '{export}'
+                    ExportButtons::widget(['excelRoute' => 'export-excel', 'pdfRoute' => 'export-pdf'])
                 ],
             ],          
             'striped' => true,

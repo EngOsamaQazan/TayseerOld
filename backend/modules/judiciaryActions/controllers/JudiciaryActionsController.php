@@ -10,10 +10,13 @@ use yii\helpers\Html;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
+use backend\helpers\ExportHelper;
+use backend\helpers\ExportTrait;
 use Yii;
 
 class JudiciaryActionsController extends Controller
 {
+    use ExportTrait;
     public function behaviors()
     {
         return [
@@ -22,7 +25,7 @@ class JudiciaryActionsController extends Controller
                 'rules' => [
                     ['actions' => ['login', 'error'], 'allow' => true],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'view', 'bulk-delete'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'view', 'bulk-delete', 'export-excel', 'export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -46,10 +49,6 @@ class JudiciaryActionsController extends Controller
         $searchModel = new JudiciaryActionsSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $searchCounter = $searchModel->searchCounter(Yii::$app->request->queryParams);
-
-        if (Yii::$app->request->get('export') === 'csv') {
-            return $this->exportCsv($searchModel);
-        }
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -252,50 +251,74 @@ class JudiciaryActionsController extends Controller
         }
     }
 
-    /**
-     * Export CSV (called from actionIndex when ?export=csv)
-     */
-    private function exportCsv($searchModel)
+    public function actionExportExcel()
+    {
+        $searchModel = new JudiciaryActionsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig());
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new JudiciaryActionsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig(), 'pdf');
+    }
+
+    protected function getExportConfig()
     {
         $natureLabels = JudiciaryActions::getNatureList();
         $stageLabels  = JudiciaryActions::getActionTypeList();
+        $allNames = \yii\helpers\ArrayHelper::map(
+            (new \yii\db\Query())->select(['id', 'name'])->from('os_judiciary_actions')->all(),
+            'id', 'name'
+        );
 
-        $query = (new \yii\db\Query())
-            ->select(['id', 'name', 'action_nature', 'action_type'])
-            ->from('os_judiciary_actions')
-            ->where(['or', ['is_deleted' => 0], ['is_deleted' => null]])
-            ->orderBy(['id' => SORT_ASC]);
-
-        if (!empty($searchModel->name)) {
-            $query->andFilterWhere(['like', 'name', $searchModel->name]);
-        }
-        if (!empty($searchModel->action_nature)) {
-            $query->andFilterWhere(['action_nature' => $searchModel->action_nature]);
-        }
-
-        $rows = $query->all();
-
-        $filename = 'judiciary-actions-' . date('Y-m-d') . '.csv';
-        header('Content-Type: text/csv; charset=UTF-8');
-        header("Content-Disposition: attachment; filename=\"$filename\"");
-        header('Pragma: no-cache');
-        header('Expires: 0');
-
-        $handle = fopen('php://output', 'w');
-        fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
-        fputcsv($handle, ['#', 'اسم الإجراء', 'الطبيعة', 'المرحلة'], ',', '"', '\\');
-
-        foreach ($rows as $r) {
-            fputcsv($handle, [
-                $r['id'],
-                $r['name'],
-                $natureLabels[$r['action_nature']] ?? $r['action_nature'],
-                $stageLabels[$r['action_type']] ?? $r['action_type'],
-            ], ',', '"', '\\');
-        }
-
-        fclose($handle);
-        Yii::$app->end();
+        return [
+            'title' => 'الإجراءات القضائية',
+            'filename' => 'judiciary-actions',
+            'headers' => ['#', 'اسم الإجراء', 'الطبيعة', 'المرحلة', 'الكتب المسموحة', 'الحالات المسموحة', 'يتبع لطلبات'],
+            'keys' => [
+                '#',
+                'name',
+                function ($model) use ($natureLabels) {
+                    return $natureLabels[$model->action_nature] ?? $model->action_nature;
+                },
+                function ($model) use ($stageLabels) {
+                    return $model->getActionTypeLabel();
+                },
+                function ($model) use ($allNames) {
+                    $ids = $model->getAllowedDocumentIds();
+                    if (empty($ids)) return '—';
+                    $names = [];
+                    foreach ($ids as $id) {
+                        $names[] = $allNames[$id] ?? '#' . $id;
+                    }
+                    return implode('، ', $names);
+                },
+                function ($model) use ($allNames) {
+                    $ids = $model->getAllowedStatusIds();
+                    if (empty($ids)) return '—';
+                    $names = [];
+                    foreach ($ids as $id) {
+                        $names[] = $allNames[$id] ?? '#' . $id;
+                    }
+                    return implode('، ', $names);
+                },
+                function ($model) use ($allNames) {
+                    $ids = $model->getParentRequestIdList();
+                    if (empty($ids)) return '—';
+                    $names = [];
+                    foreach ($ids as $id) {
+                        $names[] = $allNames[$id] ?? '#' . $id;
+                    }
+                    return implode('، ', $names);
+                },
+            ],
+            'widths' => [6, 30, 16, 16, 30, 30, 30],
+        ];
     }
 
     /**

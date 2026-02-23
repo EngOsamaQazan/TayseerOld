@@ -1549,4 +1549,318 @@
     .gc-step-line { max-width: 30px; }
     .gs-items-grid { grid-template-columns: 1fr; }
     .gs-item { border-left: none !important; }
+    .g-inner-tabs { gap: 0; }
+    .g-inner-tab { font-size: 12px; padding: 8px 14px; }
+}
+
+/* ═══════ Google APIs — Inner Tabs ═══════ */
+.g-inner-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 0;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 0 4px;
+}
+
+.g-inner-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px 8px 0 0;
+    transition: all .2s ease;
+    white-space: nowrap;
+}
+
+.g-inner-tab:hover {
+    color: #334155;
+    background: #f8fafc;
+}
+
+.g-inner-tab.active {
+    color: #800020;
+    background: #fff;
+    box-shadow: 0 -2px 6px rgba(0,0,0,.04);
+}
+
+.g-inner-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #800020;
+    border-radius: 2px 2px 0 0;
+}
+
+.g-inner-tab i {
+    font-size: 13px;
+    opacity: .7;
+}
+
+.g-inner-tab.active i {
+    opacity: 1;
+}
+
+.g-inner-panel {
+    display: none;
+    padding-top: 20px;
+    animation: gPanelIn .25s ease;
+}
+
+.g-inner-panel.active {
+    display: block;
+}
+
+@keyframes gPanelIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════ JSON Upload Dropzone ═══════ */
+.json-upload-zone {
+    position: relative;
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .25s ease;
+    background: #f8fafc;
+}
+
+.json-upload-zone:hover {
+    border-color: #800020;
+    background: #fdf2f4;
+}
+
+.json-upload-zone.dragover {
+    border-color: #800020;
+    background: #fce4ec;
+    box-shadow: 0 0 0 4px rgba(128,0,32,.1);
+}
+
+.json-upload-zone-sm {
+    padding: 18px 16px;
+}
+
+.json-upload-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.json-upload-content {
+    pointer-events: none;
+}
+
+.json-upload-icon {
+    font-size: 32px;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    transition: color .2s;
+}
+
+.json-upload-zone:hover .json-upload-icon {
+    color: #800020;
+}
+
+.json-upload-title {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.json-upload-hint {
+    margin: 0;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.json-upload-success {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #16a34a;
+    animation: gPanelIn .3s ease;
+}
+
+.json-upload-success i {
+    font-size: 20px;
+}
+
+.json-upload-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.json-upload-divider::before,
+.json-upload-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+}
+
+/* ═══════ Cost & Statistics Tab ═══════ */
+.cost-api-card {
+    margin-bottom: 16px;
+}
+
+.cost-api-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    margin-inline-end: 8px;
+}
+
+.cost-src-tabs {
+    display: flex;
+    gap: 4px;
+}
+
+.cost-src-tab {
+    padding: 5px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #fff;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cost-src-tab:hover {
+    background: #f8fafc;
+    color: #334155;
+}
+
+.cost-src-tab.active {
+    background: #800020;
+    color: #fff;
+    border-color: #800020;
+}
+
+.cost-free-tier-note {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #166534;
+}
+
+.cost-free-tier-note i {
+    color: #22c55e;
+    margin-inline-end: 4px;
+}
+
+.cost-gc-status {
+    font-size: 11px;
+    color: #888;
+    margin-top: 8px;
+}
+
+.cost-gc-status a {
+    color: #4285f4;
+    text-decoration: underline;
+}
+
+.cost-breakdown-tbl {
+    width: 100%;
+    margin-top: 10px;
+    font-size: 12px;
+    border-collapse: collapse;
+}
+
+.cost-breakdown-tbl th,
+.cost-breakdown-tbl td {
+    padding: 6px 10px;
+    border: 1px solid #eee;
+    text-align: right;
+}
+
+.cost-breakdown-tbl th {
+    background: #f8fafc;
+    font-weight: 700;
+}
+
+.cost-maps-services h4 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+    margin: 0 0 10px;
+}
+
+.cost-maps-services h4 i {
+    margin-inline-end: 6px;
+    color: #64748b;
+}
+
+.cost-service-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #f8fafc;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+
+.cost-service-name {
+    font-weight: 600;
+    color: #334155;
+}
+
+.cost-service-name i {
+    width: 18px;
+    text-align: center;
+    color: #4285f4;
+    margin-inline-end: 6px;
+}
+
+.cost-service-free {
+    font-size: 11px;
+    color: #16a34a;
+    font-weight: 600;
+    background: #f0fdf4;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+    .cost-src-tabs { flex-wrap: wrap; }
+    .cost-service-row { flex-direction: column; align-items: flex-start; gap: 4px; }
 }

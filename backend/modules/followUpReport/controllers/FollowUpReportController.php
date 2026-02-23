@@ -11,12 +11,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\filters\AccessControl;
+use backend\helpers\ExportTrait;
 
 /**
  * FollowUpReportController implements the CRUD actions for FollowUpReport model.
  */
 class FollowUpReportController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -32,7 +34,8 @@ class FollowUpReportController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'no-contact'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'no-contact',
+                        'export-excel', 'export-pdf', 'export-no-contact-excel', 'export-no-contact-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -65,97 +68,7 @@ class FollowUpReportController extends Controller
      */
     public function actionIndex()
     {
-        // ═══ إنشاء/تحديث الـ VIEW ═══
-        // يدعم: التسويات (os_loan_scheduling) + القضايا (كامل المبلغ مستحق)
-        // المنطق:
-        //   1. قضائي بدون تسوية → كامل المبلغ + أتعاب + مصاريف مستحق فوراً
-        //   2. عقد عليه تسوية (قضائي أو عادي) → حساب حسب قسط وتاريخ التسوية
-        //   3. عقد عادي بدون تسوية → حساب حسب قسط وتاريخ العقد الأصلي
-        $sql = "CREATE OR REPLACE VIEW os_follow_up_report AS
-SELECT
-    c.*,
-    f.date_time      AS last_follow_up,
-    f.promise_to_pay_at,
-    f.reminder,
-    IFNULL(payments.total_paid, 0) AS total_paid,
-    COALESCE(ls.monthly_installment, c.monthly_installment_value) AS effective_installment,
-    GREATEST(0,
-        PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'),
-            DATE_FORMAT(COALESCE(ls.first_installment_date, c.first_installment_date),'%Y%m'))
-        + CASE WHEN DAY(CURDATE()) >= DAY(COALESCE(ls.first_installment_date, c.first_installment_date))
-               THEN 1 ELSE 0 END
-    ) AS due_installments,
-    CASE
-        WHEN jud.jud_id IS NOT NULL AND ls.id IS NULL THEN
-            GREATEST(0,
-                c.total_value
-                + IFNULL(exp_sum.total_expenses, 0)
-                + IFNULL(jud.total_lawyer, 0)
-                - IFNULL(payments.total_paid, 0)
-            )
-        ELSE
-            GREATEST(0,
-                (GREATEST(0,
-                    PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'),
-                        DATE_FORMAT(COALESCE(ls.first_installment_date, c.first_installment_date),'%Y%m'))
-                    + CASE WHEN DAY(CURDATE()) >= DAY(COALESCE(ls.first_installment_date, c.first_installment_date))
-                           THEN 1 ELSE 0 END
-                ) * COALESCE(ls.monthly_installment, c.monthly_installment_value))
-                - IFNULL(payments.total_paid, 0)
-            )
-    END AS due_amount,
-    CASE WHEN f.id IS NULL THEN 1 ELSE 0 END AS never_followed
-FROM os_contracts c
-LEFT JOIN os_follow_up f ON f.contract_id = c.id
-    AND f.id = (SELECT MAX(id) FROM os_follow_up WHERE contract_id = c.id)
-LEFT JOIN os_loan_scheduling ls ON ls.contract_id = c.id
-    AND ls.is_deleted = 0
-    AND ls.id = (SELECT MAX(id) FROM os_loan_scheduling WHERE contract_id = c.id AND is_deleted = 0)
-LEFT JOIN (
-    SELECT contract_id, SUM(amount) AS total_paid
-    FROM os_income GROUP BY contract_id
-) payments ON c.id = payments.contract_id
-LEFT JOIN (
-    SELECT contract_id, MAX(id) AS jud_id, SUM(lawyer_cost) AS total_lawyer
-    FROM os_judiciary WHERE is_deleted = 0
-    GROUP BY contract_id
-) jud ON jud.contract_id = c.id
-LEFT JOIN (
-    SELECT contract_id, SUM(amount) AS total_expenses
-    FROM os_expenses
-    GROUP BY contract_id
-) exp_sum ON exp_sum.contract_id = c.id
-WHERE
-    c.status NOT IN ('finished','canceled','refused')
-    AND (
-        (c.is_can_not_contact = 0 AND (
-            /* قضائي بدون تسوية: كامل المبلغ مستحق */
-            (jud.jud_id IS NOT NULL AND ls.id IS NULL AND
-                (c.total_value + IFNULL(exp_sum.total_expenses, 0) + IFNULL(jud.total_lawyer, 0)
-                 - IFNULL(payments.total_paid, 0)) > 5
-            )
-            OR
-            /* عقود عادية أو عقود عليها تسوية: حساب بالأقساط */
-            ((jud.jud_id IS NULL OR ls.id IS NOT NULL) AND
-                ((GREATEST(0,
-                    PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'),
-                        DATE_FORMAT(COALESCE(ls.first_installment_date, c.first_installment_date),'%Y%m'))
-                    + CASE WHEN DAY(CURDATE()) >= DAY(COALESCE(ls.first_installment_date, c.first_installment_date))
-                           THEN 1 ELSE 0 END
-                ) * COALESCE(ls.monthly_installment, c.monthly_installment_value))
-                - IFNULL(payments.total_paid, 0)) > 5
-            )
-        ))
-        OR
-        c.is_can_not_contact = 1
-    )
-ORDER BY
-    CASE WHEN f.id IS NULL THEN 0 ELSE 1 END ASC,
-    f.date_time ASC";
-
-        $connection = Yii::$app->getDb();
-        $connection->createCommand($sql)->execute();
-        $connection->getSchema()->refreshTableSchema('os_follow_up_report');
+        $this->createFollowUpReportView();
 
         // ═══ بيانات البحث ═══
         $searchModel = new FollowUpReportSearch();
@@ -475,6 +388,370 @@ ORDER BY c.id DESC";
             return $this->redirect(['index']);
         }
 
+    }
+
+    /**
+     * Export follow-up report to Excel.
+     */
+    public function actionExportExcel()
+    {
+        $this->createFollowUpReportView();
+        $searchModel = new FollowUpReportSearch();
+        $params = Yii::$app->request->queryParams;
+        if (!isset($params['FollowUpReportSearch']['is_can_not_contact'])) {
+            $params['FollowUpReportSearch']['is_can_not_contact'] = '0';
+        }
+        $dataProvider = $searchModel->search($params);
+
+        $statusMap = [
+            'pending' => 'قيد الانتظار', 'active' => 'نشط', 'reconciliation' => 'تسوية',
+            'judiciary' => 'قضائي', 'legal_department' => 'دائرة قانونية', 'settlement' => 'مصالحة',
+        ];
+
+        return $this->exportData($dataProvider, [
+            'title' => 'تقرير المتابعة',
+            'filename' => 'follow_up_report',
+            'headers' => ['#', 'العميل', 'القسط', 'أقساط مستحقة', 'المبلغ المستحق', 'آخر متابعة', 'التذكير', 'وعد بالدفع', 'الحالة', 'المتابع'],
+            'keys' => [
+                'id',
+                function ($model) {
+                    $names = \yii\helpers\ArrayHelper::map($model->customers, 'id', 'name');
+                    return implode('، ', $names) ?: '—';
+                },
+                function ($model) {
+                    return $model->effective_installment ?? $model->monthly_installment_value ?? 0;
+                },
+                'due_installments',
+                'due_amount',
+                function ($model) {
+                    if ((int)($model->never_followed ?? 0) === 1) return 'لم يُتابع أبداً';
+                    return $model->last_follow_up ? date('Y-m-d', strtotime($model->last_follow_up)) : '—';
+                },
+                function ($model) {
+                    return $model->reminder ?: '—';
+                },
+                function ($model) {
+                    return $model->promise_to_pay_at ?: '—';
+                },
+                function ($model) use ($statusMap) {
+                    return $statusMap[$model->status] ?? $model->status;
+                },
+                function ($model) {
+                    return $model->followedBy ? $model->followedBy->username : '—';
+                },
+            ],
+            'widths' => [10, 22, 14, 14, 16, 16, 14, 14, 14, 16],
+            'orientation' => 'L',
+        ], 'excel');
+    }
+
+    /**
+     * Export follow-up report to PDF.
+     */
+    public function actionExportPdf()
+    {
+        $this->createFollowUpReportView();
+        $searchModel = new FollowUpReportSearch();
+        $params = Yii::$app->request->queryParams;
+        if (!isset($params['FollowUpReportSearch']['is_can_not_contact'])) {
+            $params['FollowUpReportSearch']['is_can_not_contact'] = '0';
+        }
+        $dataProvider = $searchModel->search($params);
+
+        $statusMap = [
+            'pending' => 'قيد الانتظار', 'active' => 'نشط', 'reconciliation' => 'تسوية',
+            'judiciary' => 'قضائي', 'legal_department' => 'دائرة قانونية', 'settlement' => 'مصالحة',
+        ];
+
+        return $this->exportData($dataProvider, [
+            'title' => 'تقرير المتابعة',
+            'filename' => 'follow_up_report',
+            'headers' => ['#', 'العميل', 'القسط', 'أقساط مستحقة', 'المبلغ المستحق', 'آخر متابعة', 'التذكير', 'وعد بالدفع', 'الحالة', 'المتابع'],
+            'keys' => [
+                'id',
+                function ($model) {
+                    $names = \yii\helpers\ArrayHelper::map($model->customers, 'id', 'name');
+                    return implode('، ', $names) ?: '—';
+                },
+                function ($model) {
+                    return $model->effective_installment ?? $model->monthly_installment_value ?? 0;
+                },
+                'due_installments',
+                'due_amount',
+                function ($model) {
+                    if ((int)($model->never_followed ?? 0) === 1) return 'لم يُتابع أبداً';
+                    return $model->last_follow_up ? date('Y-m-d', strtotime($model->last_follow_up)) : '—';
+                },
+                function ($model) {
+                    return $model->reminder ?: '—';
+                },
+                function ($model) {
+                    return $model->promise_to_pay_at ?: '—';
+                },
+                function ($model) use ($statusMap) {
+                    return $statusMap[$model->status] ?? $model->status;
+                },
+                function ($model) {
+                    return $model->followedBy ? $model->followedBy->username : '—';
+                },
+            ],
+            'orientation' => 'L',
+        ], 'pdf');
+    }
+
+    /**
+     * Export no-contact report to Excel.
+     */
+    public function actionExportNoContactExcel()
+    {
+        $this->createNoContactView();
+
+        $searchModel = new FollowUpReportSearch();
+        $dataProvider = $searchModel->searchNoContact(Yii::$app->request->queryParams);
+
+        $statusLabels = [
+            'active' => 'نشط', 'pending' => 'معلّق', 'judiciary' => 'قضاء',
+            'legal_department' => 'قانوني', 'settlement' => 'تسوية', 'finished' => 'منتهي',
+            'canceled' => 'ملغي', 'refused' => 'مرفوض',
+        ];
+
+        return $this->exportData($dataProvider, [
+            'title' => 'عقود بدون أرقام تواصل',
+            'filename' => 'no_contact_contracts',
+            'headers' => ['#', 'العميل', 'البائع', 'تاريخ البيع', 'الإجمالي', 'المدفوع', 'المتبقي', 'الحالة', 'آخر متابعة', 'المتابع'],
+            'keys' => [
+                'id',
+                function ($model) {
+                    $names = \yii\helpers\ArrayHelper::map($model->customers, 'id', 'name');
+                    return implode('، ', $names) ?: '—';
+                },
+                function ($model) {
+                    return $model->seller ? $model->seller->name : '—';
+                },
+                'Date_of_sale',
+                'total_value',
+                'total_paid',
+                function ($model) {
+                    return max(0, ($model->total_value ?? 0) - ($model->total_paid ?? 0));
+                },
+                function ($model) use ($statusLabels) {
+                    return $statusLabels[$model->status] ?? $model->status;
+                },
+                function ($model) {
+                    return $model->date_time ? date('Y-m-d', strtotime($model->date_time)) : 'لا يوجد';
+                },
+                function ($model) {
+                    return $model->followedBy ? $model->followedBy->username : '—';
+                },
+            ],
+            'widths' => [10, 22, 16, 14, 14, 14, 14, 14, 14, 16],
+            'orientation' => 'L',
+        ], 'excel');
+    }
+
+    /**
+     * Export no-contact report to PDF.
+     */
+    public function actionExportNoContactPdf()
+    {
+        $this->createNoContactView();
+
+        $searchModel = new FollowUpReportSearch();
+        $dataProvider = $searchModel->searchNoContact(Yii::$app->request->queryParams);
+
+        $statusLabels = [
+            'active' => 'نشط', 'pending' => 'معلّق', 'judiciary' => 'قضاء',
+            'legal_department' => 'قانوني', 'settlement' => 'تسوية', 'finished' => 'منتهي',
+            'canceled' => 'ملغي', 'refused' => 'مرفوض',
+        ];
+
+        return $this->exportData($dataProvider, [
+            'title' => 'عقود بدون أرقام تواصل',
+            'filename' => 'no_contact_contracts',
+            'headers' => ['#', 'العميل', 'البائع', 'تاريخ البيع', 'الإجمالي', 'المدفوع', 'المتبقي', 'الحالة', 'آخر متابعة', 'المتابع'],
+            'keys' => [
+                'id',
+                function ($model) {
+                    $names = \yii\helpers\ArrayHelper::map($model->customers, 'id', 'name');
+                    return implode('، ', $names) ?: '—';
+                },
+                function ($model) {
+                    return $model->seller ? $model->seller->name : '—';
+                },
+                'Date_of_sale',
+                'total_value',
+                'total_paid',
+                function ($model) {
+                    return max(0, ($model->total_value ?? 0) - ($model->total_paid ?? 0));
+                },
+                function ($model) use ($statusLabels) {
+                    return $statusLabels[$model->status] ?? $model->status;
+                },
+                function ($model) {
+                    return $model->date_time ? date('Y-m-d', strtotime($model->date_time)) : 'لا يوجد';
+                },
+                function ($model) {
+                    return $model->followedBy ? $model->followedBy->username : '—';
+                },
+            ],
+            'orientation' => 'L',
+        ], 'pdf');
+    }
+
+    /**
+     * Creates the follow-up report SQL VIEW (shared logic with actionIndex).
+     */
+    private function createFollowUpReportView()
+    {
+        $sql = "CREATE OR REPLACE VIEW os_follow_up_report AS
+SELECT
+    c.*,
+    f.date_time      AS last_follow_up,
+    f.promise_to_pay_at,
+    f.reminder,
+    IFNULL(payments.total_paid, 0) AS total_paid,
+    COALESCE(ls.monthly_installment, c.monthly_installment_value) AS effective_installment,
+    GREATEST(0,
+        PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'),
+            DATE_FORMAT(COALESCE(ls.first_installment_date, c.first_installment_date),'%Y%m'))
+        + CASE WHEN DAY(CURDATE()) >= DAY(COALESCE(ls.first_installment_date, c.first_installment_date))
+               THEN 1 ELSE 0 END
+    ) AS due_installments,
+    CASE
+        WHEN jud.jud_id IS NOT NULL AND ls.id IS NULL THEN
+            GREATEST(0,
+                c.total_value
+                + IFNULL(exp_sum.total_expenses, 0)
+                + IFNULL(jud.total_lawyer, 0)
+                - IFNULL(payments.total_paid, 0)
+            )
+        ELSE
+            GREATEST(0,
+                (GREATEST(0,
+                    PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'),
+                        DATE_FORMAT(COALESCE(ls.first_installment_date, c.first_installment_date),'%Y%m'))
+                    + CASE WHEN DAY(CURDATE()) >= DAY(COALESCE(ls.first_installment_date, c.first_installment_date))
+                           THEN 1 ELSE 0 END
+                ) * COALESCE(ls.monthly_installment, c.monthly_installment_value))
+                - IFNULL(payments.total_paid, 0)
+            )
+    END AS due_amount,
+    CASE WHEN f.id IS NULL THEN 1 ELSE 0 END AS never_followed
+FROM os_contracts c
+LEFT JOIN os_follow_up f ON f.contract_id = c.id
+    AND f.id = (SELECT MAX(id) FROM os_follow_up WHERE contract_id = c.id)
+LEFT JOIN os_loan_scheduling ls ON ls.contract_id = c.id
+    AND ls.is_deleted = 0
+    AND ls.id = (SELECT MAX(id) FROM os_loan_scheduling WHERE contract_id = c.id AND is_deleted = 0)
+LEFT JOIN (
+    SELECT contract_id, SUM(amount) AS total_paid
+    FROM os_income GROUP BY contract_id
+) payments ON c.id = payments.contract_id
+LEFT JOIN (
+    SELECT contract_id, MAX(id) AS jud_id, SUM(lawyer_cost) AS total_lawyer
+    FROM os_judiciary WHERE is_deleted = 0
+    GROUP BY contract_id
+) jud ON jud.contract_id = c.id
+LEFT JOIN (
+    SELECT contract_id, SUM(amount) AS total_expenses
+    FROM os_expenses
+    GROUP BY contract_id
+) exp_sum ON exp_sum.contract_id = c.id
+WHERE
+    c.status NOT IN ('finished','canceled','refused')
+    AND (
+        (c.is_can_not_contact = 0 AND (
+            (jud.jud_id IS NOT NULL AND ls.id IS NULL AND
+                (c.total_value + IFNULL(exp_sum.total_expenses, 0) + IFNULL(jud.total_lawyer, 0)
+                 - IFNULL(payments.total_paid, 0)) > 5
+            )
+            OR
+            ((jud.jud_id IS NULL OR ls.id IS NOT NULL) AND
+                ((GREATEST(0,
+                    PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'),
+                        DATE_FORMAT(COALESCE(ls.first_installment_date, c.first_installment_date),'%Y%m'))
+                    + CASE WHEN DAY(CURDATE()) >= DAY(COALESCE(ls.first_installment_date, c.first_installment_date))
+                           THEN 1 ELSE 0 END
+                ) * COALESCE(ls.monthly_installment, c.monthly_installment_value))
+                - IFNULL(payments.total_paid, 0)) > 5
+            )
+        ))
+        OR
+        c.is_can_not_contact = 1
+    )
+ORDER BY
+    CASE WHEN f.id IS NULL THEN 0 ELSE 1 END ASC,
+    f.date_time ASC";
+
+        $connection = Yii::$app->getDb();
+        $connection->createCommand($sql)->execute();
+        $connection->getSchema()->refreshTableSchema('os_follow_up_report');
+    }
+
+    /**
+     * Creates the no-contact SQL VIEW (shared logic with actionNoContact).
+     */
+    private function createNoContactView()
+    {
+        $sql = "CREATE OR REPLACE VIEW os_follow_up_no_contact AS
+SELECT
+    c.*,
+    f.date_time,
+    f.promise_to_pay_at,
+    f.reminder,
+    IFNULL(payments.total_paid, 0) AS total_paid,
+    COALESCE(ls.monthly_installment, c.monthly_installment_value) AS effective_installment,
+    GREATEST(0,
+        PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'),
+            DATE_FORMAT(COALESCE(ls.first_installment_date, c.first_installment_date),'%Y%m'))
+        + CASE WHEN DAY(CURDATE()) >= DAY(COALESCE(ls.first_installment_date, c.first_installment_date))
+               THEN 1 ELSE 0 END
+    ) AS due_installments,
+    CASE
+        WHEN jud.jud_id IS NOT NULL AND ls.id IS NULL THEN
+            GREATEST(0,
+                c.total_value
+                + IFNULL(exp_sum.total_expenses, 0)
+                + IFNULL(jud.total_lawyer, 0)
+                - IFNULL(payments.total_paid, 0)
+            )
+        ELSE
+            GREATEST(0,
+                (GREATEST(0,
+                    PERIOD_DIFF(DATE_FORMAT(CURDATE(),'%Y%m'),
+                        DATE_FORMAT(COALESCE(ls.first_installment_date, c.first_installment_date),'%Y%m'))
+                    + CASE WHEN DAY(CURDATE()) >= DAY(COALESCE(ls.first_installment_date, c.first_installment_date))
+                           THEN 1 ELSE 0 END
+                ) * COALESCE(ls.monthly_installment, c.monthly_installment_value))
+                - IFNULL(payments.total_paid, 0)
+            )
+    END AS due_amount
+FROM os_contracts c
+LEFT JOIN os_follow_up f ON f.contract_id = c.id
+    AND f.id = (SELECT MAX(id) FROM os_follow_up WHERE contract_id = c.id)
+LEFT JOIN os_loan_scheduling ls ON ls.contract_id = c.id
+    AND ls.is_deleted = 0
+    AND ls.id = (SELECT MAX(id) FROM os_loan_scheduling WHERE contract_id = c.id AND is_deleted = 0)
+LEFT JOIN (
+    SELECT contract_id, SUM(amount) AS total_paid
+    FROM os_income GROUP BY contract_id
+) payments ON c.id = payments.contract_id
+LEFT JOIN (
+    SELECT contract_id, MAX(id) AS jud_id, SUM(lawyer_cost) AS total_lawyer
+    FROM os_judiciary WHERE is_deleted = 0
+    GROUP BY contract_id
+) jud ON jud.contract_id = c.id
+LEFT JOIN (
+    SELECT contract_id, SUM(amount) AS total_expenses
+    FROM os_expenses
+    GROUP BY contract_id
+) exp_sum ON exp_sum.contract_id = c.id
+WHERE c.is_can_not_contact = 1
+ORDER BY c.id DESC";
+
+        $connection = Yii::$app->getDb();
+        $connection->createCommand($sql)->execute();
+        $connection->getSchema()->refreshTableSchema('os_follow_up_no_contact');
     }
 
     /**

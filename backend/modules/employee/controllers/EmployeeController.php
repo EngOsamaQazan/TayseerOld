@@ -19,6 +19,7 @@ use backend\modules\leavePolicy\models\LeavePolicy;
 use yii\filters\AccessControl;
 use yii\web\UploadedFile;
 use common\helper\Permissions;
+use backend\helpers\ExportTrait;
 
 
 /**
@@ -26,6 +27,7 @@ use common\helper\Permissions;
  */
 class EmployeeController extends Controller
 {
+    use ExportTrait;
 
     /**
      * @inheritdoc
@@ -41,7 +43,7 @@ class EmployeeController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['index', 'view', 'is_read'],
+                        'actions' => ['index', 'view', 'is_read', 'export-excel', 'export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -101,6 +103,33 @@ class EmployeeController extends Controller
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
         ]);
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new EmployeeSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'الموظفين',
+            'filename' => 'employees',
+            'headers'  => ['#', 'اسم المستخدم', 'البريد الإلكتروني'],
+            'keys'     => ['#', 'username', 'email'],
+            'widths'   => [8, 30, 35],
+        ], 'excel');
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new EmployeeSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'الموظفين',
+            'filename' => 'employees',
+            'headers'  => ['#', 'اسم المستخدم', 'البريد الإلكتروني'],
+            'keys'     => ['#', 'username', 'email'],
+        ], 'pdf');
     }
 
     /**

@@ -16,6 +16,7 @@ use \yii\web\Response;
 use yii\helpers\Html;
 use common\helper\LoanContract;
 use backend\modules\contractInstallment\models\ContractInstallment;
+use backend\helpers\ExportTrait;
 
 
 /**
@@ -23,6 +24,7 @@ use backend\modules\contractInstallment\models\ContractInstallment;
  */
 class SmsController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -321,6 +323,31 @@ class SmsController extends Controller
             return $this->redirect(['index']);
         }
 
+    }
+
+    public function actionExportExcel() {
+        $searchModel = new SmsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'الرسائل النصية',
+            'filename' => 'sms',
+            'headers' => ['#', 'الرسالة', 'النوع', 'التاريخ', 'العميل', 'العقد'],
+            'keys' => ['#', 'massage', 'type', 'date', 'customers_id', 'contract_id'],
+            'widths' => [8, 40, 14, 14, 18, 14],
+        ]);
+    }
+
+    public function actionExportPdf() {
+        $searchModel = new SmsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'الرسائل النصية',
+            'filename' => 'sms',
+            'headers' => ['#', 'الرسالة', 'النوع', 'التاريخ', 'العميل', 'العقد'],
+            'keys' => ['#', 'massage', 'type', 'date', 'customers_id', 'contract_id'],
+        ], 'pdf');
     }
 
     /**

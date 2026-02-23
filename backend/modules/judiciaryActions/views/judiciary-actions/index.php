@@ -9,6 +9,7 @@ use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset;
 use backend\modules\judiciaryActions\models\JudiciaryActions;
+use backend\widgets\ExportButtons;
 
 $this->title = 'إدارة الإجراءات القضائية';
 $this->params['breadcrumbs'][] = $this->title;
@@ -163,9 +164,11 @@ $natureStyles = [
     <div class="ja-header">
         <h1><i class="fa fa-gavel"></i> <?= $this->title ?></h1>
         <div style="display:flex;gap:8px">
-            <?= Html::a('<i class="fa fa-download"></i> تصدير CSV', ['index', 'export' => 'csv'] + Yii::$app->request->queryParams, [
-                'class' => 'btn btn-success',
-                'style' => 'border-radius:8px;font-size:13px;padding:8px 20px;font-weight:600',
+            <?= ExportButtons::widget([
+                'excelRoute' => ['export-excel'],
+                'pdfRoute' => ['export-pdf'],
+                'excelBtnClass' => 'btn btn-success',
+                'pdfBtnClass' => 'btn btn-danger',
             ]) ?>
             <?= Html::a('<i class="fa fa-plus"></i> إضافة إجراء جديد', ['create'], [
                 'class' => 'btn btn-primary',
@@ -228,8 +231,7 @@ $natureStyles = [
                                 'class' => 'btn btn-default',
                                 'title' => 'تحديث',
                             ]) .
-                            '{toggleData}' .
-                            '{export}'
+                            '{toggleData}'
                         ],
                     ],
                     'striped' => true,

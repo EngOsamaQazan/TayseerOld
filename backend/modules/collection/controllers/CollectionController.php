@@ -16,12 +16,14 @@ use common\helper\LoanContract;
 use \backend\modules\loanScheduling\models\LoanScheduling;
 use \backend\modules\contracts\model\Contracts;
 use common\helper\Permissions;
+use backend\helpers\ExportTrait;
 
 /**
  * CollectionController implements the CRUD actions for Collection model.
  */
 class CollectionController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -37,7 +39,7 @@ class CollectionController extends Controller
                     ],
                     ['actions' => ['logout'], 'allow' => true, 'roles' => ['@']],
                     [
-                        'actions' => ['index', 'view'],
+                        'actions' => ['index', 'view', 'export-excel', 'export-pdf', 'export-view-excel', 'export-view-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -309,6 +311,116 @@ class CollectionController extends Controller
             return $this->redirect(['index']);
         }
 
+    }
+
+    /**
+     * Export index (Collection list) to Excel.
+     */
+    public function actionExportExcel()
+    {
+        $searchModel = new CollectionSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'التحصيلات',
+            'filename' => 'collections',
+            'headers' => ['رقم العقد', 'التاريخ', 'المبلغ', 'ملاحظات', 'أنشئ بواسطة', 'المتاح للقبض'],
+            'keys' => [
+                'contract_id',
+                'date',
+                'amount',
+                'notes',
+                'createdBy.username',
+                function ($model) {
+                    $d1 = new \DateTime($model->date);
+                    $d2 = new \DateTime(date('Y-m-d'));
+                    $interval = $d1->diff($d2);
+                    $diffInMonths = $interval->m + 1;
+                    $revares_courts = \backend\modules\financialTransaction\models\FinancialTransaction::find()
+                        ->where(['contract_id' => $model->contract_id])
+                        ->andWhere(['income_type' => 11])->all();
+                    $revares = 0;
+                    foreach ($revares_courts as $revares_court) {
+                        $revares += $revares_court->amount;
+                    }
+                    return ($diffInMonths * $model->amount) - $revares;
+                },
+            ],
+            'widths' => [14, 14, 14, 25, 16, 16],
+        ], 'excel');
+    }
+
+    /**
+     * Export index (Collection list) to PDF.
+     */
+    public function actionExportPdf()
+    {
+        $searchModel = new CollectionSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'التحصيلات',
+            'filename' => 'collections',
+            'headers' => ['رقم العقد', 'التاريخ', 'المبلغ', 'ملاحظات', 'أنشئ بواسطة', 'المتاح للقبض'],
+            'keys' => [
+                'contract_id',
+                'date',
+                'amount',
+                'notes',
+                'createdBy.username',
+                function ($model) {
+                    $d1 = new \DateTime($model->date);
+                    $d2 = new \DateTime(date('Y-m-d'));
+                    $interval = $d1->diff($d2);
+                    $diffInMonths = $interval->m + 1;
+                    $revares_courts = \backend\modules\financialTransaction\models\FinancialTransaction::find()
+                        ->where(['contract_id' => $model->contract_id])
+                        ->andWhere(['income_type' => 11])->all();
+                    $revares = 0;
+                    foreach ($revares_courts as $revares_court) {
+                        $revares += $revares_court->amount;
+                    }
+                    return ($diffInMonths * $model->amount) - $revares;
+                },
+            ],
+        ], 'pdf');
+    }
+
+    /**
+     * Export DivisionsCollection (view/form grid) to Excel.
+     */
+    public function actionExportViewExcel($id)
+    {
+        $model = $this->findModel($id);
+        $query = \backend\modules\divisionsCollection\models\DivisionsCollection::find()
+            ->where(['collection_id' => $model->id]);
+        $dataProvider = new \yii\data\ActiveDataProvider(['query' => $query]);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'أقساط التحصيل #' . $model->id,
+            'filename' => 'collection_divisions_' . $model->id,
+            'headers' => ['رقم التحصيل', 'الشهر', 'السنة', 'المبلغ'],
+            'keys' => ['collection_id', 'month', 'year', 'amount'],
+            'widths' => [16, 12, 12, 14],
+        ], 'excel');
+    }
+
+    /**
+     * Export DivisionsCollection (view/form grid) to PDF.
+     */
+    public function actionExportViewPdf($id)
+    {
+        $model = $this->findModel($id);
+        $query = \backend\modules\divisionsCollection\models\DivisionsCollection::find()
+            ->where(['collection_id' => $model->id]);
+        $dataProvider = new \yii\data\ActiveDataProvider(['query' => $query]);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'أقساط التحصيل #' . $model->id,
+            'filename' => 'collection_divisions_' . $model->id,
+            'headers' => ['رقم التحصيل', 'الشهر', 'السنة', 'المبلغ'],
+            'keys' => ['collection_id', 'month', 'year', 'amount'],
+        ], 'pdf');
     }
 
     /**

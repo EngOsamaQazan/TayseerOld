@@ -12,12 +12,14 @@ use \yii\web\Response;
 use yii\helpers\Html;
 
 use yii\filters\AccessControl;
+use backend\helpers\ExportTrait;
 
 /**
  * PhoneNumbersController implements the CRUD actions for PhoneNumbers model.
  */
 class PhoneNumbersController extends Controller
 {
+    use ExportTrait;
 
     /**
      * @inheritdoc
@@ -33,7 +35,7 @@ class PhoneNumbersController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete','view'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete','view','export-excel','export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -249,6 +251,31 @@ class PhoneNumbersController extends Controller
              */
             return $this->redirect(['index']);
         }
+    }
+
+    public function actionExportExcel() {
+        $searchModel = new PhoneNumbersSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'أرقام الهواتف',
+            'filename' => 'phone_numbers',
+            'headers' => ['#', 'العميل', 'رقم الهاتف', 'محذوف', 'مالك الرقم', 'اسم المالك'],
+            'keys' => ['#', 'customers_id', 'phone_number', 'is_deleted', 'phone_number_owner', 'owner_name'],
+            'widths' => [8, 18, 20, 12, 20, 22],
+        ]);
+    }
+
+    public function actionExportPdf() {
+        $searchModel = new PhoneNumbersSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'أرقام الهواتف',
+            'filename' => 'phone_numbers',
+            'headers' => ['#', 'العميل', 'رقم الهاتف', 'محذوف', 'مالك الرقم', 'اسم المالك'],
+            'keys' => ['#', 'customers_id', 'phone_number', 'is_deleted', 'phone_number_owner', 'owner_name'],
+        ], 'pdf');
     }
 
     /**

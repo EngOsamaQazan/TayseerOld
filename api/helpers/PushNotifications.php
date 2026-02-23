@@ -144,8 +144,6 @@ class PushNotifications {
             if ($result === FALSE) {
                 die('Curl failed: ' . curl_error($ch));
             }
-            // Close connection
-            curl_close($ch);
             return $result;
         }
     }

@@ -198,13 +198,12 @@ class VisionService
                     'Content-Type: application/json',
                 ],
                 CURLOPT_TIMEOUT => 30,
-                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYPEER => false,
             ]);
             
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $curlError = curl_error($ch);
-            curl_close($ch);
             
             $elapsed = (int)((microtime(true) - $startTime) * 1000);
             
@@ -470,11 +469,11 @@ class VisionService
                 'assertion' => $jwt,
             ]),
             CURLOPT_TIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => false,
         ]);
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
         
         if ($httpCode !== 200) {
             throw new \Exception("Token exchange failed ({$httpCode}): " . $response);
@@ -685,11 +684,11 @@ class VisionService
                     'Content-Type: application/json',
                 ],
                 CURLOPT_TIMEOUT => 15,
+                CURLOPT_SSL_VERIFYPEER => false,
             ]);
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
 
             $billingInfo = ($httpCode === 200) ? json_decode($response, true) : null;
 
@@ -748,11 +747,11 @@ class VisionService
                     'Content-Type: application/json',
                 ],
                 CURLOPT_TIMEOUT => 15,
+                CURLOPT_SSL_VERIFYPEER => false,
             ]);
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
 
             if ($httpCode !== 200) {
                 // Fallback: try simpler Service Usage API
@@ -828,11 +827,11 @@ class VisionService
                 'Content-Type: application/json',
             ],
             CURLOPT_TIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => false,
         ]);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
         $serviceInfo = ($httpCode === 200) ? json_decode($response, true) : [];
         $state = isset($serviceInfo['state']) ? $serviceInfo['state'] : 'UNKNOWN';
@@ -889,11 +888,11 @@ class VisionService
                 'assertion' => $jwt,
             ]),
             CURLOPT_TIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => false,
         ]);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
         if ($httpCode !== 200) {
             throw new \Exception("Multi-scope token failed ({$httpCode}): " . substr($response, 0, 300));

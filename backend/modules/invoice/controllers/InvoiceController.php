@@ -15,11 +15,13 @@ use backend\models\Model;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
 use yii\filters\AccessControl;
+use backend\helpers\ExportTrait;
 
 /**
  * InvoiceController implements the CRUD actions for Invoice model.
  */
 class InvoiceController extends Controller {
+    use ExportTrait;
 
     /**
      * @inheritdoc
@@ -34,7 +36,7 @@ class InvoiceController extends Controller {
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','update','create','delete'],
+                        'actions' => ['logout', 'index','update','create','delete','export-excel','export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -377,6 +379,31 @@ class InvoiceController extends Controller {
              */
             return $this->redirect(['index']);
         }
+    }
+
+    public function actionExportExcel() {
+        $searchModel = new InvoiceSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'الفواتير',
+            'filename' => 'invoices',
+            'headers' => ['#', 'العنوان', 'الرقم', 'الإجمالي', 'التاريخ'],
+            'keys' => ['#', 'title', 'number', 'total', 'date'],
+            'widths' => [8, 30, 14, 14, 14],
+        ]);
+    }
+
+    public function actionExportPdf() {
+        $searchModel = new InvoiceSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'الفواتير',
+            'filename' => 'invoices',
+            'headers' => ['#', 'العنوان', 'الرقم', 'الإجمالي', 'التاريخ'],
+            'keys' => ['#', 'title', 'number', 'total', 'date'],
+        ], 'pdf');
     }
 
     /**

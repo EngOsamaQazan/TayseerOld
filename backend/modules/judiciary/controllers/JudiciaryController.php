@@ -20,12 +20,14 @@ use \backend\modules\followUpReport\models\FollowUpReport;
 use yii\helpers\Html;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use common\helper\Permissions;
+use backend\helpers\ExportTrait;
 
 /**
  * JudiciaryController implements the CRUD actions for Judiciary model.
  */
 class JudiciaryController extends Controller
 {
+    use ExportTrait;
 
     /**
      * @inheritdoc
@@ -47,6 +49,9 @@ class JudiciaryController extends Controller
                             'print-cases-report', 'print-case', 'add-print-case',
                             'refresh-persistence-cache',
                             'tab-cases', 'tab-actions', 'tab-persistence', 'tab-legal',
+                            'export-cases-excel', 'export-cases-pdf',
+                            'export-actions-excel', 'export-actions-pdf',
+                            'export-report-excel', 'export-report-pdf',
                         ],
                         'allow' => true,
                         'roles' => ['@'],
@@ -544,6 +549,193 @@ class JudiciaryController extends Controller
         ]);
     }
 
+
+    /* ═══════════════════════════════════════════════════════════
+     *  تصدير القضايا (تبويب القضايا) — Excel / PDF
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionExportCasesExcel()
+    {
+        $searchModel = new JudiciarySearch();
+        $search = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($search['dataProvider'], [
+            'title'    => 'القضايا',
+            'filename' => 'judiciary_cases',
+            'headers'  => ['#', 'العقد', 'العميل', 'المحكمة', 'النوع', 'المحامي', 'رقم القضية', 'أتعاب المحامي', 'رسوم القضية'],
+            'keys'     => [
+                '#',
+                'contract_id',
+                function ($m) {
+                    $names = [];
+                    foreach ($m->customersAndGuarantor as $customer) {
+                        $names[] = $customer->name;
+                    }
+                    return implode('، ', $names) ?: '—';
+                },
+                'court.name',
+                'type.name',
+                'lawyer.name',
+                function ($m) {
+                    $num = $m->judiciary_number ?: '—';
+                    $year = $m->year ?: '';
+                    return $year ? "{$num}-{$year}" : $num;
+                },
+                'lawyer_cost',
+                'case_cost',
+            ],
+            'widths' => [6, 10, 28, 18, 14, 18, 16, 16, 14],
+        ], 'excel');
+    }
+
+    public function actionExportCasesPdf()
+    {
+        $searchModel = new JudiciarySearch();
+        $search = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($search['dataProvider'], [
+            'title'    => 'القضايا',
+            'filename' => 'judiciary_cases',
+            'headers'  => ['#', 'العقد', 'العميل', 'المحكمة', 'النوع', 'المحامي', 'رقم القضية', 'أتعاب المحامي', 'رسوم القضية'],
+            'keys'     => [
+                '#',
+                'contract_id',
+                function ($m) {
+                    $names = [];
+                    foreach ($m->customersAndGuarantor as $customer) {
+                        $names[] = $customer->name;
+                    }
+                    return implode('، ', $names) ?: '—';
+                },
+                'court.name',
+                'type.name',
+                'lawyer.name',
+                function ($m) {
+                    $num = $m->judiciary_number ?: '—';
+                    $year = $m->year ?: '';
+                    return $year ? "{$num}-{$year}" : $num;
+                },
+                'lawyer_cost',
+                'case_cost',
+            ],
+        ], 'pdf');
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  تصدير إجراءات العملاء القضائية (تبويب الإجراءات) — Excel / PDF
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionExportActionsExcel()
+    {
+        $searchModel = new \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActionsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'إجراءات العملاء القضائية',
+            'filename' => 'judiciary_actions',
+            'headers'  => ['القضية', 'المحكوم عليه', 'الإجراء', 'ملاحظات', 'المنشئ', 'المحامي', 'المحكمة', 'العقد', 'تاريخ الإجراء'],
+            'keys'     => [
+                function ($m) {
+                    $jud = $m->judiciary;
+                    return $jud ? ($jud->judiciary_number . '/' . $jud->year) : '#' . $m->judiciary_id;
+                },
+                'customers.name',
+                'judiciaryActions.name',
+                'note',
+                'createdBy.username',
+                function ($m) {
+                    return \common\helper\FindJudicary::findLawyerJudicary($m->judiciary_id);
+                },
+                function ($m) {
+                    return \common\helper\FindJudicary::findCourtJudicary($m->judiciary_id);
+                },
+                function ($m) {
+                    return \common\helper\FindJudicary::findJudiciaryContract($m->judiciary_id) ?: '—';
+                },
+                'action_date',
+            ],
+            'widths' => [14, 22, 16, 24, 14, 18, 18, 10, 14],
+        ], 'excel');
+    }
+
+    public function actionExportActionsPdf()
+    {
+        $searchModel = new \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActionsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'إجراءات العملاء القضائية',
+            'filename' => 'judiciary_actions',
+            'headers'  => ['القضية', 'المحكوم عليه', 'الإجراء', 'ملاحظات', 'المنشئ', 'المحامي', 'المحكمة', 'العقد', 'تاريخ الإجراء'],
+            'keys'     => [
+                function ($m) {
+                    $jud = $m->judiciary;
+                    return $jud ? ($jud->judiciary_number . '/' . $jud->year) : '#' . $m->judiciary_id;
+                },
+                'customers.name',
+                'judiciaryActions.name',
+                'note',
+                'createdBy.username',
+                function ($m) {
+                    return \common\helper\FindJudicary::findLawyerJudicary($m->judiciary_id);
+                },
+                function ($m) {
+                    return \common\helper\FindJudicary::findCourtJudicary($m->judiciary_id);
+                },
+                function ($m) {
+                    return \common\helper\FindJudicary::findJudiciaryContract($m->judiciary_id) ?: '—';
+                },
+                'action_date',
+            ],
+        ], 'pdf');
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  تصدير تقرير القضايا (report) — Excel / PDF
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionExportReportExcel()
+    {
+        $searchModel = new JudiciarySearch();
+        $search = $searchModel->report();
+
+        return $this->exportData($search['dataProvider'], [
+            'title'    => 'تقرير القضايا',
+            'filename' => 'judiciary_report',
+            'headers'  => ['العقد', 'المحكمة', 'رقم القضية', 'أتعاب المحامي', 'العميل', 'الإجراء', 'تاريخ الإجراء'],
+            'keys'     => [
+                'contract_id',
+                'court_name',
+                'judiciary_number',
+                'lawyer_cost',
+                'customer_name',
+                'action_name',
+                'customer_date',
+            ],
+            'widths' => [10, 18, 16, 16, 24, 18, 14],
+        ], 'excel');
+    }
+
+    public function actionExportReportPdf()
+    {
+        $searchModel = new JudiciarySearch();
+        $search = $searchModel->report();
+
+        return $this->exportData($search['dataProvider'], [
+            'title'    => 'تقرير القضايا',
+            'filename' => 'judiciary_report',
+            'headers'  => ['العقد', 'المحكمة', 'رقم القضية', 'أتعاب المحامي', 'العميل', 'الإجراء', 'تاريخ الإجراء'],
+            'keys'     => [
+                'contract_id',
+                'court_name',
+                'judiciary_number',
+                'lawyer_cost',
+                'customer_name',
+                'action_name',
+                'customer_date',
+            ],
+        ], 'pdf');
+    }
 
     /* ═══════════════════════════════════════════════════════════
      *  AJAX Tab Loaders — للتحميل الكسول في الشاشة الموحدة

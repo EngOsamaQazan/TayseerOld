@@ -13,12 +13,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\web\UploadedFile;
+use backend\helpers\ExportTrait;
 
 /**
  * ExpenseCategoriesController implements the CRUD actions for ExpenseCategories model.
  */
 class ExpenseCategoriesController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -33,7 +35,7 @@ class ExpenseCategoriesController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','update','create','delete','view','import-file'],
+                        'actions' => ['logout', 'index','update','create','delete','view','import-file','export-excel','export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -268,6 +270,33 @@ class ExpenseCategoriesController extends Controller
             return $this->redirect(['index']);
         }
 
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new ExpenseCategoriesSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'تصنيفات المصاريف',
+            'filename' => 'expense_categories',
+            'headers' => ['#', 'الاسم', 'أنشئ بواسطة'],
+            'keys' => ['#', 'name', 'createdBy.username'],
+            'widths' => [8, 30, 20],
+        ]);
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new ExpenseCategoriesSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'تصنيفات المصاريف',
+            'filename' => 'expense_categories',
+            'headers' => ['#', 'الاسم', 'أنشئ بواسطة'],
+            'keys' => ['#', 'name', 'createdBy.username'],
+        ], 'pdf');
     }
 
     /**

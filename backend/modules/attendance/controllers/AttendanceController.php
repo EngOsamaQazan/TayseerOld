@@ -11,12 +11,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\filters\AccessControl;
+use backend\helpers\ExportTrait;
 
 /**
  * AttendanceController implements the CRUD actions for Attendance model.
  */
 class AttendanceController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -31,7 +33,7 @@ class AttendanceController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','update','create','delete'],
+                        'actions' => ['logout', 'index','update','create','delete', 'export-excel', 'export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -61,6 +63,33 @@ class AttendanceController extends Controller
         ]);
     }
 
+
+    public function actionExportExcel()
+    {
+        $searchModel = new AttendanceSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'سجل الحضور',
+            'filename' => 'attendance',
+            'headers'  => ['#', 'المستخدم', 'الموقع', 'وقت الحضور', 'وقت الانصراف', 'تسجيل يدوي بواسطة'],
+            'keys'     => ['#', 'user_id', 'location_id', 'check_in_time', 'check_out_time', 'manual_checked_in_by'],
+            'widths'   => [8, 15, 15, 20, 20, 20],
+        ], 'excel');
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new AttendanceSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'سجل الحضور',
+            'filename' => 'attendance',
+            'headers'  => ['#', 'المستخدم', 'الموقع', 'وقت الحضور', 'وقت الانصراف', 'تسجيل يدوي بواسطة'],
+            'keys'     => ['#', 'user_id', 'location_id', 'check_in_time', 'check_out_time', 'manual_checked_in_by'],
+        ], 'pdf');
+    }
 
     /**
      * Displays a single Attendance model.

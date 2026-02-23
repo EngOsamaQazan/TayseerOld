@@ -18,12 +18,14 @@ use yii\helpers\Html;
 use yii\data\SqlDataProvider;
 use backend\modules\judiciary\models\Judiciary;
 use backend\modules\reports\models\CustomersJudiciaryActionsSearch;
+use backend\helpers\ExportTrait;
 
 /**
  * FollowUpReportsController implements the CRUD actions for FollowUpReports model.
  */
 class ReportsController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -45,6 +47,13 @@ class ReportsController extends Controller
                             'due-installment', 'month-installments', 'this-month-installments',
                             'monthly-installmentBeer-user', 'monthly-installment',
                             'total-customer-payments-index', 'total-judiciary-customer-payments-index',
+                            'export-income-reports-excel', 'export-income-reports-pdf',
+                            'export-total-payments-excel', 'export-total-payments-pdf',
+                            'export-jud-payments-excel', 'export-jud-payments-pdf',
+                            'export-follow-up-reports-excel', 'export-follow-up-reports-pdf',
+                            'export-jud-actions-excel', 'export-jud-actions-pdf',
+                            'export-jud-report-excel', 'export-jud-report-pdf',
+                            'export-jud-index-excel', 'export-jud-index-pdf',
                         ],
                         'allow' => true,
                         'roles' => [Permissions::REP_VIEW],
@@ -301,5 +310,208 @@ class ReportsController extends Controller
             'dataProvider' => $dataProvider,
             'hasFilter' => $hasFilter,
         ]);
+    }
+
+    /* ═══════════════════════════════════════════════════
+     *  Export Actions
+     * ═══════════════════════════════════════════════════ */
+
+    private function _incomeReportExportConfig()
+    {
+        return [
+            'title'    => 'تقرير الإيرادات',
+            'filename' => 'income_reports',
+            'headers'  => ['#', 'رقم العقد', 'الحالة', 'التاريخ', 'المبلغ', 'المنشئ', 'طريقة الدفع', 'العميل', 'التصنيف'],
+            'keys'     => ['#', 'contract_id', 'status.status', 'date', 'amount', 'createdBy.username', 'paymentType.name', '_by', 'incomeCategory.name'],
+            'widths'   => [6, 14, 12, 14, 14, 16, 16, 20, 16],
+        ];
+    }
+
+    public function actionExportIncomeReportsExcel()
+    {
+        $searchModel = new IncomeSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->_incomeReportExportConfig());
+    }
+
+    public function actionExportIncomeReportsPdf()
+    {
+        $searchModel = new IncomeSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->_incomeReportExportConfig(), 'pdf');
+    }
+
+    private function _totalPaymentsExportConfig()
+    {
+        return [
+            'title'    => 'تقرير مدفوعات العملاء',
+            'filename' => 'total_customer_payments',
+            'headers'  => ['#', 'رقم العقد', 'الحالة', 'التاريخ', 'المبلغ', 'المنشئ', 'طريقة الدفع', 'العميل', 'التصنيف'],
+            'keys'     => ['#', 'contract_id', 'status.status', 'date', 'amount', 'createdBy.username', 'paymentType.name', '_by', 'incomeCategory.name'],
+            'widths'   => [6, 14, 12, 14, 14, 16, 16, 20, 16],
+        ];
+    }
+
+    public function actionExportTotalPaymentsExcel()
+    {
+        $searchModel = new IncomeSearch();
+        $dataProvider = $searchModel->totalCustomerPayments(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->_totalPaymentsExportConfig());
+    }
+
+    public function actionExportTotalPaymentsPdf()
+    {
+        $searchModel = new IncomeSearch();
+        $dataProvider = $searchModel->totalCustomerPayments(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->_totalPaymentsExportConfig(), 'pdf');
+    }
+
+    private function _judPaymentsExportConfig()
+    {
+        return [
+            'title'    => 'إيرادات عملاء القضايا',
+            'filename' => 'judiciary_customer_payments',
+            'headers'  => ['#', 'رقم العقد', 'الحالة', 'التاريخ', 'المبلغ', 'المنشئ', 'طريقة الدفع', 'العميل', 'التصنيف'],
+            'keys'     => ['#', 'contract_id', 'status.status', 'date', 'amount', 'createdBy.username', 'paymentType.name', '_by', 'incomeCategory.name'],
+            'widths'   => [6, 14, 12, 14, 14, 16, 16, 20, 16],
+        ];
+    }
+
+    public function actionExportJudPaymentsExcel()
+    {
+        $searchModel = new IncomeSearch();
+        $dataProvider = $searchModel->totalJudiciaryCustomerPayments(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->_judPaymentsExportConfig());
+    }
+
+    public function actionExportJudPaymentsPdf()
+    {
+        $searchModel = new IncomeSearch();
+        $dataProvider = $searchModel->totalJudiciaryCustomerPayments(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->_judPaymentsExportConfig(), 'pdf');
+    }
+
+    private function _followUpReportsExportConfig()
+    {
+        return [
+            'title'    => 'تقارير المتابعة',
+            'filename' => 'follow_up_reports',
+            'headers'  => ['#', 'رقم العقد', 'التاريخ', 'الملاحظات', 'الشعور', 'المنشئ', 'التذكير', 'وعد بالدفع'],
+            'keys'     => ['#', 'contract_id', 'date_time', 'notes', 'feeling', 'createdBy.username', 'reminder', 'promise_to_pay_at'],
+            'widths'   => [6, 14, 18, 30, 14, 16, 18, 18],
+        ];
+    }
+
+    public function actionExportFollowUpReportsExcel()
+    {
+        $searchModel = new FollowUpSearch();
+        $dataProvider = $searchModel->searchReport(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->_followUpReportsExportConfig());
+    }
+
+    public function actionExportFollowUpReportsPdf()
+    {
+        $searchModel = new FollowUpSearch();
+        $dataProvider = $searchModel->searchReport(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->_followUpReportsExportConfig(), 'pdf');
+    }
+
+    private function _judActionsExportConfig()
+    {
+        return [
+            'title'    => 'الحركات القضائية للعملاء',
+            'filename' => 'customers_judiciary_actions',
+            'headers'  => ['#', 'رقم العقد', 'رقم العميل', 'اسم العميل', 'المحكمة', 'رقم القضية', 'الإجراء القضائي'],
+            'keys'     => ['#', 'contract_id', 'customer_id', 'customer_name', 'court_name', 'judiciary_id', 'judiciary_actions_name'],
+            'widths'   => [6, 14, 14, 22, 18, 14, 22],
+        ];
+    }
+
+    public function actionExportJudActionsExcel()
+    {
+        $searchModel = new CustomersJudiciaryActionsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->_judActionsExportConfig());
+    }
+
+    public function actionExportJudActionsPdf()
+    {
+        $searchModel = new CustomersJudiciaryActionsSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        return $this->exportData($dataProvider, $this->_judActionsExportConfig(), 'pdf');
+    }
+
+    private function _judReportExportConfig()
+    {
+        return [
+            'title'    => 'التقرير القضائي',
+            'filename' => 'judiciary_report',
+            'headers'  => ['#', 'رقم العقد', 'المحكمة', 'رقم القضية', 'أتعاب المحامي', 'اسم العميل', 'الإجراء', 'تاريخ الإجراء'],
+            'keys'     => ['#', 'contract_id', 'court_name', 'judiciary_number', 'lawyer_cost', 'customer_name', 'action_name', 'customer_date'],
+            'widths'   => [6, 14, 18, 14, 16, 22, 20, 16],
+        ];
+    }
+
+    public function actionExportJudReportExcel()
+    {
+        $searchModel = new JudiciarySearch();
+        $result = $searchModel->report();
+        if (is_array($result) && isset($result['dataProvider'])) {
+            return $this->exportData($result['dataProvider'], $this->_judReportExportConfig());
+        }
+        return $this->exportData($result, $this->_judReportExportConfig());
+    }
+
+    public function actionExportJudReportPdf()
+    {
+        $searchModel = new JudiciarySearch();
+        $result = $searchModel->report();
+        if (is_array($result) && isset($result['dataProvider'])) {
+            return $this->exportData($result['dataProvider'], $this->_judReportExportConfig(), 'pdf');
+        }
+        return $this->exportData($result, $this->_judReportExportConfig(), 'pdf');
+    }
+
+    private function _judIndexExportConfig()
+    {
+        return [
+            'title'    => 'القضايا',
+            'filename' => 'judiciary_index',
+            'headers'  => ['#', 'رقم العقد', 'المحكمة', 'رقم القضية', 'أتعاب المحامي', 'المحامي', 'اسم العميل'],
+            'keys'     => [
+                '#',
+                'contract_id',
+                'court.name',
+                function ($model) { return $model->judiciary_number . '/' . $model->year; },
+                'lawyer_cost',
+                'lawyer.name',
+                function ($model) {
+                    $names = [];
+                    if (!empty($model->customersAndGuarantor)) {
+                        foreach ($model->customersAndGuarantor as $c) {
+                            $names[] = $c->name;
+                        }
+                    }
+                    return implode(', ', $names);
+                },
+            ],
+            'widths'   => [6, 14, 18, 14, 16, 18, 30],
+        ];
+    }
+
+    public function actionExportJudIndexExcel()
+    {
+        $searchModel = new JudiciarySearch();
+        $search = $searchModel->reportSearch(Yii::$app->request->queryParams);
+        $dataProvider = is_array($search) ? $search['dataProvider'] : $search;
+        return $this->exportData($dataProvider, $this->_judIndexExportConfig());
+    }
+
+    public function actionExportJudIndexPdf()
+    {
+        $searchModel = new JudiciarySearch();
+        $search = $searchModel->reportSearch(Yii::$app->request->queryParams);
+        $dataProvider = is_array($search) ? $search['dataProvider'] : $search;
+        return $this->exportData($dataProvider, $this->_judIndexExportConfig(), 'pdf');
     }
 }

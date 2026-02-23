@@ -13,12 +13,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\filters\AccessControl;
+use backend\helpers\ExportTrait;
 
 /**
  * LeaveRequestController implements the CRUD actions for LeaveRequest model.
  */
 class LeaveRequestController extends Controller
 {
+    use ExportTrait;
 
     /**
      * @inheritdoc
@@ -34,7 +36,7 @@ class LeaveRequestController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'view', 'number-date', 'suspended-vacations', 'aproved','reject'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'view', 'number-date', 'suspended-vacations', 'aproved','reject', 'export-excel', 'export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -62,6 +64,43 @@ class LeaveRequestController extends Controller
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
         ]);
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new LeaveRequestSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'طلبات الإجازة',
+            'filename' => 'leave_requests',
+            'headers'  => ['#', 'السبب', 'تاريخ البداية', 'تاريخ النهاية', 'سياسة الإجازة', 'الحالة', 'أنشأ بواسطة'],
+            'keys'     => [
+                '#', 'Reason', 'start_at', 'end_at',
+                function ($model) { return $model->leavePolicy ? $model->leavePolicy->title : ''; },
+                'status',
+                function ($model) { return $model->createdBy ? $model->createdBy->username : ''; },
+            ],
+            'widths'   => [8, 25, 18, 18, 20, 15, 20],
+        ], 'excel');
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new LeaveRequestSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'طلبات الإجازة',
+            'filename' => 'leave_requests',
+            'headers'  => ['#', 'السبب', 'تاريخ البداية', 'تاريخ النهاية', 'سياسة الإجازة', 'الحالة', 'أنشأ بواسطة'],
+            'keys'     => [
+                '#', 'Reason', 'start_at', 'end_at',
+                function ($model) { return $model->leavePolicy ? $model->leavePolicy->title : ''; },
+                'status',
+                function ($model) { return $model->createdBy ? $model->createdBy->username : ''; },
+            ],
+        ], 'pdf');
     }
 
     /**

@@ -7,6 +7,7 @@ use yii\helpers\Html;
 use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset;
+use backend\widgets\ExportButtons;
 
 $this->title = 'إيرادات القضايا';
 $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['depends' => ['yii\web\YiiAsset']]);
@@ -130,7 +131,10 @@ CrudAsset::register($this);
                 ['content' =>
                     Html::a('<i class="fa fa-repeat"></i>', ['reports/total-judiciary-customer-payments-index'], ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'تحديث']) .
                     '{toggleData}' .
-                    '{export}'
+                    ExportButtons::widget([
+                        'excelRoute' => '/reports/reports/export-jud-payments-excel',
+                        'pdfRoute'   => '/reports/reports/export-jud-payments-pdf',
+                    ])
                 ],
             ],
             'panel' => [

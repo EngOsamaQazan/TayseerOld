@@ -7,6 +7,7 @@ use yii\data\ActiveDataProvider;
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
+use backend\widgets\ExportButtons;
 
 /* @var $this yii\web\View */
 /* @var $model common\models\Collection */
@@ -116,7 +117,10 @@ use yii\widgets\ActiveForm;
                     Html::a('<i class="glyphicon glyphicon-repeat"></i>', [''],
                         ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'Reset Grid']) .
                     '{toggleData}' .
-                    '{export}'
+                    ExportButtons::widget([
+                        'excelRoute' => ['export-view-excel', 'id' => $model->id],
+                        'pdfRoute' => ['export-view-pdf', 'id' => $model->id],
+                    ])
                 ],
             ],
             'striped' => false,

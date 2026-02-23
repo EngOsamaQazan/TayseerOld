@@ -15,12 +15,14 @@ use yii\helpers\Html;
 use yii\data\ActiveDataProvider;
 use yii\filters\AccessControl;
 use common\helper\Permissions;
+use backend\helpers\ExportTrait;
 
 /**
  * IncomeController implements the CRUD actions for Installment model.
  */
 class IncomeController extends Controller
 {
+    use ExportTrait;
     public $customer_ids;
 
     /**
@@ -35,7 +37,7 @@ class IncomeController extends Controller
                     ['actions' => ['login', 'error'], 'allow' => true],
                     /* ═══ عرض ═══ */
                     [
-                        'actions' => ['income-list', 'index', 'view'],
+                        'actions' => ['income-list', 'index', 'view', 'export-excel', 'export-pdf'],
                         'allow'   => true,
                         'roles'   => [Permissions::INC_VIEW],
                     ],
@@ -271,6 +273,33 @@ class IncomeController extends Controller
             return $this->redirect(['index']);
         }
 
+    }
+
+    public function actionExportExcel($customer_id)
+    {
+        $query = Income::find()->andFilterWhere(['customer_id' => $customer_id]);
+        $dataProvider = new ActiveDataProvider(['query' => $query]);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'الأقساط',
+            'filename' => 'income',
+            'headers' => ['#', 'اسم الصنف', 'اسم العميل', 'التاريخ', 'رقم الشيك', 'ملاحظات', 'الإجمالي'],
+            'keys' => ['#', 'item.name', 'customer.name', 'date', 'cheque_number', 'notes', 'total'],
+            'widths' => [8, 22, 22, 14, 16, 25, 14],
+        ]);
+    }
+
+    public function actionExportPdf($customer_id)
+    {
+        $query = Income::find()->andFilterWhere(['customer_id' => $customer_id]);
+        $dataProvider = new ActiveDataProvider(['query' => $query]);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'الأقساط',
+            'filename' => 'income',
+            'headers' => ['#', 'اسم الصنف', 'اسم العميل', 'التاريخ', 'رقم الشيك', 'ملاحظات', 'الإجمالي'],
+            'keys' => ['#', 'item.name', 'customer.name', 'date', 'cheque_number', 'notes', 'total'],
+        ], 'pdf');
     }
 
     /**

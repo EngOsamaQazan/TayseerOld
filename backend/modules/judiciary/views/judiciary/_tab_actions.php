@@ -5,6 +5,7 @@
 use yii\helpers\Url;
 use yii\helpers\Html;
 use kartik\grid\GridView;
+use backend\widgets\ExportButtons;
 
 /* @var $searchModel \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActionsSearch */
 /* @var $dataProvider yii\data\ActiveDataProvider */
@@ -24,7 +25,11 @@ use kartik\grid\GridView;
                 'content' =>
                     Html::a('<i class="fa fa-plus"></i> إضافة إجراء', ['/judiciaryCustomersActions/judiciary-customers-actions/create'], ['class' => 'btn btn-success', 'role' => 'modal-remote']) .
                     Html::a('<i class="fa fa-refresh"></i>', ['/judiciaryCustomersActions/judiciary-customers-actions/index'], ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'تحديث']) .
-                    '{toggleData}{export}'
+                    '{toggleData}' .
+                    ExportButtons::widget([
+                        'excelRoute' => '/judiciary/judiciary/export-actions-excel',
+                        'pdfRoute'   => '/judiciary/judiciary/export-actions-pdf',
+                    ])
             ],
         ],
         'striped' => true,

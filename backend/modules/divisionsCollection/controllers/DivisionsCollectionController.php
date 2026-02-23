@@ -10,12 +10,14 @@ use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
+use backend\helpers\ExportTrait;
 
 /**
  * DivisionsCollectionController implements the CRUD actions for DivisionsCollection model.
  */
 class DivisionsCollectionController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -251,6 +253,31 @@ class DivisionsCollectionController extends Controller
             return $this->redirect(['index']);
         }
        
+    }
+
+    public function actionExportExcel() {
+        $searchModel = new DivisionsCollectionSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'أقسام التحصيل',
+            'filename' => 'divisions_collection',
+            'headers' => ['#', 'التحصيل', 'الشهر', 'المبلغ', 'أنشئ بواسطة', 'آخر تحديث بواسطة'],
+            'keys' => ['#', 'collection_id', 'month', 'amount', 'created_by', 'last_updated_by'],
+            'widths' => [8, 18, 14, 16, 18, 18],
+        ]);
+    }
+
+    public function actionExportPdf() {
+        $searchModel = new DivisionsCollectionSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'أقسام التحصيل',
+            'filename' => 'divisions_collection',
+            'headers' => ['#', 'التحصيل', 'الشهر', 'المبلغ', 'أنشئ بواسطة', 'آخر تحديث بواسطة'],
+            'keys' => ['#', 'collection_id', 'month', 'amount', 'created_by', 'last_updated_by'],
+        ], 'pdf');
     }
 
     /**

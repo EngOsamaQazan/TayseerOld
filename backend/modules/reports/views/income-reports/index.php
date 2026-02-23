@@ -5,6 +5,7 @@ use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset; 
 use johnitvn\ajaxcrud\BulkButtonWidget;
+use backend\widgets\ExportButtons;
 
 /* @var $this yii\web\View */
 /* @var $searchModel backend\modules\reports\models\IncomeReportsSearch */
@@ -30,8 +31,11 @@ CrudAsset::register($this);
                     ['role'=>'modal-remote','title'=> 'Create new Income Reports','class'=>'btn btn-default']).
                     Html::a('<i class="glyphicon glyphicon-repeat"></i>', [''],
                     ['data-pjax'=>1, 'class'=>'btn btn-default', 'title'=>'Reset Grid']).
-                    '{toggleData}'.
-                    '{export}'
+                    '{toggleData}' .
+                    ExportButtons::widget([
+                        'excelRoute' => '/reports/reports/export-income-reports-excel',
+                        'pdfRoute'   => '/reports/reports/export-income-reports-pdf',
+                    ])
                 ],
             ],          
             'striped' => true,

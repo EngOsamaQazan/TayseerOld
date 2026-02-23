@@ -12,12 +12,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\web\UploadedFile;
+use backend\helpers\ExportTrait;
 
 /**
  * MovmentController implements the CRUD actions for Movment model.
  */
 class MovmentController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -32,7 +34,7 @@ class MovmentController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','update','create','delete','view'],
+                        'actions' => ['logout', 'index','update','create','delete','view','export-excel','export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -303,6 +305,33 @@ class MovmentController extends Controller
             return $this->redirect(['index']);
         }
 
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new \backend\modules\movment\models\MovmentSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'الحركات',
+            'filename' => 'movments',
+            'headers' => ['#', 'المستخدم', 'رقم الحركة', 'رقم إيصال البنك', 'القيمة المالية', 'صورة الإيصال'],
+            'keys' => ['#', 'user.username', 'movement_number', 'bank_receipt_number', 'financial_value', 'receipt_image'],
+            'widths' => [8, 20, 18, 20, 18, 25],
+        ]);
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new \backend\modules\movment\models\MovmentSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'الحركات',
+            'filename' => 'movments',
+            'headers' => ['#', 'المستخدم', 'رقم الحركة', 'رقم إيصال البنك', 'القيمة المالية', 'صورة الإيصال'],
+            'keys' => ['#', 'user.username', 'movement_number', 'bank_receipt_number', 'financial_value', 'receipt_image'],
+        ], 'pdf');
     }
 
     /**

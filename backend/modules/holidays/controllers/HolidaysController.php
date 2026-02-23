@@ -11,12 +11,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\filters\AccessControl;
+use backend\helpers\ExportTrait;
 
 /**
  * HolidaysController implements the CRUD actions for Holidays model.
  */
 class HolidaysController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -31,7 +33,7 @@ class HolidaysController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'export-excel', 'export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -61,6 +63,33 @@ class HolidaysController extends Controller
         ]);
     }
 
+
+    public function actionExportExcel()
+    {
+        $searchModel = new HolidaysSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'العطل الرسمية',
+            'filename' => 'holidays',
+            'headers'  => ['#', 'العنوان', 'تاريخ البداية', 'تاريخ النهاية', 'أنشأ بواسطة'],
+            'keys'     => ['#', 'title', 'start_at', 'end_at', 'createdBy.username'],
+            'widths'   => [8, 25, 18, 18, 20],
+        ], 'excel');
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new HolidaysSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'العطل الرسمية',
+            'filename' => 'holidays',
+            'headers'  => ['#', 'العنوان', 'تاريخ البداية', 'تاريخ النهاية', 'أنشأ بواسطة'],
+            'keys'     => ['#', 'title', 'start_at', 'end_at', 'createdBy.username'],
+        ], 'pdf');
+    }
 
     /**
      * Displays a single Holidays model.

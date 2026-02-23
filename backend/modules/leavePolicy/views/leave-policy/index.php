@@ -6,6 +6,7 @@ use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset;
 use johnitvn\ajaxcrud\BulkButtonWidget;
+use backend\widgets\ExportButtons;
 
 /* @var $this yii\web\View */
 /* @var $searchModel common\models\LeavePolicySearch */
@@ -30,8 +31,11 @@ CrudAsset::register($this);
                         ['title' => 'Create new Leave Policies', 'class' => 'btn btn-default']) .
                     Html::a('<i class="glyphicon glyphicon-repeat"></i>', [''],
                         ['class' => 'btn btn-default', 'title' => 'Reset Grid']) .
-                    '{toggleData}' .
-                    '{export}'
+                    '{toggleData}'.
+                    ExportButtons::widget([
+                        'excelRoute' => 'export-excel',
+                        'pdfRoute'   => 'export-pdf',
+                    ])
                 ],
             ],
             'striped' => true,

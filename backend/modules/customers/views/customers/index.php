@@ -9,6 +9,7 @@ use yii\bootstrap\Modal;
 use kartik\grid\GridView;
 use johnitvn\ajaxcrud\CrudAsset;
 use common\helper\Permissions;
+use backend\widgets\ExportButtons;
 
 CrudAsset::register($this);
 $this->title = 'العملاء';
@@ -96,7 +97,9 @@ $this->registerCss('
                             'title' => 'تحديث',
                         ]) .
                         '{toggleData}' .
-                        (Permissions::can(Permissions::CUST_EXPORT) ? '{export}' : '')
+                        (Permissions::can(Permissions::CUST_EXPORT)
+                            ? ExportButtons::widget(['excelRoute' => ['export-excel'], 'pdfRoute' => ['export-pdf']])
+                            : '')
                 ],
             ],
             'striped' => true,

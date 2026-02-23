@@ -4,15 +4,18 @@ namespace backend\modules\itemsInventoryInvoices\controllers;
 
 use backend\modules\itemsInventoryInvoices\models\ItemsInventoryInvoices;
 use backend\modules\itemsInventoryInvoices\models\ItemsInventoryInvoicesSearch;
+use Yii;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
+use backend\helpers\ExportTrait;
 
 /**
  * ItemsInventoryInvoicesController implements the CRUD actions for ItemsInventoryInvoices model.
  */
 class ItemsInventoryInvoicesController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritDoc
      */
@@ -114,6 +117,42 @@ class ItemsInventoryInvoicesController extends Controller
         $this->findModel($id)->delete();
 
         return $this->redirect(['index']);
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new ItemsInventoryInvoicesSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig());
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new ItemsInventoryInvoicesSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig(), 'pdf');
+    }
+
+    protected function getExportConfig()
+    {
+        return [
+            'title' => 'فواتير مخزون الأصناف',
+            'headers' => ['#', 'الرقم', 'السعر', 'أنشأ بواسطة', 'آخر تعديل بواسطة', 'محذوف'],
+            'keys' => [
+                '#',
+                'number',
+                'single_price',
+                'created_by',
+                'last_updated_by',
+                function ($model) {
+                    return $model->is_deleted ? 'نعم' : 'لا';
+                },
+            ],
+            'widths' => [6, 18, 16, 18, 20, 12],
+            'filename' => 'items_inventory_invoices',
+        ];
     }
 
     /**

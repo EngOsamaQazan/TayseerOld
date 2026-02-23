@@ -12,12 +12,14 @@ use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
+use backend\helpers\ExportTrait;
 
 /**
  * RejesterFollowUpTypeController implements the CRUD actions for RejesterFollowUpType model.
  */
 class RejesterFollowUpTypeController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -32,7 +34,7 @@ class RejesterFollowUpTypeController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'view', 'add-new-loan'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'view', 'add-new-loan', 'export-excel', 'export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -278,6 +280,33 @@ class RejesterFollowUpTypeController extends Controller
             return $this->redirect(['index']);
         }
 
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new RejesterFollowUpTypeSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'أنواع سجل المتابعة',
+            'filename' => 'rejester_follow_up_types',
+            'headers' => ['#', 'الاسم'],
+            'keys' => ['#', 'name'],
+            'widths' => [8, 40],
+        ]);
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new RejesterFollowUpTypeSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'أنواع سجل المتابعة',
+            'filename' => 'rejester_follow_up_types',
+            'headers' => ['#', 'الاسم'],
+            'keys' => ['#', 'name'],
+        ], 'pdf');
     }
 
     /**

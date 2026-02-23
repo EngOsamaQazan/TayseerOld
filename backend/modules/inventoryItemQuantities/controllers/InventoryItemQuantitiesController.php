@@ -9,11 +9,13 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 use Yii;
+use backend\helpers\ExportTrait;
 /**
  * Default controller for the `reports` module
  */
 class InventoryItemQuantitiesController extends Controller
 {
+    use ExportTrait;
     /**
      * Lists all InventoryItemQuantities models.
      * @return mixed
@@ -237,6 +239,41 @@ class InventoryItemQuantitiesController extends Controller
             return $this->redirect(['index']);
         }
 
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new InventoryItemQuantitiesSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig());
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new InventoryItemQuantitiesSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig(), 'pdf');
+    }
+
+    protected function getExportConfig()
+    {
+        return [
+            'title' => 'كميات الأصناف',
+            'headers' => ['#', 'اسم الصنف', 'الموقع', 'المورد', 'الكمية', 'أنشأ بواسطة', 'الشركة'],
+            'keys' => [
+                '#',
+                'inventoryItems.item_name',
+                'locations.locations_name',
+                'inventorySuppliers.name',
+                'quantity',
+                'createdBy.username',
+                'company.name',
+            ],
+            'widths' => [6, 28, 22, 22, 14, 18, 22],
+            'filename' => 'inventory_item_quantities',
+        ];
     }
 
     /**

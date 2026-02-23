@@ -11,12 +11,14 @@ use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
+use backend\helpers\ExportTrait;
 
 /**
  * ContractDocumentFileController implements the CRUD actions for ContractDocumentFile model.
  */
 class ContractDocumentFileController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -31,7 +33,7 @@ class ContractDocumentFileController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'create', 'delete', 'view', 'update'],
+                        'actions' => ['logout', 'index', 'create', 'delete', 'view', 'update', 'export-excel', 'export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -265,6 +267,33 @@ class ContractDocumentFileController extends Controller
             return $this->redirect(['index']);
         }
        
+    }
+
+    public function actionExportExcel()
+    {
+        $searchModel = new ContractDocumentFileSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'ملفات وثائق العقود',
+            'filename' => 'contract_document_files',
+            'headers' => ['#', 'نوع الوثيقة', 'رقم العقد'],
+            'keys' => ['#', 'document_type', 'contract_id'],
+            'widths' => [8, 30, 20],
+        ]);
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new ContractDocumentFileSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'ملفات وثائق العقود',
+            'filename' => 'contract_document_files',
+            'headers' => ['#', 'نوع الوثيقة', 'رقم العقد'],
+            'keys' => ['#', 'document_type', 'contract_id'],
+        ], 'pdf');
     }
 
     /**

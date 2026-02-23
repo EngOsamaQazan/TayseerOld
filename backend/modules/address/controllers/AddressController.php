@@ -11,12 +11,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\filters\AccessControl;
+use backend\helpers\ExportTrait;
 
 /**
  * AddressController implements the CRUD actions for address model.
  */
 class AddressController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -31,7 +33,7 @@ class AddressController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','update','create','delete'],
+                        'actions' => ['logout', 'index','update','create','delete','export-excel','export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -265,6 +267,31 @@ class AddressController extends Controller
             return $this->redirect(['index']);
         }
        
+    }
+
+    public function actionExportExcel() {
+        $searchModel = new addressSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'العناوين',
+            'filename' => 'addresses',
+            'headers' => ['#', 'العميل', 'العنوان', 'محذوف'],
+            'keys' => ['#', 'customers_id', 'address', 'is_deleted'],
+            'widths' => [8, 18, 40, 12],
+        ]);
+    }
+
+    public function actionExportPdf() {
+        $searchModel = new addressSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'العناوين',
+            'filename' => 'addresses',
+            'headers' => ['#', 'العميل', 'العنوان', 'محذوف'],
+            'keys' => ['#', 'customers_id', 'address', 'is_deleted'],
+        ], 'pdf');
     }
 
     /**

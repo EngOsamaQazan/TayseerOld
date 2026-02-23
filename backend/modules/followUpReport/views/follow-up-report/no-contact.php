@@ -13,6 +13,7 @@ use kartik\select2\Select2;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use backend\modules\followUp\helper\ContractCalculations;
 use common\helper\Permissions;
+use backend\widgets\ExportButtons;
 
 /* Assets */
 $this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' . time());
@@ -82,9 +83,13 @@ $end   = $begin + count($models) - 1;
             <a href="<?= Url::to(['/followUpReport/follow-up-report/index']) ?>" class="ct-btn ct-btn-outline">
                 <i class="fa fa-arrow-right"></i> <span class="ct-hide-xs">تقرير المتابعة</span>
             </a>
-            <button class="ct-btn ct-btn-outline ct-hide-sm" id="ctExportBtn" title="تصدير CSV">
-                <i class="fa fa-download"></i> <span class="ct-hide-xs">تصدير</span>
-            </button>
+            <?= ExportButtons::widget([
+                'excelRoute' => ['export-no-contact-excel'],
+                'pdfRoute' => ['export-no-contact-pdf'],
+                'excelBtnClass' => 'ct-btn ct-btn-outline ct-hide-sm',
+                'pdfBtnClass' => 'ct-btn ct-btn-outline ct-hide-sm',
+                'passQueryParams' => true,
+            ]) ?>
             <button class="ct-btn ct-btn-ghost ct-show-sm" id="ctFilterToggle" aria-label="فتح الفلاتر">
                 <i class="fa fa-sliders" style="font-size:18px"></i>
             </button>

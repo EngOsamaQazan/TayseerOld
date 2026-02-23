@@ -11,12 +11,14 @@ use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
+use backend\helpers\ExportTrait;
 
 /**
  * InventorySuppliersController implements the CRUD actions for InventorySuppliers model.
  */
 class InventorySuppliersController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -31,7 +33,7 @@ class InventorySuppliersController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','update','create','delete','view'],
+                        'actions' => ['logout', 'index','update','create','delete','view','export-excel','export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -64,6 +66,44 @@ class InventorySuppliersController extends Controller
         ]);
     }
 
+
+    public function actionExportExcel()
+    {
+        $searchModel = new InventorySuppliersSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig());
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new InventorySuppliersSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, $this->getExportConfig(), 'pdf');
+    }
+
+    protected function getExportConfig()
+    {
+        return [
+            'title' => 'الموردين',
+            'filename' => 'suppliers',
+            'headers' => ['#', 'الشركة', 'الاسم', 'العنوان', 'رقم الهاتف', 'أنشئ بواسطة'],
+            'keys' => [
+                '#',
+                function ($model) {
+                    return $model->company ? $model->company->name : '—';
+                },
+                'name',
+                'adress',
+                'phone_number',
+                function ($model) {
+                    return $model->createdBy ? $model->createdBy->username : '—';
+                },
+            ],
+            'widths' => [6, 22, 22, 24, 18, 18],
+        ];
+    }
 
     /**
      * Displays a single InventorySuppliers model.

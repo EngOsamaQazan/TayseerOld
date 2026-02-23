@@ -11,12 +11,14 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\filters\AccessControl;
+use backend\helpers\ExportTrait;
 
 /**
  * LeaveTypesController implements the CRUD actions for LeaveTypes model.
  */
 class LeaveTypesController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -31,7 +33,7 @@ class LeaveTypesController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'export-excel', 'export-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -61,6 +63,55 @@ class LeaveTypesController extends Controller
         ]);
     }
 
+
+    public function actionExportExcel()
+    {
+        $searchModel = new LeaveTypesSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'أنواع الإجازات',
+            'filename' => 'leave_types',
+            'headers'  => ['#', 'السنة', 'نوع الإجازة', 'إجمالي الأيام', 'الوصف', 'القسم'],
+            'keys'     => [
+                '#', 'year',
+                function ($model) {
+                    $type = \common\models\LeaveTypes::findOne($model->leave_type);
+                    return $type ? $type->title : '';
+                },
+                'total_days', 'description',
+                function ($model) {
+                    $dept = \backend\modules\department\models\Department::findOne($model->department);
+                    return $dept ? $dept->title : '';
+                },
+            ],
+            'widths'   => [8, 12, 20, 15, 25, 20],
+        ], 'excel');
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel = new LeaveTypesSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'أنواع الإجازات',
+            'filename' => 'leave_types',
+            'headers'  => ['#', 'السنة', 'نوع الإجازة', 'إجمالي الأيام', 'الوصف', 'القسم'],
+            'keys'     => [
+                '#', 'year',
+                function ($model) {
+                    $type = \common\models\LeaveTypes::findOne($model->leave_type);
+                    return $type ? $type->title : '';
+                },
+                'total_days', 'description',
+                function ($model) {
+                    $dept = \backend\modules\department\models\Department::findOne($model->department);
+                    return $dept ? $dept->title : '';
+                },
+            ],
+        ], 'pdf');
+    }
 
     /**
      * Displays a single LeaveTypes model.

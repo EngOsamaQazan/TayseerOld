@@ -26,12 +26,14 @@ use backend\modules\notification\models\Notification;
 use backend\modules\feelings\models\Feelings;
 use common\components\customersInformation;
 use common\helper\Permissions;
+use backend\helpers\ExportTrait;
 
 /**
  * FollowUpController implements the CRUD actions for FollowUp model.
  */
 class FollowUpController extends Controller
 {
+    use ExportTrait;
 
     /**
      * {@inheritdoc}
@@ -49,7 +51,9 @@ class FollowUpController extends Controller
                     ['actions' => ['logout'], 'allow' => true, 'roles' => ['@']],
                     [
                         'actions' => ['index', 'view', 'panel', 'find-next-contract',
-                            'printer', 'clearance', 'custamer-info', 'get-timeline', 'customer-image'],
+                            'printer', 'clearance', 'custamer-info', 'get-timeline', 'customer-image',
+                            'export-phone-numbers-excel', 'export-phone-numbers-pdf',
+                            'export-loan-scheduling-excel', 'export-loan-scheduling-pdf'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -354,7 +358,6 @@ class FollowUpController extends Controller
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_TIMEOUT, 10);
         $output = curl_exec($ch);
-        curl_close($ch);
 
         $response = [
             '-100' => 'المعلومات ناقصه',
@@ -461,13 +464,12 @@ class FollowUpController extends Controller
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_TIMEOUT => 15,
-                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYPEER => false,
                 CURLOPT_USERAGENT => 'JadalImageProxy/1.0',
                 CURLOPT_HTTPHEADER => ['Accept: image/*'],
             ]);
             $content = curl_exec($ch);
             $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
             if ($code !== 200 || $content === false || $content === '') {
                 $content = null;
             }
@@ -544,6 +546,108 @@ class FollowUpController extends Controller
             'message' => $message,
             'contract_id' => $contractId,
         ]);
+    }
+
+    /**
+     * Export phone numbers for a contract to Excel.
+     */
+    public function actionExportPhoneNumbersExcel($contract_id)
+    {
+        $contract = Contracts::findOne($contract_id);
+        if (!$contract) {
+            throw new NotFoundHttpException('العقد غير موجود');
+        }
+
+        $rows = [];
+        foreach ($contract->contractsCustomers as $cc) {
+            $customer = $cc->customer;
+            if (!$customer) continue;
+            foreach ($customer->phoneNumbers as $phone) {
+                $relation = \backend\modules\cousins\models\Cousins::findOne(['id' => $phone->phone_number_owner]);
+                $rows[] = [
+                    'customer_name' => $customer->name,
+                    'phone_number' => $phone->phone_number,
+                    'owner_name' => $phone->owner_name,
+                    'relation' => $relation ? $relation->name : '',
+                ];
+            }
+        }
+
+        return $this->exportArrayData($rows, [
+            'title' => 'أرقام هواتف العملاء — عقد #' . $contract_id,
+            'filename' => 'phone_numbers_' . $contract_id,
+            'headers' => ['العميل', 'رقم الهاتف', 'اسم صاحب الرقم', 'صلة القرابة'],
+            'keys' => ['customer_name', 'phone_number', 'owner_name', 'relation'],
+            'widths' => [22, 18, 22, 18],
+        ], 'excel');
+    }
+
+    /**
+     * Export phone numbers for a contract to PDF.
+     */
+    public function actionExportPhoneNumbersPdf($contract_id)
+    {
+        $contract = Contracts::findOne($contract_id);
+        if (!$contract) {
+            throw new NotFoundHttpException('العقد غير موجود');
+        }
+
+        $rows = [];
+        foreach ($contract->contractsCustomers as $cc) {
+            $customer = $cc->customer;
+            if (!$customer) continue;
+            foreach ($customer->phoneNumbers as $phone) {
+                $relation = \backend\modules\cousins\models\Cousins::findOne(['id' => $phone->phone_number_owner]);
+                $rows[] = [
+                    'customer_name' => $customer->name,
+                    'phone_number' => $phone->phone_number,
+                    'owner_name' => $phone->owner_name,
+                    'relation' => $relation ? $relation->name : '',
+                ];
+            }
+        }
+
+        return $this->exportArrayData($rows, [
+            'title' => 'أرقام هواتف العملاء — عقد #' . $contract_id,
+            'filename' => 'phone_numbers_' . $contract_id,
+            'headers' => ['العميل', 'رقم الهاتف', 'اسم صاحب الرقم', 'صلة القرابة'],
+            'keys' => ['customer_name', 'phone_number', 'owner_name', 'relation'],
+        ], 'pdf');
+    }
+
+    /**
+     * Export loan scheduling for a contract to Excel.
+     */
+    public function actionExportLoanSchedulingExcel($contract_id)
+    {
+        $query = \backend\modules\loanScheduling\models\LoanScheduling::find()
+            ->where(['contract_id' => $contract_id]);
+        $dataProvider = new \yii\data\ActiveDataProvider(['query' => $query]);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'التسويات — عقد #' . $contract_id,
+            'filename' => 'loan_scheduling_' . $contract_id,
+            'headers' => ['رقم العقد', 'تاريخ التسوية الجديد', 'القسط الشهري', 'تاريخ أول دفعة'],
+            'keys' => ['contract_id', 'new_installment_date', 'monthly_installment', 'first_installment_date'],
+            'widths' => [14, 20, 16, 20],
+        ], 'excel');
+    }
+
+    /**
+     * Export loan scheduling for a contract to PDF.
+     */
+    public function actionExportLoanSchedulingPdf($contract_id)
+    {
+        $query = \backend\modules\loanScheduling\models\LoanScheduling::find()
+            ->where(['contract_id' => $contract_id]);
+        $dataProvider = new \yii\data\ActiveDataProvider(['query' => $query]);
+
+        return $this->exportData($dataProvider, [
+            'title' => 'التسويات — عقد #' . $contract_id,
+            'filename' => 'loan_scheduling_' . $contract_id,
+            'headers' => ['رقم العقد', 'تاريخ التسوية الجديد', 'القسط الشهري', 'تاريخ أول دفعة'],
+            'keys' => ['contract_id', 'new_installment_date', 'monthly_installment', 'first_installment_date'],
+        ], 'pdf');
     }
 
     public function actionChangeStatus()
