@@ -53,6 +53,7 @@ $mainMenuItems = [
             ['label' => 'مناطق العمل',       'icon' => 'map-pin',           'url' => ['/hr/hr-work-zone/index']],
             ['label' => 'التتبع المباشر',   'icon' => 'crosshairs',        'url' => ['/hr/hr-tracking-api/live-map']],
             ['label' => 'سجل الحضور الموحّد', 'icon' => 'calendar-check-o', 'url' => ['/hr/hr-tracking-api/attendance-board']],
+            ['label' => 'تحليلات الحضور',   'icon' => 'bar-chart',         'url' => ['/hr/hr-tracking-report/index']],
             ['label' => 'إدارة الإجازات',    'icon' => 'calendar-check-o',  'url' => ['/hr/hr-leave/index']],
             ['label' => 'تقارير HR',         'icon' => 'bar-chart',         'url' => ['/hr/hr-report/index']],
         ],
