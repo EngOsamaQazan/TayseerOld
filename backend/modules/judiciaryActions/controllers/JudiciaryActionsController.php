@@ -284,7 +284,8 @@ class JudiciaryActionsController extends Controller
                 '#',
                 'name',
                 function ($model) use ($natureLabels) {
-                    return $natureLabels[$model->action_nature] ?? $model->action_nature;
+                    $key = $model->action_nature ?? '';
+                    return $natureLabels[$key] ?? ($model->action_nature ?? '—');
                 },
                 function ($model) use ($stageLabels) {
                     return $model->getActionTypeLabel();
