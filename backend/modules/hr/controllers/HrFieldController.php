@@ -16,6 +16,7 @@ use backend\modules\hr\models\HrFieldSession;
 use backend\modules\hr\models\HrFieldEvent;
 use backend\modules\hr\models\HrFieldConfig;
 use backend\modules\hr\models\HrLocationPoint;
+use backend\modules\location\models\Location;
 use common\models\User;
 use common\helper\Permissions;
 
@@ -71,6 +72,8 @@ class HrFieldController extends Controller
                 'class' => VerbFilter::class,
                 'actions' => [
                     'delete' => ['POST'],
+                    'save-location' => ['POST'],
+                    'delete-location' => ['POST'],
                     'api-start-session' => ['POST'],
                     'api-end-session' => ['POST'],
                     'api-send-location' => ['POST'],
@@ -216,8 +219,14 @@ class HrFieldController extends Controller
               AND is_deleted = 0
         ")->queryScalar();
 
+        $savedLocations = (new Query())
+            ->select(['id', 'location as name', 'description', 'latitude', 'longitude', 'radius', 'status'])
+            ->from('{{%location}}')
+            ->where(['status' => 'active'])
+            ->all();
+
         $request = Yii::$app->request;
-        if ($request->isAjax) {
+        if ($request->isAjax && !$request->get('withLocations')) {
             Yii::$app->response->format = Response::FORMAT_JSON;
             return [
                 'staffLocations' => $staffLocations,
@@ -226,11 +235,81 @@ class HrFieldController extends Controller
             ];
         }
 
+        if ($request->isAjax && $request->get('withLocations')) {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+            return [
+                'staffLocations' => $staffLocations,
+                'activeSessionCount' => $activeSessionCount,
+                'tasksInProgress' => $tasksInProgress,
+                'savedLocations' => $savedLocations,
+            ];
+        }
+
         return $this->render('map', [
             'staffLocations' => $staffLocations,
             'activeSessionCount' => $activeSessionCount,
             'tasksInProgress' => $tasksInProgress,
+            'savedLocations' => $savedLocations,
         ]);
+    }
+
+    /**
+     * Save (create/update) a named location from the map.
+     */
+    public function actionSaveLocation()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+        $id = $request->post('id');
+
+        $model = $id ? Location::findOne($id) : new Location();
+        if (!$model) {
+            return ['success' => false, 'message' => 'الموقع غير موجود'];
+        }
+
+        $model->location = $request->post('name', '');
+        $model->description = $request->post('description', '');
+        $model->latitude = $request->post('latitude', 0);
+        $model->longitude = $request->post('longitude', 0);
+        $model->radius = $request->post('radius', 100);
+        $model->status = 'active';
+
+        if ($model->isNewRecord) {
+            $model->created_by = Yii::$app->user->id;
+            $model->created_at = time();
+        }
+        $model->updated_at = time();
+
+        if ($model->save()) {
+            return [
+                'success' => true,
+                'location' => [
+                    'id' => $model->id,
+                    'name' => $model->location,
+                    'description' => $model->description,
+                    'latitude' => $model->latitude,
+                    'longitude' => $model->longitude,
+                    'radius' => $model->radius,
+                ],
+            ];
+        }
+        return ['success' => false, 'message' => implode(', ', $model->getFirstErrors())];
+    }
+
+    /**
+     * Delete a named location.
+     */
+    public function actionDeleteLocation()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $id = Yii::$app->request->post('id');
+        $model = Location::findOne($id);
+        if (!$model) {
+            return ['success' => false, 'message' => 'الموقع غير موجود'];
+        }
+        $model->status = 'inactive';
+        $model->save(false);
+        return ['success' => true];
     }
 
     /**
