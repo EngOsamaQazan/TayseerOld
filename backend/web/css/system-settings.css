@@ -1864,3 +1864,331 @@
     .cost-src-tabs { flex-wrap: wrap; }
     .cost-service-row { flex-direction: column; align-items: flex-start; gap: 4px; }
 }
+
+/* ============================================================
+   BACKUP TAB — النسخ الاحتياطي
+   ============================================================ */
+
+.bk-card {
+    margin-bottom: 24px;
+}
+
+.bk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.bk-badge-fast {
+    background: #ecfdf5;
+    color: #059669;
+}
+
+.bk-badge-full {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.bk-desc {
+    font-size: 14px;
+    color: #475569;
+    line-height: 1.7;
+    margin-bottom: 20px;
+}
+.bk-desc code {
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #0f172a;
+}
+
+/* ── Info Grid ── */
+.bk-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.bk-info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+}
+
+.bk-info-item > i {
+    font-size: 20px;
+    color: var(--clr-primary, #2563eb);
+    margin-top: 2px;
+    min-width: 22px;
+    text-align: center;
+}
+
+.bk-info-item strong {
+    display: block;
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.bk-info-item span {
+    font-size: 13px;
+    color: #1e293b;
+    font-weight: 500;
+}
+
+/* ── Actions ── */
+.bk-actions {
+    text-align: center;
+    padding: 8px 0;
+}
+
+.bk-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 32px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .2s;
+    text-decoration: none !important;
+    border: none;
+}
+
+.bk-btn-primary {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    color: #fff !important;
+    box-shadow: 0 4px 14px rgba(5, 150, 105, .3);
+}
+
+.bk-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(5, 150, 105, .4);
+    color: #fff;
+}
+
+/* ── Folders Section ── */
+.bk-folders-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.bk-folders-section h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #334155;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bk-folders-section h4 i {
+    color: #64748b;
+}
+
+.bk-folders-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+}
+
+.bk-folder-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    transition: all .15s;
+}
+
+.bk-folder-item:hover {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+}
+
+.bk-folder-item > i {
+    font-size: 16px;
+    color: var(--clr-primary, #2563eb);
+    min-width: 20px;
+    text-align: center;
+}
+
+.bk-folder-item span {
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+    font-family: 'Courier New', monospace;
+    direction: ltr;
+}
+
+.bk-folder-item small {
+    display: block;
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 400;
+    margin-top: 2px;
+    font-family: inherit;
+}
+
+/* ── How-to Section ── */
+.bk-howto-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.bk-howto-section h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #334155;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bk-howto-section h4 i {
+    color: #64748b;
+}
+
+.bk-code-block {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 16px;
+}
+
+.bk-code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: #1e293b;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.bk-copy-btn {
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.15);
+    color: #e2e8f0;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all .2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.bk-copy-btn:hover {
+    background: rgba(255,255,255,.2);
+    color: #fff;
+}
+
+.bk-code {
+    margin: 0;
+    padding: 16px 20px;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-size: 13px;
+    line-height: 1.8;
+    direction: ltr;
+    text-align: left;
+    overflow-x: auto;
+    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+}
+
+.bk-code .bk-comment {
+    color: #64748b;
+}
+
+/* ── Notes ── */
+.bk-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: #1e40af;
+    line-height: 1.6;
+}
+
+.bk-note > i {
+    font-size: 18px;
+    margin-top: 2px;
+    min-width: 20px;
+}
+
+.bk-note strong {
+    display: inline;
+}
+
+.bk-note code {
+    background: rgba(30, 64, 175, .1);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.bk-note-success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+.bk-note-success code {
+    background: rgba(22, 101, 52, .1);
+}
+
+.bk-save-location {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-radius: 10px;
+    background: #fefce8;
+    border: 1px solid #fde68a;
+    font-size: 13px;
+    color: #92400e;
+    margin-top: 12px;
+}
+
+.bk-save-location i {
+    font-size: 16px;
+}
+
+.bk-save-location code {
+    background: rgba(146, 64, 14, .1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    direction: ltr;
+}
+
+@media (max-width: 768px) {
+    .bk-info-grid { grid-template-columns: 1fr; }
+    .bk-folders-grid { grid-template-columns: 1fr; }
+}

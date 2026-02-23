@@ -34,7 +34,7 @@ class SiteController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['system-settings', 'test-google-connection', 'image-manager', 'image-manager-data', 'image-reassign', 'image-manager-stats', 'image-search-customers', 'image-update-doc-type', 'image-delete'],
+                        'actions' => ['system-settings', 'test-google-connection', 'server-backup', 'image-manager', 'image-manager-data', 'image-reassign', 'image-manager-stats', 'image-search-customers', 'image-update-doc-type', 'image-delete'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -353,6 +353,58 @@ class SiteController extends Controller
             'usageStats'  => $usageStats,
             'activeTab'   => Yii::$app->request->get('tab', 'general'),
         ]);
+    }
+
+    /**
+     * تحميل نسخة احتياطية من قاعدة البيانات (SQL dump مضغوط)
+     */
+    public function actionServerBackup()
+    {
+        set_time_limit(0);
+        ini_set('memory_limit', '256M');
+
+        $db = Yii::$app->db;
+        $dsn = $db->dsn;
+
+        preg_match('/host=([^;]+)/', $dsn, $hostMatch);
+        preg_match('/dbname=([^;]+)/', $dsn, $dbMatch);
+        $host = $hostMatch[1] ?? 'localhost';
+        $dbName = $dbMatch[1] ?? 'tayseer';
+        $username = $db->username;
+        $password = $db->password;
+
+        $timestamp = date('Y-m-d_H-i-s');
+        $backupDir = Yii::getAlias('@runtime/backups');
+        if (!is_dir($backupDir)) {
+            mkdir($backupDir, 0755, true);
+        }
+
+        $sqlFile = $backupDir . "/db_{$dbName}_{$timestamp}.sql";
+        $gzFile = $sqlFile . '.gz';
+
+        $cmd = sprintf(
+            'mysqldump --single-transaction --quick --routines --triggers -h%s -u%s -p%s %s 2>/dev/null | gzip > %s',
+            escapeshellarg($host),
+            escapeshellarg($username),
+            escapeshellarg($password),
+            escapeshellarg($dbName),
+            escapeshellarg($gzFile)
+        );
+
+        exec($cmd, $output, $returnCode);
+
+        if ($returnCode !== 0 || !file_exists($gzFile) || filesize($gzFile) < 100) {
+            @unlink($gzFile);
+            Yii::$app->session->setFlash('error', 'فشل إنشاء النسخة الاحتياطية — تحقق من صلاحيات mysqldump');
+            return $this->redirect(['system-settings', 'tab' => 'backup']);
+        }
+
+        $downloadName = "backup_{$dbName}_{$timestamp}.sql.gz";
+
+        return Yii::$app->response->sendFile($gzFile, $downloadName)
+            ->on(\yii\web\Response::EVENT_AFTER_SEND, function () use ($gzFile) {
+                @unlink($gzFile);
+            });
     }
 
     /**

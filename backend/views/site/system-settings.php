@@ -68,6 +68,14 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                         <span class="sys-nav-sub">قريباً</span>
                     </div>
                 </a>
+                <a href="#" class="sys-nav-item <?= $activeTab === 'backup' ? 'active' : '' ?>" data-tab="backup">
+                    <div class="sys-nav-icon"><i class="fa fa-cloud-download"></i></div>
+                    <div class="sys-nav-text">
+                        <span class="sys-nav-label">النسخ الاحتياطي</span>
+                        <span class="sys-nav-sub">قاعدة البيانات · الملفات · الإعدادات</span>
+                    </div>
+                    <span class="sys-nav-badge" style="background:#27ae60;color:#fff"><i class="fa fa-shield"></i></span>
+                </a>
                 <hr style="border-color:#eee;margin:8px 0;" />
                 <a href="<?= Url::to(['/site/image-manager']) ?>" class="sys-nav-item">
                     <div class="sys-nav-icon"><i class="fa fa-image"></i></div>
@@ -1395,6 +1403,175 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                 </div>
 
             </div>
+
+            <!-- ═══════════ Backup Tab ═══════════ -->
+            <div class="sys-tab-content <?= $activeTab === 'backup' ? 'active' : '' ?>" id="tab-backup">
+
+                <!-- Database Backup Card -->
+                <div class="sys-card bk-card">
+                    <div class="sys-card-header">
+                        <div class="sys-card-title">
+                            <i class="fa fa-database"></i> نسخة احتياطية لقاعدة البيانات
+                        </div>
+                        <span class="bk-badge bk-badge-fast"><i class="fa fa-bolt"></i> سريع</span>
+                    </div>
+                    <div class="sys-card-body">
+                        <p class="bk-desc">تحميل ملف <code>SQL.gz</code> مضغوط يحتوي على جميع جداول وبيانات قاعدة البيانات الحالية.</p>
+
+                        <div class="bk-info-grid">
+                            <div class="bk-info-item">
+                                <i class="fa fa-hdd-o"></i>
+                                <div>
+                                    <strong>الحجم المتوقع</strong>
+                                    <span>عادةً أقل من 100 MB</span>
+                                </div>
+                            </div>
+                            <div class="bk-info-item">
+                                <i class="fa fa-clock-o"></i>
+                                <div>
+                                    <strong>الوقت المتوقع</strong>
+                                    <span>أقل من دقيقة</span>
+                                </div>
+                            </div>
+                            <div class="bk-info-item">
+                                <i class="fa fa-table"></i>
+                                <div>
+                                    <strong>يشمل</strong>
+                                    <span>كل الجداول · البيانات · الإجراءات</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bk-actions">
+                            <a href="<?= Url::to(['server-backup']) ?>" class="bk-btn bk-btn-primary" id="btn-db-backup" onclick="return startDbBackup(this)">
+                                <i class="fa fa-download"></i> تحميل نسخة قاعدة البيانات
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Full Server Backup Card -->
+                <div class="sys-card bk-card">
+                    <div class="sys-card-header">
+                        <div class="sys-card-title">
+                            <i class="fa fa-server"></i> نسخة احتياطية كاملة للسيرفر
+                        </div>
+                        <span class="bk-badge bk-badge-full"><i class="fa fa-cloud-download"></i> شامل</span>
+                    </div>
+                    <div class="sys-card-body">
+                        <p class="bk-desc">تحميل جميع الملفات والصور والمستندات من السيرفر إلى جهازك المحلي عبر سكربت Python مع مزامنة تدريجية (يحمّل الملفات الجديدة/المتغيرة فقط).</p>
+
+                        <div class="bk-info-grid">
+                            <div class="bk-info-item">
+                                <i class="fa fa-hdd-o"></i>
+                                <div>
+                                    <strong>الحجم المتوقع</strong>
+                                    <span>~20 GB (أول مرة)</span>
+                                </div>
+                            </div>
+                            <div class="bk-info-item">
+                                <i class="fa fa-clock-o"></i>
+                                <div>
+                                    <strong>الوقت المتوقع</strong>
+                                    <span>2-6 ساعات (أول مرة) · دقائق (التحديثات)</span>
+                                </div>
+                            </div>
+                            <div class="bk-info-item">
+                                <i class="fa fa-folder-open"></i>
+                                <div>
+                                    <strong>يشمل</strong>
+                                    <span>الصور · المستندات · القضايا · الموظفين · الإعدادات</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Folders included -->
+                        <div class="bk-folders-section">
+                            <h4><i class="fa fa-sitemap"></i> المجلدات المشمولة</h4>
+                            <div class="bk-folders-grid">
+                                <div class="bk-folder-item">
+                                    <i class="fa fa-image"></i>
+                                    <span>images/imagemanager</span>
+                                    <small>صور العملاء والعقود</small>
+                                </div>
+                                <div class="bk-folder-item">
+                                    <i class="fa fa-file-text"></i>
+                                    <span>uploads/customers/documents</span>
+                                    <small>مستندات العملاء</small>
+                                </div>
+                                <div class="bk-folder-item">
+                                    <i class="fa fa-camera"></i>
+                                    <span>uploads/customers/photos</span>
+                                    <small>صور العملاء (قديم)</small>
+                                </div>
+                                <div class="bk-folder-item">
+                                    <i class="fa fa-gavel"></i>
+                                    <span>uploads/judiciary_*</span>
+                                    <small>مرفقات القضايا والقرارات</small>
+                                </div>
+                                <div class="bk-folder-item">
+                                    <i class="fa fa-building"></i>
+                                    <span>uploads/investors</span>
+                                    <small>مستندات الشركات</small>
+                                </div>
+                                <div class="bk-folder-item">
+                                    <i class="fa fa-user"></i>
+                                    <span>images/employeeImage</span>
+                                    <small>صور الموظفين</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- How to run -->
+                        <div class="bk-howto-section">
+                            <h4><i class="fa fa-terminal"></i> كيفية التشغيل</h4>
+                            <div class="bk-code-block">
+                                <div class="bk-code-header">
+                                    <span>Terminal / PowerShell</span>
+                                    <button type="button" class="bk-copy-btn" onclick="copyBackupCmd(this)"><i class="fa fa-copy"></i> نسخ</button>
+                                </div>
+                                <pre class="bk-code"><code><span class="bk-comment"># نسخة كاملة (قاعدة البيانات + الملفات)</span>
+python scripts/backup/backup.py
+
+<span class="bk-comment"># قاعدة البيانات فقط</span>
+python scripts/backup/backup.py --db-only
+
+<span class="bk-comment"># ملفات فقط</span>
+python scripts/backup/backup.py --files-only
+
+<span class="bk-comment"># موقع محدد فقط</span>
+python scripts/backup/backup.py --site jadal
+python scripts/backup/backup.py --site namaa
+
+<span class="bk-comment"># معاينة بدون تحميل</span>
+python scripts/backup/backup.py --dry-run</code></pre>
+                            </div>
+
+                            <div class="bk-note">
+                                <i class="fa fa-info-circle"></i>
+                                <div>
+                                    <strong>ملاحظة:</strong> يتطلب مكتبة <code>paramiko</code>. إذا لم تكن مثبتة:
+                                    <code>pip install paramiko</code>
+                                </div>
+                            </div>
+
+                            <div class="bk-note bk-note-success">
+                                <i class="fa fa-refresh"></i>
+                                <div>
+                                    <strong>مزامنة تدريجية:</strong> السكربت يقارن تاريخ وحجم كل ملف — يحمّل فقط الملفات الجديدة أو المتغيرة.
+                                    بعد أول نسخة، التحديثات ستكون سريعة جداً (دقائق فقط).
+                                </div>
+                            </div>
+
+                            <div class="bk-save-location">
+                                <i class="fa fa-folder"></i>
+                                <span>مسار الحفظ: <code>%USERPROFILE%\TayseerBackups\</code></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -1790,6 +1967,29 @@ window.testGoogleConnection = function() {
         complete: function() {
             btn.prop('disabled', false).html('<i class="fa fa-plug"></i> اختبار الاتصال');
         }
+    });
+};
+
+// ═══ Backup: DB download button state ═══
+window.startDbBackup = function(el) {
+    var b = $(el);
+    b.html('<i class="fa fa-spinner fa-spin"></i> جاري إعداد النسخة الاحتياطية...');
+    b.css({'pointer-events': 'none', 'opacity': '0.7'});
+    setTimeout(function() {
+        b.html('<i class="fa fa-download"></i> تحميل نسخة قاعدة البيانات');
+        b.css({'pointer-events': '', 'opacity': ''});
+    }, 8000);
+    return true;
+};
+
+// ═══ Backup: Copy command to clipboard ═══
+window.copyBackupCmd = function(el) {
+    var code = $(el).closest('.bk-code-block').find('code').text();
+    var lines = code.split('\\n').filter(function(l) { return l.trim() && l.trim().charAt(0) !== '#'; });
+    navigator.clipboard.writeText(lines[0] || code).then(function() {
+        var orig = $(el).html();
+        $(el).html('<i class="fa fa-check"></i> تم النسخ!');
+        setTimeout(function() { $(el).html(orig); }, 2000);
     });
 };
 JS;
