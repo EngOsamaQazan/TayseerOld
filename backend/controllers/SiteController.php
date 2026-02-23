@@ -34,7 +34,7 @@ class SiteController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['system-settings', 'test-google-connection', 'server-backup', 'image-manager', 'image-manager-data', 'image-reassign', 'image-manager-stats', 'image-search-customers', 'image-update-doc-type', 'image-delete'],
+                        'actions' => ['system-settings', 'test-google-connection', 'test-maps-connection', 'server-backup', 'image-manager', 'image-manager-data', 'image-reassign', 'image-manager-stats', 'image-search-customers', 'image-update-doc-type', 'image-delete'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -425,6 +425,70 @@ class SiteController extends Controller
         ];
 
         return SystemSettings::testGoogleConnection($creds);
+    }
+
+    /**
+     * اختبار مفتاح Google Maps API (AJAX)
+     */
+    public function actionTestMapsConnection()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (!Yii::$app->request->isAjax) {
+            return ['success' => false, 'error' => 'طلب غير صالح'];
+        }
+
+        $apiKey = SystemSettings::get('google_maps', 'api_key', '');
+        if (empty($apiKey)) {
+            return ['success' => false, 'error' => 'لم يتم إعداد مفتاح Google Maps API بعد'];
+        }
+
+        $testUrl = 'https://maps.googleapis.com/maps/api/geocode/json?'
+            . http_build_query(['address' => 'Amman, Jordan', 'key' => $apiKey]);
+
+        $ch = curl_init($testUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($curlError) {
+            return ['success' => false, 'error' => "خطأ في الاتصال: {$curlError}"];
+        }
+
+        $data = json_decode($response, true);
+        if (!$data) {
+            return ['success' => false, 'error' => 'لم يتم استلام رد صالح من Google'];
+        }
+
+        $status = $data['status'] ?? 'UNKNOWN';
+
+        if ($status === 'OK') {
+            $firstResult = $data['results'][0]['formatted_address'] ?? '';
+            return [
+                'success' => true,
+                'message' => "المفتاح يعمل — تم اختبار Geocoding API بنجاح" . ($firstResult ? " ({$firstResult})" : ''),
+            ];
+        }
+
+        $errorMessages = [
+            'REQUEST_DENIED'     => 'المفتاح مرفوض — تأكد من تفعيل Geocoding API و Maps JavaScript API في مشروعك',
+            'OVER_QUERY_LIMIT'   => 'تم تجاوز حد الاستخدام — تحقق من حساب الفوترة',
+            'INVALID_REQUEST'    => 'طلب غير صالح — قد يكون المفتاح غير صحيح',
+            'OVER_DAILY_LIMIT'   => 'تم تجاوز الحد اليومي — تحقق من إعدادات الفوترة',
+        ];
+
+        $errorMsg = $errorMessages[$status] ?? "رد غير متوقع من Google: {$status}";
+        if (!empty($data['error_message'])) {
+            $errorMsg .= " — " . $data['error_message'];
+        }
+
+        return ['success' => false, 'error' => $errorMsg];
     }
 
     /**

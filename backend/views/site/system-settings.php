@@ -862,6 +862,11 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                             <div class="sys-card-title">
                                 <i class="fa fa-map-marker"></i> حالة التكوين
                             </div>
+                            <?php if (!empty($googleMaps['configured'])): ?>
+                            <button type="button" class="sys-test-btn" id="btn-test-maps" onclick="testMapsConnection()">
+                                <i class="fa fa-plug"></i> اختبار المفتاح
+                            </button>
+                            <?php endif; ?>
                         </div>
                         <div class="sys-card-body">
                             <div class="sys-connection-status" id="gm-connection-status">
@@ -870,7 +875,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                         <i class="fa fa-check-circle fa-2x"></i>
                                         <div>
                                             <strong>تم التكوين</strong>
-                                            <p>مفتاح Google Maps API محفوظ — خريطة تتبع الموظفين ستستخدم خريطة Google تلقائياً</p>
+                                            <p>مفتاح Google Maps API محفوظ — اضغط "اختبار المفتاح" للتحقق من صلاحيته</p>
                                         </div>
                                     </div>
                                 <?php else: ?>
@@ -1578,6 +1583,7 @@ python scripts/backup/backup.py --dry-run</code></pre>
 
 <?php
 $testUrl = Url::to(['test-google-connection']);
+$testMapsUrl = Url::to(['test-maps-connection']);
 $googleStatsUrl = Url::to(['/customers/smart-media/google-stats']);
 $js = <<<JS
 // دليل خريطة Google — طيّ/فتح
@@ -1802,6 +1808,20 @@ window.parseJsonCredentials = function() {
                 setTimeout(function() { keyField.css('border-color', ''); }, 3000);
                 return;
             }
+            // Detect service account JSON (wrong file type for Maps)
+            if (data.type === 'service_account' || data.private_key || data.client_email) {
+                var hint = $('<div class="gc-parse-error" style="margin-top:8px">'
+                    + '<i class="fa fa-exclamation-triangle" style="color:#f59e0b"></i> '
+                    + '<strong>هذا ملف حساب خدمة (Service Account)</strong> — يُستخدم لـ Vision API فقط.<br>'
+                    + 'خريطة Google Maps تحتاج <strong>مفتاح API Key</strong> (نص يبدأ بـ <code>AIza...</code>).<br>'
+                    + '<span style="margin-top:6px;display:inline-block">'
+                    + 'للحصول عليه: <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:#2563eb;font-weight:700">'
+                    + 'Cloud Console → Credentials → Create API Key</a></span>'
+                    + '</div>');
+                $(dropzone).after(hint);
+                setTimeout(function() { hint.fadeOut(function() { hint.remove(); }); }, 12000);
+                return;
+            }
             var key = data.api_key || data.key || data.maps_api_key || data.google_maps_api_key || data.apiKey || null;
             if (!key && typeof data === 'object') {
                 for (var k in data) {
@@ -1815,7 +1835,7 @@ window.parseJsonCredentials = function() {
                 setTimeout(function() { keyField.css('border-color', ''); }, 3000);
             } else {
                 keyField.css('border-color', '#dc3545');
-                var hint = $('<div class="gc-parse-error" style="margin-top:8px"><i class="fa fa-exclamation-circle"></i> لم يتم العثور على مفتاح API في الملف (api_key, key, maps_api_key)</div>');
+                var hint = $('<div class="gc-parse-error" style="margin-top:8px"><i class="fa fa-exclamation-circle"></i> لم يتم العثور على مفتاح API في الملف. المفتاح هو نص يبدأ بـ <code>AIza...</code> — يمكنك لصقه مباشرة في الحقل أعلاه</div>');
                 $(dropzone).after(hint);
                 setTimeout(function() { keyField.css('border-color', ''); hint.fadeOut(function() { hint.remove(); }); }, 4000);
             }
@@ -1914,14 +1934,20 @@ function fillCostPanels(data) {
         $('#v-gc-status').html('<i class="fa fa-exclamation-triangle" style="color:#e74c3c"></i> لا توجد بيانات — تأكد من إعداد Google Cloud credentials');
     }
 
-    // --- Maps: estimate from $200 free credit ---
-    // Maps billing is estimated; actual data comes from Google Cloud Billing
-    $('#m-gc-total').text('—');
-    $('#m-gc-used').text('$0');
-    $('#m-gc-remaining').text('$200');
-    $('#m-gc-bar-label').text('$0 / $200');
-    $('#m-gc-bar').css('width', '0%');
-    $('#m-gc-status').html('<i class="fa fa-info-circle" style="color:#4285f4"></i> بيانات Maps API التفصيلية تتوفر عبر <a href="https://console.cloud.google.com/billing" target="_blank" rel="noopener">Google Cloud Billing Console</a>');
+    // --- Maps: verify key and show status ---
+    if (data && data.maps) {
+        var m = data.maps;
+        $('#m-gc-total').text(m.total_requests || '—');
+        $('#m-gc-used').text(m.cost || '$0');
+        $('#m-gc-remaining').text(m.remaining || '$200');
+        var mPct = m.usage_percent || 0;
+        $('#m-gc-bar-label').text((m.cost || '$0') + ' / $200');
+        $('#m-gc-bar').css('width', mPct + '%');
+        if (mPct > 80) $('#m-gc-bar').addClass('warning');
+        $('#m-gc-status').html(m.status_html || '<i class="fa fa-check-circle" style="color:#27ae60"></i> متصل');
+    } else {
+        $('#m-gc-status').html('<i class="fa fa-info-circle" style="color:#4285f4"></i> بيانات Maps API التفصيلية تتوفر عبر <a href="https://console.cloud.google.com/billing" target="_blank" rel="noopener">Google Cloud Billing Console</a> — استخدم زر "اختبار المفتاح" في تبويب Maps للتحقق من صلاحيته');
+    }
 }
 
 // Test connection
@@ -1966,6 +1992,53 @@ window.testGoogleConnection = function() {
         },
         complete: function() {
             btn.prop('disabled', false).html('<i class="fa fa-plug"></i> اختبار الاتصال');
+        }
+    });
+};
+
+// ═══ Maps API: Test connection ═══
+window.testMapsConnection = function() {
+    var btn = document.getElementById('btn-test-maps');
+    var statusDiv = $('#gm-connection-status');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الاختبار...';
+
+    $.ajax({
+        url: '{$testMapsUrl}',
+        type: 'POST',
+        dataType: 'json',
+        data: { _csrf: $('meta[name="csrf-token"]').attr('content') || $('input[name="_csrf"]').val() },
+        success: function(res) {
+            if (res.success) {
+                statusDiv.html(
+                    '<div class="sys-status-indicator connected">' +
+                    '  <i class="fa fa-check-circle fa-2x"></i>' +
+                    '  <div><strong>المفتاح يعمل بنجاح!</strong>' +
+                    '  <p>' + (res.message || '') + '</p></div>' +
+                    '</div>'
+                );
+            } else {
+                statusDiv.html(
+                    '<div class="sys-status-indicator error">' +
+                    '  <i class="fa fa-times-circle fa-2x"></i>' +
+                    '  <div><strong>المفتاح لا يعمل</strong>' +
+                    '  <p>' + (res.error || 'خطأ غير معروف') + '</p></div>' +
+                    '</div>'
+                );
+            }
+        },
+        error: function() {
+            statusDiv.html(
+                '<div class="sys-status-indicator error">' +
+                '  <i class="fa fa-times-circle fa-2x"></i>' +
+                '  <div><strong>خطأ في الشبكة</strong>' +
+                '  <p>لم يتم الاتصال بالخادم</p></div>' +
+                '</div>'
+            );
+        },
+        complete: function() {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-plug"></i> اختبار المفتاح';
         }
     });
 };
