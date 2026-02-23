@@ -33,7 +33,7 @@ class StockController extends Controller
         $outCount = 0;
 
         $serials = $db->createCommand(
-            "SELECT id, item_id, serial_number, supplier_id, company_id, purchase_price, created_at, status, contract_id, sold_at
+            "SELECT id, item_id, serial_number, supplier_id, company_id, created_at, status, contract_id, sold_at
              FROM {$prefix}inventory_serial_numbers
              WHERE is_deleted = 0"
         )->queryAll();
@@ -56,7 +56,7 @@ class StockController extends Controller
                     'reference_id'   => $s['id'],
                     'supplier_id'    => $s['supplier_id'] ?: null,
                     'company_id'     => $s['company_id'] ?: null,
-                    'unit_cost'      => $s['purchase_price'] ?: null,
+                    'unit_cost'      => null,
                     'notes'          => 'backfill: إضافة سيريال ' . $s['serial_number'],
                     'created_by'     => 1,
                     'created_at'     => $s['created_at'] ?: time(),
