@@ -68,7 +68,7 @@ DynamicFormWidget::begin([
                 </div>
 
                 <!-- خريطة -->
-                <div class="addr-map-section" style="display:none">
+                <div class="addr-map-section">
                     <div class="row" style="margin-bottom:10px">
                         <div class="col-md-12">
                             <div class="addr-smart-loc">
@@ -381,7 +381,7 @@ $js = <<<JS
 
     /* ─── Event Delegation ─── */
 
-    // Toggle map section
+    // Toggle map section (collapse/expand)
     $(document).on('click', '.addr-toggle-map', function() {
         var panel = getPanel(this);
         var section = panel.find('.addr-map-section');
@@ -394,6 +394,15 @@ $js = <<<JS
             }
         });
     });
+
+    // Auto-init all maps on page load
+    setTimeout(function() {
+        $('.addrres-item').each(function() {
+            var panel = $(this);
+            var entry = initMap(panel);
+            if (entry) setTimeout(function(){ entry.map.invalidateSize(); }, 300);
+        });
+    }, 400);
 
     // Map search input
     var _searchTimers = {};
@@ -544,11 +553,14 @@ $js = <<<JS
         }
     });
 
-    // Re-index after dynamic form add
+    // Init map for newly added address item
     $('.dynamicform_wrapper').on('afterInsert', function(e, item) {
-        $(item).find('.addr-map-section').hide();
-        var newIdx = $('.addrres-item').length - 1;
-        $(item).attr('data-addr-idx', 'new-' + newIdx);
+        var newIdx = 'new-' + Date.now();
+        $(item).attr('data-addr-idx', newIdx);
+        setTimeout(function() {
+            var entry = initMap($(item));
+            if (entry) setTimeout(function(){ entry.map.invalidateSize(); }, 200);
+        }, 300);
     });
 
 })();
