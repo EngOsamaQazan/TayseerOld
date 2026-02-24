@@ -495,6 +495,23 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
     <?php Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '']) ?>
     <?php Modal::end() ?>
 
+    <?php
+    $this->registerJs(<<<'JS'
+    (function(){
+        var origReload = jQuery.pjax.reload;
+        jQuery.pjax.reload = function(options) {
+            if (options && options.container && jQuery(options.container).length === 0) {
+                jQuery('#ajaxCrudModal').modal('hide');
+                location.reload();
+                return;
+            }
+            return origReload.apply(this, arguments);
+        };
+    })();
+JS
+    , $this::POS_READY);
+    ?>
+
     <?php // ═══ TOAST NOTIFICATION ═══ ?>
     <div class="ocp-toast" id="ocp-toast">
         <i class="fa" id="ocp-toast-icon"></i>
