@@ -142,7 +142,7 @@ $statusLabels = [
                 <div class="so-grid so-grid-3">
                     <div class="cv-field">
                         <span class="cv-label">الهاتف الرئيسي</span>
-                        <span class="cv-value" dir="ltr"><?= Html::encode($model->primary_phone_number ?: '—') ?></span>
+                        <span class="cv-value" dir="ltr"><?= Html::encode($model->primary_phone_number ? \backend\helpers\PhoneHelper::toLocal($model->primary_phone_number) : '—') ?></span>
                     </div>
                     <div class="cv-field">
                         <span class="cv-label">البريد الإلكتروني</span>
@@ -274,7 +274,7 @@ $statusLabels = [
                         </div>
                         <div class="cv-field">
                             <span class="cv-label">الهاتف</span>
-                            <span class="cv-value" dir="ltr"><?= Html::encode($ph['phone_number'] ?? '—') ?></span>
+                            <span class="cv-value" dir="ltr"><?= Html::encode(!empty($ph['phone_number']) ? \backend\helpers\PhoneHelper::toLocal($ph['phone_number']) : '—') ?></span>
                         </div>
                         <div class="cv-field">
                             <span class="cv-label">صلة القرابة</span>
@@ -378,7 +378,7 @@ $statusLabels = [
             <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;font-size:12.5px;color:#334155">
                 <div style="display:flex;justify-content:space-between;margin-bottom:8px">
                     <span><i class="fa fa-phone" style="color:#0891b2;width:16px"></i> الهاتف</span>
-                    <b dir="ltr"><?= $model->primary_phone_number ?: '—' ?></b>
+                    <b dir="ltr"><?= $model->primary_phone_number ? \backend\helpers\PhoneHelper::toLocal($model->primary_phone_number) : '—' ?></b>
                 </div>
                 <div style="display:flex;justify-content:space-between;margin-bottom:8px">
                     <span><i class="fa fa-money" style="color:#059669;width:16px"></i> الراتب</span>

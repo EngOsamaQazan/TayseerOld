@@ -199,7 +199,7 @@ foreach ($models as $model):
                 <td><?= $number++ ?></td>
                 <td><?= $Customers->name ?></td>
                 <td style="direction:ltr;text-align:center;font-family:monospace"><?= $Customers->id_number ?></td>
-                <td><?= ($model->informAddress ? $model->informAddress->address : '') ?> — <?= $Customers->primary_phone_number ?></td>
+                <td><?= ($model->informAddress ? $model->informAddress->address : '') ?> — <?= \backend\helpers\PhoneHelper::toLocal($Customers->primary_phone_number) ?></td>
             </tr>
             <?php endforeach ?>
         </tbody>

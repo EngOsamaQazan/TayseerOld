@@ -43,7 +43,7 @@ if ($hasNotes) {
     $ovlPhones = [];
     $ovlEmails = [];
     foreach ($ovlAllPeople as $p) {
-        if (!empty($p->primary_phone_number)) $ovlPhones[] = $p->primary_phone_number;
+        if (!empty($p->primary_phone_number)) $ovlPhones[] = \backend\helpers\PhoneHelper::toLocal($p->primary_phone_number);
         if (!empty($p->email)) $ovlEmails[] = $p->email;
     }
     $ovlPeopleNames = [];
@@ -388,7 +388,7 @@ body { background: #e0e0e0; font-family: 'Cairo', 'Segoe UI', 'Tahoma', sans-ser
                 <td><?= $number++ ?></td>
                 <td><?= $Customers->name ?></td>
                 <td style="direction:ltr;text-align:center;font-family:monospace"><?= $Customers->id_number ?></td>
-                <td><?= $model->informAddress->address ?> — <?= $Customers->primary_phone_number ?></td>
+                <td><?= $model->informAddress->address ?> — <?= \backend\helpers\PhoneHelper::toLocal($Customers->primary_phone_number) ?></td>
             </tr>
             <?php endforeach ?>
         </tbody>

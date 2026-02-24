@@ -33,6 +33,10 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'primary_phone_number',
         'label' => 'الهاتف',
+        'format' => 'raw',
+        'value' => function ($model) {
+            return '<span dir="ltr">' . \yii\helpers\Html::encode(\backend\helpers\PhoneHelper::toLocal($model->primary_phone_number)) . '</span>';
+        },
         'contentOptions' => ['style' => 'direction:ltr;text-align:right;font-family:monospace'],
     ],
 

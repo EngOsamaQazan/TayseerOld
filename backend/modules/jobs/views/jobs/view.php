@@ -582,7 +582,7 @@ $customersCount = $model->getCustomersCount();
                                     <td><?= $i + 1 ?></td>
                                     <td><?= Html::encode($customer->name) ?></td>
                                     <td><?= Html::encode($customer->id_number) ?: '-' ?></td>
-                                    <td dir="ltr" class="text-right"><?= Html::encode($customer->primary_phone_number) ?: '-' ?></td>
+                                    <td dir="ltr" class="text-right"><?= Html::encode(\backend\helpers\PhoneHelper::toLocal($customer->primary_phone_number)) ?: '-' ?></td>
                                     <td>
                                         <?= Html::a('<i class="fa fa-eye"></i>', ['/customers/view', 'id' => $customer->id], [
                                             'class' => 'btn btn-xs btn-info',

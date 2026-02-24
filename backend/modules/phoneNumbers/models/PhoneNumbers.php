@@ -59,6 +59,15 @@ class PhoneNumbers extends \yii\db\ActiveRecord
         ];
     }
 
+    public function beforeSave($insert)
+    {
+        if (!parent::beforeSave($insert)) return false;
+        if (!empty($this->phone_number)) {
+            $this->phone_number = \backend\helpers\PhoneHelper::toE164($this->phone_number);
+        }
+        return true;
+    }
+
     /**
      * @return \yii\db\ActiveQuery
      */

@@ -23,7 +23,7 @@ $allPeople = $model->customersAndGuarantor;
 $phones = [];
 $emails = [];
 foreach ($allPeople as $p) {
-    if (!empty($p->primary_phone_number)) $phones[] = $p->primary_phone_number;
+    if (!empty($p->primary_phone_number)) $phones[] = \backend\helpers\PhoneHelper::toLocal($p->primary_phone_number);
     if (!empty($p->email)) $emails[] = $p->email;
 }
 $peopleNames = [];

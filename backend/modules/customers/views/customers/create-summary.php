@@ -36,7 +36,7 @@ $this->registerCssFile('@web/css/smart-onboarding.css', ['depends' => [\yii\web\
                 </div>
                 <div class="cs-summary-item">
                     <span class="cs-label">الهاتف</span>
-                    <span class="cs-value"><?= Html::encode($model->primary_phone_number) ?></span>
+                    <span class="cs-value"><?= Html::encode(\backend\helpers\PhoneHelper::toLocal($model->primary_phone_number)) ?></span>
                 </div>
                 <div class="cs-summary-item">
                     <span class="cs-label">البريد الإلكتروني</span>
@@ -60,7 +60,7 @@ $this->registerCssFile('@web/css/smart-onboarding.css', ['depends' => [\yii\web\
                 <h4 style="font-size: 14px; color: #166534; margin-bottom: 8px;"><i class="fa fa-address-book"></i> المعرّفون</h4>
                 <ul style="margin: 0; padding-right: 20px;">
                     <?php foreach ($modelsPhoneNumbers as $pn): ?>
-                    <li><?= Html::encode($pn->phone_number) ?> — <?= Html::encode($pn->owner_name) ?></li>
+                    <li><?= Html::encode(\backend\helpers\PhoneHelper::toLocal($pn->phone_number)) ?> — <?= Html::encode($pn->owner_name) ?></li>
                     <?php endforeach ?>
                 </ul>
             </div>

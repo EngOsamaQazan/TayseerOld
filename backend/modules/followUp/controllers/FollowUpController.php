@@ -341,6 +341,7 @@ class FollowUpController extends Controller
     {
         $phone_number = Yii::$app->request->post('phone_number');
         $phone_number = strip_tags($phone_number, '+');
+        $phone_number = \backend\helpers\PhoneHelper::toWhatsApp($phone_number);
         $text = Yii::$app->request->post('text');
         $url = 'http://www.smsapril.com/api.php?comm=sendsms';
         $params = array(
@@ -566,7 +567,7 @@ class FollowUpController extends Controller
                 $relation = \backend\modules\cousins\models\Cousins::findOne(['id' => $phone->phone_number_owner]);
                 $rows[] = [
                     'customer_name' => $customer->name,
-                    'phone_number' => $phone->phone_number,
+                    'phone_number' => \backend\helpers\PhoneHelper::toLocal($phone->phone_number),
                     'owner_name' => $phone->owner_name,
                     'relation' => $relation ? $relation->name : '',
                 ];
@@ -600,7 +601,7 @@ class FollowUpController extends Controller
                 $relation = \backend\modules\cousins\models\Cousins::findOne(['id' => $phone->phone_number_owner]);
                 $rows[] = [
                     'customer_name' => $customer->name,
-                    'phone_number' => $phone->phone_number,
+                    'phone_number' => \backend\helpers\PhoneHelper::toLocal($phone->phone_number),
                     'owner_name' => $phone->owner_name,
                     'relation' => $relation ? $relation->name : '',
                 ];
@@ -675,7 +676,7 @@ class FollowUpController extends Controller
             $custumer_info['notes'] = $custumer->notes;
             $custumer_info['account_number'] = $custumer->account_number;
             $custumer_info['bank_branch'] = $custumer->bank_branch;
-            $custumer_info['primary_phone_number'] = $custumer->primary_phone_number;
+            $custumer_info['primary_phone_number'] = \backend\helpers\PhoneHelper::toLocal($custumer->primary_phone_number);
             $custumer_info['facebook_account'] = $custumer->facebook_account;
             $custumer_info['sex'] = customersInformation::getSex($custumer->sex);
             $custumer_info['hear_about_us'] = customersInformation::getHearAboutUs($custumer->hear_about_us);

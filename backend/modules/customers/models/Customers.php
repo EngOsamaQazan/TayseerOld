@@ -99,6 +99,15 @@ class Customers extends \yii\db\ActiveRecord
         ];
     }
 
+    public function beforeSave($insert)
+    {
+        if (!parent::beforeSave($insert)) return false;
+        if (!empty($this->primary_phone_number)) {
+            $this->primary_phone_number = \backend\helpers\PhoneHelper::toE164($this->primary_phone_number);
+        }
+        return true;
+    }
+
     /**
      * {@inheritdoc}
      */

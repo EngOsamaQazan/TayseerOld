@@ -1,6 +1,7 @@
 <?php
 use backend\modules\contracts\models\Contracts;
 use backend\modules\customers\models\ContractsCustomers;
+use backend\helpers\PhoneHelper;
 use yii\helpers\Url;
 use yii\helpers\Html;
 
@@ -105,20 +106,21 @@ $allParties = $contractModel ? $contractModel->contractsCustomers : [];
             </div>
             <div class="pn-party-body">
                 <?php if ($cust->primary_phone_number): ?>
+                <?php $ppLocal = PhoneHelper::toLocal($cust->primary_phone_number); $ppWa = PhoneHelper::toWhatsApp($cust->primary_phone_number); $ppTel = PhoneHelper::toTel($cust->primary_phone_number); ?>
                 <div class="pn-primary">
                     <div>
                         <div class="pn-primary-label"><i class="fa fa-phone"></i> الرقم الرئيسي</div>
-                        <div class="pn-primary-number"><?= Html::encode($cust->primary_phone_number) ?></div>
+                        <div class="pn-primary-number"><?= Html::encode($ppLocal) ?></div>
                     </div>
                     <div class="pn-primary-social">
-                        <a class="pn-contact-btn call" href="tel:+<?= Html::encode($cust->primary_phone_number) ?>" title="اتصال"><i class="fa fa-phone"></i></a>
-                        <a class="pn-contact-btn whatsapp" href="https://wa.me/<?= Html::encode($cust->primary_phone_number) ?>" target="_blank" title="واتساب"><i class="fa fa-whatsapp"></i></a>
+                        <a class="pn-contact-btn call" href="tel:<?= Html::encode($ppTel) ?>" title="اتصال"><i class="fa fa-phone"></i></a>
+                        <a class="pn-contact-btn whatsapp" href="https://wa.me/<?= Html::encode($ppWa) ?>" target="_blank" title="واتساب"><i class="fa fa-whatsapp"></i></a>
                         <?php if (!empty($cust->facebook_account)): ?>
                         <a class="pn-contact-btn facebook" href="https://m.me/<?= Html::encode($cust->facebook_account) ?>" target="_blank" title="فيسبوك"><i class="fa fa-facebook"></i></a>
                         <?php else: ?>
                         <span class="pn-contact-btn facebook empty" title="لا يوجد حساب فيسبوك"><i class="fa fa-facebook"></i></span>
                         <?php endif; ?>
-                        <button type="button" class="pn-contact-btn sms" onclick="setPhoneNumebr(<?= $cust->primary_phone_number ?>)" data-toggle="modal" data-target="#smsModal" title="إرسال رسالة"><i class="fa fa-comment"></i></button>
+                        <button type="button" class="pn-contact-btn sms" onclick="setPhoneNumebr('<?= Html::encode($ppWa) ?>')" data-toggle="modal" data-target="#smsModal" title="إرسال رسالة"><i class="fa fa-comment"></i></button>
                         <?= Html::a('<i class="fa fa-pencil"></i>', ['/customers/customers/update-contact', 'id' => $cust->id], ['role' => 'modal-remote', 'class' => 'pn-contact-btn edit', 'title' => 'تعديل بيانات الاتصال']) ?>
                     </div>
                 </div>
@@ -129,9 +131,12 @@ $allParties = $contractModel ? $contractModel->contractsCustomers : [];
                     <div class="pn-extra-title"><i class="fa fa-phone-square"></i> أرقام إضافية (<?= count($phones) ?>)</div>
                     <?php foreach ($phones as $pn):
                         $relation = \backend\modules\cousins\models\Cousins::findOne(['id' => $pn->phone_number_owner]);
+                        $pnLocal = PhoneHelper::toLocal($pn->phone_number);
+                        $pnWa = PhoneHelper::toWhatsApp($pn->phone_number);
+                        $pnTel = PhoneHelper::toTel($pn->phone_number);
                     ?>
                     <div class="pn-extra-row">
-                        <span class="pn-extra-number"><?= Html::encode($pn->phone_number) ?></span>
+                        <span class="pn-extra-number"><?= Html::encode($pnLocal) ?></span>
                         <?php if ($pn->owner_name): ?>
                         <span class="pn-extra-owner"><?= Html::encode($pn->owner_name) ?></span>
                         <?php endif; ?>
@@ -139,14 +144,14 @@ $allParties = $contractModel ? $contractModel->contractsCustomers : [];
                         <span class="pn-extra-relation"><?= Html::encode($relation->name) ?></span>
                         <?php endif; ?>
                         <div class="pn-extra-actions">
-                            <a class="pn-contact-btn call" href="tel:+<?= Html::encode($pn->phone_number) ?>" title="اتصال"><i class="fa fa-phone"></i></a>
-                            <a class="pn-contact-btn whatsapp" href="https://wa.me/<?= Html::encode($pn->phone_number) ?>" target="_blank" title="واتساب"><i class="fa fa-whatsapp"></i></a>
+                            <a class="pn-contact-btn call" href="tel:<?= Html::encode($pnTel) ?>" title="اتصال"><i class="fa fa-phone"></i></a>
+                            <a class="pn-contact-btn whatsapp" href="https://wa.me/<?= Html::encode($pnWa) ?>" target="_blank" title="واتساب"><i class="fa fa-whatsapp"></i></a>
                             <?php if (!empty($pn->fb_account)): ?>
                             <a class="pn-contact-btn facebook" href="https://m.me/<?= Html::encode($pn->fb_account) ?>" target="_blank" title="فيسبوك"><i class="fa fa-facebook"></i></a>
                             <?php else: ?>
                             <span class="pn-contact-btn facebook empty"><i class="fa fa-facebook"></i></span>
                             <?php endif; ?>
-                            <button type="button" class="pn-contact-btn sms" onclick="setPhoneNumebr(<?= $pn->phone_number ?>)" data-toggle="modal" data-target="#smsModal" title="رسالة"><i class="fa fa-comment"></i></button>
+                            <button type="button" class="pn-contact-btn sms" onclick="setPhoneNumebr('<?= Html::encode($pnWa) ?>')" data-toggle="modal" data-target="#smsModal" title="رسالة"><i class="fa fa-comment"></i></button>
                             <?= Html::a('<i class="fa fa-pencil"></i>', ['/phoneNumbers/phone-numbers/update', 'id' => $pn->id], ['role' => 'modal-remote', 'class' => 'pn-contact-btn edit', 'title' => 'تعديل']) ?>
                             <?= Html::a('<i class="fa fa-trash-o"></i>', ['/phoneNumbers/phone-numbers/delete', 'id' => $pn->id], ['role' => 'modal-remote', 'class' => 'pn-contact-btn edit', 'style' => 'color:#EF4444', 'title' => 'حذف', 'data-confirm' => false, 'data-method' => false, 'data-request-method' => 'post']) ?>
                         </div>

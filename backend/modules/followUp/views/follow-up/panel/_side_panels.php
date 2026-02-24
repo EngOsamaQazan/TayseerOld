@@ -184,7 +184,7 @@ $goals = [
             <div class="ocp-form-group">
                 <label class="ocp-form-label">رقم الهاتف</label>
                 <input type="text" name="phone" class="ocp-form-input" dir="ltr" 
-                       value="<?= Html::encode($customer ? $customer->primary_phone_number : '') ?>"
+                       value="<?= Html::encode($customer ? \backend\helpers\PhoneHelper::toLocal($customer->primary_phone_number) : '') ?>"
                        placeholder="07XXXXXXXX">
             </div>
 

@@ -845,7 +845,7 @@ CrudAsset::register($this);
                                 'value' => function ($model) {
                                     return '<div itemscope itemtype="https://schema.org/LocalBusiness">
                                                 <span itemprop="telephone">
-                                                    <a class="btn btn-info btn-lg" href="tel:+' . $model->primary_phone_number . '">
+                                                    <a class="btn btn-info btn-lg" href="tel:' . \backend\helpers\PhoneHelper::toTel($model->primary_phone_number) . '">
                                                         <span class="glyphicon glyphicon-earphone"></span>
                                                     </a></span>
                                             </div>';
@@ -854,7 +854,7 @@ CrudAsset::register($this);
                             [
                                 'format' => 'raw',
                                 'value' => function ($model) {
-                                    return '<a style="background-color: #60ca60;" target="_blank" class="btn btn-lg" href="https://wa.me/' . $model->primary_phone_number . '">
+                                    return '<a style="background-color: #60ca60;" target="_blank" class="btn btn-lg" href="https://wa.me/' . \backend\helpers\PhoneHelper::toWhatsApp($model->primary_phone_number) . '">
                                                         <span class="fa fa-whatsapp" style="color: white;"></span>
                                                     </a>
                                             ';
@@ -957,7 +957,7 @@ CrudAsset::register($this);
                                 'value' => function ($model) {
                                     return '<div itemscope itemtype="https://schema.org/LocalBusiness">
                                                 <span itemprop="telephone">
-                                                    <a class="btn btn-info btn-lg" href="tel:+' . $model->phone_number . '">
+                                                    <a class="btn btn-info btn-lg" href="tel:' . \backend\helpers\PhoneHelper::toTel($model->phone_number) . '">
                                                         <span class="glyphicon glyphicon-earphone"></span>
                                                     </a></span>
                                             </div>';
@@ -966,7 +966,7 @@ CrudAsset::register($this);
                             [
                                 'format' => 'raw',
                                 'value' => function ($model) {
-                                    return '<a style="background-color: #60ca60;" target="_blank" class="btn btn-lg" href="https://wa.me/' . $model->phone_number . '">
+                                    return '<a style="background-color: #60ca60;" target="_blank" class="btn btn-lg" href="https://wa.me/' . \backend\helpers\PhoneHelper::toWhatsApp($model->phone_number) . '">
                                                         <span class="fa fa-whatsapp" style="color: white;"></span>
                                                     </a>
                                             ';

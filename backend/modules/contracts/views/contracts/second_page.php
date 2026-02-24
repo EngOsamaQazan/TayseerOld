@@ -140,7 +140,7 @@ if ($primary_company == '') {
                             <div class="col-lg-9 col-md-9 col-sm-9 ">
                                 <div class="form-group">
                                     <label>اسم المدين </label>
-                                    <span><?= $customer->name . ' ورقم هاتفه:' . $customer->primary_phone_number . ' وبريده :' . $customer->email ?></span>
+                                    <span><?= $customer->name . ' ورقم هاتفه:' . \backend\helpers\PhoneHelper::toLocal($customer->primary_phone_number) . ' وبريده :' . $customer->email ?></span>
                                 </div>
                             </div>
                         <?php } ?>
