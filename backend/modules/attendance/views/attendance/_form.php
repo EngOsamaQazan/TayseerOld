@@ -5,7 +5,7 @@ use yii\widgets\ActiveForm;
 use kartik\select2\Select2;
 use yii\helpers\ArrayHelper;
 use backend\models\Employee;
-use kartik\time\TimePicker;
+use backend\helpers\FlatpickrWidget;
 use backend\modules\location\models\Location;
 
 /* @var $this yii\web\View */
@@ -37,9 +37,15 @@ use backend\modules\location\models\Location;
     ])
     ?>
     
-    <?= $form->field($model, 'check_in_time')->widget(TimePicker::classname(), [ 'pluginOptions' => ['showMeridian' => false]]); ?>
+    <?= $form->field($model, 'check_in_time')->widget(FlatpickrWidget::class, [
+        'pluginOptions' => ['enableTime' => true, 'noCalendar' => true, 'dateFormat' => 'H:i', 'time_24hr' => true],
+        'options' => ['class' => 'form-control', 'placeholder' => 'HH:MM'],
+    ]) ?>
     
-    <?= $form->field($model, 'check_out_time')->widget(TimePicker::classname(), [ 'pluginOptions' => ['showMeridian' => false]]); ?>
+    <?= $form->field($model, 'check_out_time')->widget(FlatpickrWidget::class, [
+        'pluginOptions' => ['enableTime' => true, 'noCalendar' => true, 'dateFormat' => 'H:i', 'time_24hr' => true],
+        'options' => ['class' => 'form-control', 'placeholder' => 'HH:MM'],
+    ]) ?>
 
     <?= $form->field($model, 'is_manual_actions')->dropDownList([ 'yes' => 'Yes', 'no' => 'No',], ['prompt' => '']) ?>
 

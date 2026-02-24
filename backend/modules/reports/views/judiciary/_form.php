@@ -13,7 +13,7 @@ use johnitvn\ajaxcrud\CrudAsset;
 use johnitvn\ajaxcrud\BulkButtonWidget;
 use backend\modules\customers\models\Customers;
 use backend\modules\judiciaryActions\models\JudiciaryActions;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use backend\modules\customers\models\ContractsCustomers;
 
 /* @var $this yii\web\View */
@@ -104,10 +104,9 @@ if (!$model->isNewRecord) {
 <div class="row">
     <div class="col-lg-6">
         <?=
-            $form->field($model, 'income_date')->widget(DatePicker::classname(), [
+            $form->field($model, 'income_date')->widget(FlatpickrWidget::class, [
                 'pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+                    'dateFormat' => 'Y-m-d'
                 ]
             ])->label('تاريخ الورود');
         ?>
@@ -193,10 +192,9 @@ if (!$model->isNewRecord) {
                 <div class="col-lg-6">
                     <div>
                         <?=
-                            $form->field($modelCustomerAction, 'action_date')->widget(DatePicker::classname(), [
+                            $form->field($modelCustomerAction, 'action_date')->widget(FlatpickrWidget::class, [
                                 'pluginOptions' => [
-                                    'autoclose' => true,
-                                    'format' => 'yyyy-mm-dd'
+                                    'dateFormat' => 'Y-m-d'
                                 ]
                             ])->label('تاريخ الحركة');
                         ?>

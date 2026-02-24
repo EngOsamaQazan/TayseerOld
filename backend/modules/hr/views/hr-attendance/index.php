@@ -6,7 +6,7 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 use kartik\grid\GridView;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use yii\bootstrap\Modal;
 
 $this->title = 'لوحة الحضور والانصراف';
@@ -126,15 +126,11 @@ $statusMap = [
 
         <div class="filter-group">
             <label>التاريخ</label>
-            <?= DatePicker::widget([
+            <?= FlatpickrWidget::widget([
                 'name' => 'date',
                 'value' => $filterDate,
-                'type' => DatePicker::TYPE_INPUT,
                 'pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd',
-                    'todayHighlight' => true,
-                    'rtl' => true,
+                    'dateFormat' => 'Y-m-d',
                 ],
                 'options' => ['class' => 'form-control', 'style' => 'width:180px'],
             ]) ?>

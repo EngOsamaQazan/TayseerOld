@@ -2,7 +2,7 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 
 /* @var $this yii\web\View */
 /* @var $model backend\modules\incomeCategory\models\IncomeCategory */
@@ -46,9 +46,8 @@ use kartik\date\DatePicker;
         </div>
         <div class="col-lg-6">
             <?=
-            $form->field($model, 'date')->widget(DatePicker::classname(), ['pluginOptions' => [
-                'autoclose' => true,
-                'format' => 'yyyy-mm-dd'
+            $form->field($model, 'date')->widget(FlatpickrWidget::class, ['pluginOptions' => [
+                'dateFormat' => 'Y-m-d'
             ]]);
             ?>
         </div>

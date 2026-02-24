@@ -4,7 +4,7 @@ use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use yii\helpers\ArrayHelper;
 use common\models\UserLeavePolicy;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use yii\web\View;
 use backend\modules\leavePolicy\models\LeavePolicy;
 use backend\widgets\ImageManagerInputWidget;
@@ -48,10 +48,8 @@ $this->registerJs("
                 </div>
                 <div class="col-md-4">
                     <?=
-                    $form->field($model, 'start_at')->widget(DatePicker::class, ['pluginOptions' => [
-                        'autoclose' => true,
-                        'format' => 'yyyy-mm-dd',
-                        'startDate' => "M",
+                    $form->field($model, 'start_at')->widget(FlatpickrWidget::class, ['pluginOptions' => [
+                        'dateFormat' => 'Y-m-d',
                     ]])->label(false);
                     ?>
                 </div>
@@ -62,10 +60,8 @@ $this->registerJs("
                 </div>
                 <div class="col-md-4">
                     <?=
-                    $form->field($model, 'end_at')->widget(DatePicker::class, ['pluginOptions' => [
-                        'autoclose' => true,
-                        'format' => 'yyyy-mm-dd',
-                        'startDate' => "M",
+                    $form->field($model, 'end_at')->widget(FlatpickrWidget::class, ['pluginOptions' => [
+                        'dateFormat' => 'Y-m-d',
                     ]])->label(false);
                     ?>
                 </div>

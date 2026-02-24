@@ -22,6 +22,7 @@ use yii\helpers\Html;
 use yii\web\UploadedFile;
 use yii\helpers\FileHelper;
 use yii2tech\ar\softdelete\SoftDeleteBehavior;
+use backend\helpers\PdfToImageHelper;
 use yii\filters\AccessControl;
 use common\helper\Permissions;
 
@@ -394,7 +395,7 @@ class CompaniesController extends Controller
 
     protected function handleDocumentUploads($model)
     {
-        $uploadDir = 'uploads/investors/';
+        $uploadDir = Yii::getAlias('@backend/web/uploads/investors/');
         if (!is_dir($uploadDir)) {
             FileHelper::createDirectory($uploadDir, 0775, true);
         }
@@ -404,11 +405,14 @@ class CompaniesController extends Controller
             $existing = $model->getCommercialRegisterList();
             foreach ($regFiles as $file) {
                 $fname = uniqid('reg_') . '.' . $file->extension;
-                if ($file->saveAs($uploadDir . $fname)) {
+                $fullPath = $uploadDir . $fname;
+                if ($file->saveAs($fullPath)) {
                     $existing[] = [
-                        'path' => $uploadDir . $fname,
+                        'path' => 'uploads/investors/' . $fname,
                         'name' => $file->baseName . '.' . $file->extension,
                     ];
+                } else {
+                    Yii::error("Failed to save register file: {$file->name} to {$fullPath}", __METHOD__);
                 }
             }
             $model->commercial_register = json_encode($existing, JSON_UNESCAPED_UNICODE);
@@ -419,14 +423,28 @@ class CompaniesController extends Controller
             $existing = $model->getTradeLicenseList();
             foreach ($licFiles as $file) {
                 $fname = uniqid('lic_') . '.' . $file->extension;
-                if ($file->saveAs($uploadDir . $fname)) {
+                $fullPath = $uploadDir . $fname;
+                if ($file->saveAs($fullPath)) {
                     $existing[] = [
-                        'path' => $uploadDir . $fname,
+                        'path' => 'uploads/investors/' . $fname,
                         'name' => $file->baseName . '.' . $file->extension,
                     ];
+                } else {
+                    Yii::error("Failed to save license file: {$file->name} to {$fullPath}", __METHOD__);
                 }
             }
             $model->trade_license = json_encode($existing, JSON_UNESCAPED_UNICODE);
+        }
+
+        foreach ($model->getCommercialRegisterList() as $doc) {
+            if (strtolower(pathinfo($doc['name'], PATHINFO_EXTENSION)) === 'pdf') {
+                PdfToImageHelper::convertAndCache($doc['path']);
+            }
+        }
+        foreach ($model->getTradeLicenseList() as $doc) {
+            if (strtolower(pathinfo($doc['name'], PATHINFO_EXTENSION)) === 'pdf') {
+                PdfToImageHelper::convertAndCache($doc['path']);
+            }
         }
     }
 }

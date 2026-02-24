@@ -7,9 +7,9 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use kartik\select2\Select2;
-use borales\extensions\phoneInput\PhoneInput;
+use backend\helpers\PhoneInputWidget;
 use backend\widgets\ImageManagerInputWidget;
 use common\helper\Permissions;
 
@@ -65,9 +65,9 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
                 <?= $form->field($model, 'id_number')->textInput(['maxlength' => true, 'placeholder' => 'الرقم الوطني'])->label('الرقم الوطني') ?>
             </div>
             <div class="col-md-3">
-                <?= $form->field($model, 'birth_date')->widget(DatePicker::class, [
+                <?= $form->field($model, 'birth_date')->widget(FlatpickrWidget::class, [
                     'options' => ['placeholder' => 'تاريخ الميلاد'],
-                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                 ])->label('تاريخ الميلاد') ?>
             </div>
         </div>
@@ -82,8 +82,8 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
                 <?= $form->field($model, 'hear_about_us')->dropDownList(ArrayHelper::map($hearAboutUs, 'id', 'name'), ['prompt' => '-- كيف سمعت عنا --'])->label('كيف سمعت عنا') ?>
             </div>
             <div class="col-md-3">
-                <?= $form->field($model, 'primary_phone_number')->widget(PhoneInput::class, [
-                    'jsOptions' => ['preferredCountries' => ['jo']],
+                <?= $form->field($model, 'primary_phone_number')->widget(PhoneInputWidget::class, [
+                    'options' => ['class' => 'form-control'],
                 ])->label('الهاتف الرئيسي') ?>
             </div>
         </div>
@@ -109,9 +109,9 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
                 <?= $form->field($model, 'total_salary')->textInput(['type' => 'number', 'step' => '0.01', 'placeholder' => '0.00'])->label('الراتب') ?>
             </div>
             <div class="col-md-2">
-                <?= $form->field($model, 'last_job_query_date')->widget(DatePicker::class, [
+                <?= $form->field($model, 'last_job_query_date')->widget(FlatpickrWidget::class, [
                     'options' => ['placeholder' => 'آخر استعلام'],
-                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                 ])->label('آخر استعلام وظيفي') ?>
             </div>
             <div class="col-md-3">
@@ -172,9 +172,9 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
                 <?= $form->field($model, 'total_retirement_income')->textInput(['type' => 'number', 'step' => '0.01', 'placeholder' => '0.00'])->label('دخل التقاعد') ?>
             </div>
             <div class="col-md-3">
-                <?= $form->field($model, 'last_income_query_date')->widget(DatePicker::class, [
+                <?= $form->field($model, 'last_income_query_date')->widget(FlatpickrWidget::class, [
                     'options' => ['placeholder' => 'آخر استعلام دخل'],
-                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                 ])->label('آخر استعلام دخل') ?>
             </div>
             <div class="col-md-2">

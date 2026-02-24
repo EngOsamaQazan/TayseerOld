@@ -87,23 +87,35 @@ $activeTab = Yii::$app->request->get('tab', 'cases');
 .lh-panel .panel-body, .lh-panel .kv-grid-container,
 .lh-panel .table-responsive, .lh-panel .kv-grid-table { overflow:visible !important; }
 
-/* Responsive grid columns — auto-fit widths + resizable */
-.lh-panel .kv-grid-table { table-layout:auto !important; }
-.lh-panel .kv-grid-table td, .lh-panel .kv-grid-table th {
-    white-space:nowrap; padding:8px 10px !important; font-size:12px;
-}
-.lh-panel .kv-grid-table td { max-width:250px; overflow:hidden; text-overflow:ellipsis; }
+/* Grid table styling */
+.lh-panel .kv-grid-table{table-layout:fixed !important;width:100% !important;border:none !important}
+.lh-panel .kv-grid-table thead th{background:#FAFBFC !important;font-weight:700 !important;font-size:11px !important;color:#64748B !important;border-bottom:2px solid #E2E8F0 !important;padding:8px 6px !important;white-space:nowrap}
+.lh-panel .kv-grid-table thead th a{color:#64748B !important;text-decoration:none !important}
+.lh-panel .kv-grid-table thead th a:hover{color:#334155 !important}
+.lh-panel .kv-grid-table tbody td{font-size:12px;vertical-align:middle;padding:7px 6px !important;border-bottom:1px solid #F1F5F9 !important;border-top:none !important}
+.lh-panel .kv-grid-table tbody tr{transition:background .15s}
+.lh-panel .kv-grid-table tbody tr:hover{background:#FAFBFC}
+.lh-panel .kv-grid-table .filters td{padding:4px 3px !important}
+.lh-panel .kv-grid-table .filters input,.lh-panel .kv-grid-table .filters select{border-radius:6px !important;border:1px solid #E2E8F0 !important;font-size:11px !important;padding:3px 6px !important}
+.lh-panel .table-bordered{border:none !important}
+.lh-panel .table-bordered>thead>tr>th,.lh-panel .table-bordered>tbody>tr>td{border-right:none !important;border-left:none !important}
+.lh-panel .panel{margin:0 !important;border:1px solid #E2E8F0 !important;border-radius:10px !important;box-shadow:none !important}
+.lh-panel .panel-heading{background:#FAFBFC !important;border-bottom:1px solid #E2E8F0 !important;padding:8px 12px !important;border-radius:10px 10px 0 0 !important;font-size:13px;font-weight:700;color:#1E293B}
+.lh-panel .panel-heading .badge{background:#800020;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px}
+.lh-panel .panel-body{border:none !important;padding:0 !important}
+.lh-panel .panel-footer{background:#FAFBFC !important;border-top:1px solid #E2E8F0 !important;padding:6px 10px !important;border-radius:0 0 10px 10px !important}
+.lh-panel .panel-heading .pull-right .btn{border-radius:6px !important;border:1px solid #E2E8F0 !important;background:#fff !important;color:#64748B !important;padding:4px 8px !important;font-size:12px;transition:all .15s}
+.lh-panel .panel-heading .pull-right .btn:hover{background:#F1F5F9 !important;color:#1E293B !important}
+.lh-panel .pagination>li>a,.lh-panel .pagination>li>span{border-radius:6px !important;margin:0 1px;border:1px solid #E2E8F0;color:#64748B;font-size:11px;padding:4px 8px}
+.lh-panel .pagination>.active>a,.lh-panel .pagination>.active>span{background:#800020 !important;border-color:#800020 !important;color:#fff !important}
+.lh-panel .pagination>li>a:hover{background:#F1F5F9;border-color:#CBD5E1}
 /* Column resizer handle */
-.lh-panel .kv-grid-table th { position:relative; }
-.lh-panel .kv-grid-table th .col-resize-handle {
-    position:absolute; left:0; top:0; bottom:0; width:4px;
-    cursor:col-resize; background:transparent; z-index:5;
-}
-.lh-panel .kv-grid-table th .col-resize-handle:hover,
-.lh-panel .kv-grid-table th .col-resize-handle.active { background:rgba(128,0,32,.3); }
+.lh-panel .kv-grid-table th{position:relative}
+.lh-panel .kv-grid-table th .col-resize-handle{position:absolute;left:0;top:0;bottom:0;width:4px;cursor:col-resize;background:transparent;z-index:5}
+.lh-panel .kv-grid-table th .col-resize-handle:hover,.lh-panel .kv-grid-table th .col-resize-handle.active{background:rgba(128,0,32,.3)}
 @media (max-width:992px) {
-    .lh-panel .kv-grid-table { font-size:11px; }
-    .lh-panel .kv-grid-table td, .lh-panel .kv-grid-table th { padding:6px 6px !important; }
+    .lh-panel .kv-grid-table{font-size:11px}
+    .lh-panel .kv-grid-table td,.lh-panel .kv-grid-table th{padding:5px 4px !important}
 }
 
 @media (max-width:768px) {

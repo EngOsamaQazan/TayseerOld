@@ -6,7 +6,7 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use kartik\select2\Select2;
 
 /* بيانات مرجعية من الكاش */
@@ -69,15 +69,15 @@ $legalContracts = ArrayHelper::map(
                 ])->label('العميل') ?>
             </div>
             <div class="col-md-2">
-                <?= $form->field($model, 'from_date')->widget(DatePicker::class, [
+                <?= $form->field($model, 'from_date')->widget(FlatpickrWidget::class, [
                     'options' => ['placeholder' => 'من تاريخ'],
-                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                 ])->label('من') ?>
             </div>
             <div class="col-md-2">
-                <?= $form->field($model, 'to_date')->widget(DatePicker::class, [
+                <?= $form->field($model, 'to_date')->widget(FlatpickrWidget::class, [
                     'options' => ['placeholder' => 'إلى تاريخ'],
-                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                 ])->label('إلى') ?>
             </div>
             <div class="col-md-3">

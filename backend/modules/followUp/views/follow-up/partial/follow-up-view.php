@@ -10,7 +10,7 @@ use yii\widgets\ActiveForm;
 use yii\data\ActiveDataProvider;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use backend\modules\contracts\models\Contracts;
-use kartik\date\DatePicker;
+
 use yii\widgets\Pjax;
 use common\helper\LoanContract;
 use yii\helpers\ArrayHelper;

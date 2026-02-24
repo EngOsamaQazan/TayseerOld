@@ -48,38 +48,32 @@ $(document).on('click', '.custmer-popup', function () {
     a.setAttribute("href", "../../customers/customers/update?id=" + customerId);
     $.post(customer_info_url, { customerId: customerId }, function (msg) {
         let info = JSON.parse(msg);
-        $('.cu-name').val(info['name']);
-        $('#customerInfoTitle').text(info['name']);
-        $('.cu-id-number').val(info['id_number']);
-        $('.cu-birth-date').val(info['birth_date']);
-        $('.cu-job-number').val(info['job_number']);
-        $('.cu-email').val(info['email']);
-        $('.cu-account-number').val(info['account_number']);
-        $('.cu-bank-branch').val(info['bank_branch']);
-        $('.cu-primary-phone-number').val(info['primary_phone_number']);
-        $('.cu-sex').val(info['sex']);
-        $('.cu-facebook-account').val(info['facebook_account']);
-        $('.cu-hear-about-us').val(info['hear_about_us']);
-        $('.cu-status').val(info['status']);
-        $('.cu-city').val(info['city']);
-        $('.cu-bank-name').val(info['bank_name']);
-        $('.cu-job-title').val(info['job_title']);
-        $('.cu-notes').val(info['notes']);
+        function setField(cls, val) {
+            var el = $(cls);
+            if (el.is('input,textarea,select')) el.val(val || '—');
+            else el.text(val || '—');
+        }
+        setField('.cu-name', info['name']);
+        $('#customerInfoTitle').html('<i class="fa fa-user-circle"></i> ' + (info['name'] || 'بيانات العميل'));
+        setField('.cu-id-number', info['id_number']);
+        setField('.cu-birth-date', info['birth_date']);
+        setField('.cu-job-number', info['job_number']);
+        setField('.cu-email', info['email']);
+        setField('.cu-account-number', info['account_number']);
+        setField('.cu-bank-branch', info['bank_branch']);
+        setField('.cu-primary-phone-number', info['primary_phone_number']);
+        setField('.cu-sex', info['sex']);
+        setField('.cu-facebook-account', info['facebook_account']);
+        setField('.cu-hear-about-us', info['hear_about_us']);
+        setField('.cu-status', info['status']);
+        setField('.cu-city', info['city']);
+        setField('.cu-bank-name', info['bank_name']);
+        setField('.cu-job-title', info['job_title']);
+        setField('.cu-notes', info['notes']);
         if (info['social_security_number'] != undefined) {
-            $('.cu-social-security-number').val(info['social_security_number']);
-
-
-            if (info['is_social_security'] = '0') {
-                $('.cu-is-social-security').val('لا');
-            } else {
-                $('.cu-is-social-security').val('نعم');
-            }
-
-            if (info['do_have_any_property'] = '0') {
-                $('.cu-do-have-any-property').val('لا');
-            } else {
-                $('.cu-do-have-any-property').val('نعم');
-            }
+            setField('.cu-social-security-number', info['social_security_number']);
+            setField('.cu-is-social-security', info['is_social_security'] == '0' ? 'لا' : 'نعم');
+            setField('.cu-do-have-any-property', info['do_have_any_property'] == '0' ? 'لا' : 'نعم');
         }
     })
 });

@@ -11,7 +11,7 @@ use johnitvn\ajaxcrud\CrudAsset;
 use backend\widgets\ExportButtons;
 use backend\modules\judiciaryType\models\JudiciaryType;
 use backend\modules\lawyers\models\Lawyers;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 
 $this->title = 'التقارير القضائية';
 $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['depends' => ['yii\web\YiiAsset']]);
@@ -105,14 +105,14 @@ $court = Yii::$app->cache->getOrSet("l1", function () {
                     ])->label('رقم العقد') ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($searchModel, 'from_income_date')->widget(DatePicker::class, [
-                        'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    <?= $form->field($searchModel, 'from_income_date')->widget(FlatpickrWidget::class, [
+                        'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                         'options' => ['placeholder' => 'من...'],
                     ])->label('من تاريخ الورود') ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($searchModel, 'to_income_date')->widget(DatePicker::class, [
-                        'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    <?= $form->field($searchModel, 'to_income_date')->widget(FlatpickrWidget::class, [
+                        'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                         'options' => ['placeholder' => 'إلى...'],
                     ])->label('إلى تاريخ الورود') ?>
                 </div>

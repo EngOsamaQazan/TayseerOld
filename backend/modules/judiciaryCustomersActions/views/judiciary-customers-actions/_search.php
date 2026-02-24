@@ -5,7 +5,7 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use kartik\select2\Select2;
 
 /* بيانات مرجعية - كاش */
@@ -103,15 +103,15 @@ $years = ArrayHelper::map(\backend\modules\judiciary\models\Judiciary::find()->s
                 ])->label('المنشئ') ?>
             </div>
             <div class="col-md-2">
-                <?= $form->field($model, 'form_action_date')->widget(DatePicker::class, [
+                <?= $form->field($model, 'form_action_date')->widget(FlatpickrWidget::class, [
                     'options' => ['placeholder' => 'من تاريخ الإجراء'],
-                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                 ])->label('من تاريخ') ?>
             </div>
             <div class="col-md-2">
-                <?= $form->field($model, 'to_action_date')->widget(DatePicker::class, [
+                <?= $form->field($model, 'to_action_date')->widget(FlatpickrWidget::class, [
                     'options' => ['placeholder' => 'إلى تاريخ الإجراء'],
-                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                 ])->label('إلى تاريخ') ?>
             </div>
             <div class="col-md-2">

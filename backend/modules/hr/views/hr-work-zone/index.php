@@ -168,15 +168,15 @@ $typeColors = [
         </div>
 
         <?php
-        $mapsKey = \common\models\SystemSettings::get('google_apis', 'maps_api_key', '');
+        $mapsKey = \common\models\SystemSettings::get('google_maps', 'api_key', '');
         if ($mapsKey):
         ?>
         <script>
         var map, circles = [], markers = [];
         function initMap() {
             var zones = document.querySelectorAll('.wz-card');
-            var firstLat = zones.length ? parseFloat(zones[0].dataset.lat) : 33.5138;
-            var firstLng = zones.length ? parseFloat(zones[0].dataset.lng) : 36.2765;
+            var firstLat = zones.length ? parseFloat(zones[0].dataset.lat) : 31.9539;
+            var firstLng = zones.length ? parseFloat(zones[0].dataset.lng) : 35.9106;
 
             map = new google.maps.Map(document.getElementById('zones-map'), {
                 center: {lat: firstLat, lng: firstLng},

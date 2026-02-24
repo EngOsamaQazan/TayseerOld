@@ -3,7 +3,7 @@
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use wbraganca\dynamicform\DynamicFormWidget;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 ?>
 
 <div class="customer-form">
@@ -61,11 +61,10 @@ use kartik\date\DatePicker;
                         <div class="row">
                             <div class="col-sm-6">
                                 <?=
-                                $form->field($modelAddress, "[{$i}]date")->widget(DatePicker::classname(), [
+                                $form->field($modelAddress, "[{$i}]date")->widget(FlatpickrWidget::class, [
                                     'options' => ['placeholder' => 'Enter birth date ...'],
                                     'pluginOptions' => [
-                                        'autoclose' => true,
-                                        'format' => 'yyyy-mm-dd'
+                                        'dateFormat' => 'Y-m-d'
                                     ]
                                 ]);
                                 ?>

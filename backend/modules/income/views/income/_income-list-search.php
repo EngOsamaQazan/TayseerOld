@@ -13,7 +13,7 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 
 /* @var $this yii\web\View */
 /* @var $model backend\modules\income\models\IncomeSearch */
@@ -49,20 +49,20 @@ $hasAdv = !empty($model->_by) || !empty($model->type) || !empty($model->number_r
     <div class="fin-filter-main">
         <div class="fin-f-group">
             <label class="fin-f-label">من</label>
-            <?= DatePicker::widget([
+            <?= FlatpickrWidget::widget([
                 'model'         => $model,
                 'attribute'     => 'date_from',
                 'options'       => ['class' => 'form-control fin-input', 'placeholder' => 'من تاريخ'],
-                'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                'pluginOptions' => ['dateFormat' => 'Y-m-d'],
             ]) ?>
         </div>
         <div class="fin-f-group">
             <label class="fin-f-label">إلى</label>
-            <?= DatePicker::widget([
+            <?= FlatpickrWidget::widget([
                 'model'         => $model,
                 'attribute'     => 'date_to',
                 'options'       => ['class' => 'form-control fin-input', 'placeholder' => 'إلى تاريخ'],
-                'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                'pluginOptions' => ['dateFormat' => 'Y-m-d'],
             ]) ?>
         </div>
         <div class="fin-f-group">

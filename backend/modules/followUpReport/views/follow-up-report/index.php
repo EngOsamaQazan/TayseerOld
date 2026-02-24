@@ -9,7 +9,7 @@ use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\LinkPager;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use kartik\select2\Select2;
 use backend\widgets\ExportButtons;
 
@@ -212,16 +212,16 @@ a.fur-id-link:hover{text-decoration:underline}
                     </div>
                     <div class="ct-filter-group">
                         <label>التذكير حتى</label>
-                        <?= $form->field($searchModel, 'reminder', ['template'=>'{input}'])->widget(DatePicker::class, [
+                        <?= $form->field($searchModel, 'reminder', ['template'=>'{input}'])->widget(FlatpickrWidget::class, [
                             'options'=>['placeholder'=>'التذكير حتى','class'=>'ct-input','autocomplete'=>'off'],
-                            'pluginOptions'=>['autoclose'=>true,'format'=>'yyyy-mm-dd','todayHighlight'=>true],
+                            'pluginOptions'=>['dateFormat'=>'Y-m-d'],
                         ]) ?>
                     </div>
                     <div class="ct-filter-group">
                         <label>وعد بالدفع حتى</label>
-                        <?= $form->field($searchModel, 'promise_to_pay_at', ['template'=>'{input}'])->widget(DatePicker::class, [
+                        <?= $form->field($searchModel, 'promise_to_pay_at', ['template'=>'{input}'])->widget(FlatpickrWidget::class, [
                             'options'=>['placeholder'=>'وعد بالدفع حتى','class'=>'ct-input','autocomplete'=>'off'],
-                            'pluginOptions'=>['autoclose'=>true,'format'=>'yyyy-mm-dd','todayHighlight'=>true],
+                            'pluginOptions'=>['dateFormat'=>'Y-m-d'],
                         ]) ?>
                     </div>
                     <?php endif ?>

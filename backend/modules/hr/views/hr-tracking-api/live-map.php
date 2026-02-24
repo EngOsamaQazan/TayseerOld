@@ -3,7 +3,7 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 
 $this->title = 'التتبع المباشر — خريطة حية';
-$mapsKey = \common\models\SystemSettings::get('google_apis', 'maps_api_key', '');
+$mapsKey = \common\models\SystemSettings::get('google_maps', 'api_key', '');
 $liveDataUrl = Url::to(['/hr/hr-tracking-api/live-data']);
 $summaryUrl = Url::to(['/hr/hr-tracking-api/attendance-summary']);
 ?>
@@ -115,7 +115,7 @@ var STATUS_LABELS = {
 
 function initMap() {
     map = new google.maps.Map(document.getElementById('live-map'), {
-        center: {lat: 33.5138, lng: 36.2765},
+        center: {lat: 31.9539, lng: 35.9106},
         zoom: 12,
         mapTypeControl: false,
         streetViewControl: false,

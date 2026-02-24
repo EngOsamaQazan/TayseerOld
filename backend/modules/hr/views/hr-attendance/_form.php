@@ -8,7 +8,7 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use kartik\select2\Select2;
 
 ?>
@@ -49,14 +49,10 @@ use kartik\select2\Select2;
     ])->label('الموظف') ?>
 
     <!-- التاريخ -->
-    <?= $form->field($model, 'attendance_date')->widget(DatePicker::class, [
-        'type' => DatePicker::TYPE_INPUT,
+    <?= $form->field($model, 'attendance_date')->widget(FlatpickrWidget::class, [
         'value' => $model->attendance_date ?: date('Y-m-d'),
         'pluginOptions' => [
-            'autoclose' => true,
-            'format' => 'yyyy-mm-dd',
-            'todayHighlight' => true,
-            'rtl' => true,
+            'dateFormat' => 'Y-m-d',
         ],
         'options' => ['class' => 'form-control'],
     ])->label('تاريخ الحضور') ?>

@@ -37,7 +37,7 @@ class JudiciaryActionsSearch extends JudiciaryActions
                 'defaultOrder' => ['id' => SORT_ASC],
             ],
             'pagination' => [
-                'pageSize' => 50,
+                'pageSize' => 10,
             ],
         ]);
 

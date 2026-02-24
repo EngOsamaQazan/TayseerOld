@@ -94,26 +94,26 @@ CrudAsset::register($this);
             </div>
             <div class="row">
                 <div class="col-md-3">
-                    <?= $form->field($searchModel, 'date_from')->widget(kartik\date\DatePicker::class, [
-                        'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    <?= $form->field($searchModel, 'date_from')->widget(\backend\helpers\FlatpickrWidget::class, [
+                        'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                         'options' => ['placeholder' => 'من...'],
                     ])->label('من تاريخ القبض') ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($searchModel, 'date_to')->widget(kartik\date\DatePicker::class, [
-                        'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    <?= $form->field($searchModel, 'date_to')->widget(\backend\helpers\FlatpickrWidget::class, [
+                        'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                         'options' => ['placeholder' => 'إلى...'],
                     ])->label('إلى تاريخ القبض') ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($searchModel, 'from_date')->widget(kartik\date\DatePicker::class, [
-                        'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    <?= $form->field($searchModel, 'from_date')->widget(\backend\helpers\FlatpickrWidget::class, [
+                        'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                         'options' => ['placeholder' => 'من...'],
                     ])->label('من تاريخ الإنشاء') ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($searchModel, 'to_date')->widget(kartik\date\DatePicker::class, [
-                        'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    <?= $form->field($searchModel, 'to_date')->widget(\backend\helpers\FlatpickrWidget::class, [
+                        'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                         'options' => ['placeholder' => 'إلى...'],
                     ])->label('إلى تاريخ الإنشاء') ?>
                 </div>

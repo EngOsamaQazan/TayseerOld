@@ -2,7 +2,7 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 
 /* @var $this yii\web\View */
 /* @var $model common\models\Holidays */
@@ -17,18 +17,14 @@ use kartik\date\DatePicker;
             <?= $form->field($model, 'title')->textInput(['maxlength' => true]) ?>
         </div>
         <div class="col-lg-6">
-            <?= $form->field($model, 'start_at')->widget(DatePicker::classname(), ['pluginOptions' => [
-                'autoclose' => true,
-                'format' => 'yyyy-mm-dd',
-                'startDate' => "M",
+            <?= $form->field($model, 'start_at')->widget(FlatpickrWidget::class, ['pluginOptions' => [
+                'dateFormat' => 'Y-m-d',
             ]]); ?>
         </div>
         <div class="row">
             <div class="col-lg-6">
-                <?= $form->field($model, 'end_at')->widget(DatePicker::classname(), ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd',
-                    'startDate' => "M",
+                <?= $form->field($model, 'end_at')->widget(FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d',
                 ]]); ?>
             </div>
         </div>

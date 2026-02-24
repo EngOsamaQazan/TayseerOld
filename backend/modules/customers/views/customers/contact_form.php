@@ -13,7 +13,7 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
-use borales\extensions\phoneInput\PhoneInput;
+use backend\helpers\PhoneInputWidget;
 ?>
 
 <div class="customers-contact-form">
@@ -28,8 +28,8 @@ use borales\extensions\phoneInput\PhoneInput;
     <div class="row">
         <!-- رقم الهاتف الرئيسي -->
         <div class="col-md-12">
-            <?= $form->field($model, 'primary_phone_number')->widget(PhoneInput::class, [
-                'jsOptions' => ['preferredCountries' => ['jo']],
+            <?= $form->field($model, 'primary_phone_number')->widget(PhoneInputWidget::class, [
+                'options' => ['class' => 'form-control'],
             ])->label(Yii::t('app', 'رقم الهاتف الرئيسي')) ?>
         </div>
 

@@ -23,6 +23,14 @@ use common\helper\Permissions;
 class SiteController extends Controller
 {
 
+    public function beforeAction($action)
+    {
+        if (in_array($action->id, ['test-google-connection', 'test-maps-connection', 'test-sms-connection', 'test-whatsapp-connection'])) {
+            $this->enableCsrfValidation = false;
+        }
+        return parent::beforeAction($action);
+    }
+
     public function behaviors()
     {
         return [
@@ -34,7 +42,7 @@ class SiteController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['system-settings', 'test-google-connection', 'test-maps-connection', 'server-backup', 'image-manager', 'image-manager-data', 'image-reassign', 'image-manager-stats', 'image-search-customers', 'image-update-doc-type', 'image-delete'],
+                        'actions' => ['system-settings', 'test-google-connection', 'test-maps-connection', 'test-sms-connection', 'test-whatsapp-connection', 'server-backup', 'image-manager', 'image-manager-data', 'image-reassign', 'image-manager-stats', 'image-search-customers', 'image-update-doc-type', 'image-delete'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -326,6 +334,65 @@ class SiteController extends Controller
 
                 return $this->redirect(['system-settings', 'tab' => 'google_apis']);
             }
+
+            // ── SMS API Settings ──
+            if ($tab === 'sms_api') {
+                $data = [
+                    'enabled'      => $post['sms_enabled'] ?? '0',
+                    'provider'     => trim($post['sms_provider'] ?? ''),
+                    'api_url'      => trim($post['sms_api_url'] ?? ''),
+                    'api_key'      => trim($post['sms_api_key'] ?? ''),
+                    'api_secret'   => trim($post['sms_api_secret'] ?? ''),
+                    'sender_id'    => trim($post['sms_sender_id'] ?? ''),
+                    'username'     => trim($post['sms_username'] ?? ''),
+                    'password'     => trim($post['sms_password'] ?? ''),
+                ];
+
+                if ($data['api_key'] === '' || $data['api_key'] === '••••••••••') {
+                    $data['api_key'] = SystemSettings::get('sms_api', 'api_key', '');
+                }
+                if ($data['api_secret'] === '' || $data['api_secret'] === '••••••••••') {
+                    $data['api_secret'] = SystemSettings::get('sms_api', 'api_secret', '');
+                }
+                if ($data['password'] === '' || $data['password'] === '••••••••••') {
+                    $data['password'] = SystemSettings::get('sms_api', 'password', '');
+                }
+
+                $encryptedKeys = ['api_key', 'api_secret', 'password'];
+                $saved = SystemSettings::setGroup('sms_api', $data, $encryptedKeys);
+
+                Yii::$app->session->setFlash($saved ? 'success' : 'error',
+                    $saved ? 'تم حفظ إعدادات SMS API بنجاح' : 'حدث خطأ أثناء حفظ الإعدادات');
+                return $this->redirect(['system-settings', 'tab' => 'messaging']);
+            }
+
+            // ── WhatsApp Business API Settings ──
+            if ($tab === 'whatsapp_api') {
+                $data = [
+                    'enabled'            => $post['wa_enabled'] ?? '0',
+                    'phone_number_id'    => trim($post['wa_phone_number_id'] ?? ''),
+                    'waba_id'            => trim($post['wa_waba_id'] ?? ''),
+                    'access_token'       => trim($post['wa_access_token'] ?? ''),
+                    'app_id'             => trim($post['wa_app_id'] ?? ''),
+                    'app_secret'         => trim($post['wa_app_secret'] ?? ''),
+                    'webhook_verify_token' => trim($post['wa_webhook_verify_token'] ?? ''),
+                    'api_version'        => trim($post['wa_api_version'] ?? 'v21.0'),
+                ];
+
+                if ($data['access_token'] === '' || $data['access_token'] === '••••••••••') {
+                    $data['access_token'] = SystemSettings::get('whatsapp_api', 'access_token', '');
+                }
+                if ($data['app_secret'] === '' || $data['app_secret'] === '••••••••••') {
+                    $data['app_secret'] = SystemSettings::get('whatsapp_api', 'app_secret', '');
+                }
+
+                $encryptedKeys = ['access_token', 'app_secret'];
+                $saved = SystemSettings::setGroup('whatsapp_api', $data, $encryptedKeys);
+
+                Yii::$app->session->setFlash($saved ? 'success' : 'error',
+                    $saved ? 'تم حفظ إعدادات WhatsApp Business API بنجاح' : 'حدث خطأ أثناء حفظ الإعدادات');
+                return $this->redirect(['system-settings', 'tab' => 'messaging']);
+            }
         }
 
         // Mask the private key for display
@@ -341,17 +408,45 @@ class SiteController extends Controller
         // Get API usage stats
         $usageStats = $this->getApiUsageStats();
 
-        // Google Maps: نقرأ من SystemSettings فقط حالة التكوين (لا نمرّر المفتاح للعرض)
+        // Google Maps
         $googleMapsKey = SystemSettings::get('google_maps', 'api_key', '');
         $googleMaps = [
             'configured' => $googleMapsKey !== '',
         ];
 
+        // SMS API settings
+        $smsSettings = SystemSettings::getGroup('sms_api');
+        $smsDisplay = $smsSettings;
+        foreach (['api_key', 'api_secret', 'password'] as $sensitiveKey) {
+            if (!empty($smsDisplay[$sensitiveKey])) {
+                $smsDisplay['has_' . $sensitiveKey] = true;
+                $smsDisplay[$sensitiveKey . '_masked'] = '••••••••••';
+            } else {
+                $smsDisplay['has_' . $sensitiveKey] = false;
+                $smsDisplay[$sensitiveKey . '_masked'] = '';
+            }
+        }
+
+        // WhatsApp Business API settings
+        $waSettings = SystemSettings::getGroup('whatsapp_api');
+        $waDisplay = $waSettings;
+        foreach (['access_token', 'app_secret'] as $sensitiveKey) {
+            if (!empty($waDisplay[$sensitiveKey])) {
+                $waDisplay['has_' . $sensitiveKey] = true;
+                $waDisplay[$sensitiveKey . '_masked'] = '••••••••••';
+            } else {
+                $waDisplay['has_' . $sensitiveKey] = false;
+                $waDisplay[$sensitiveKey . '_masked'] = '';
+            }
+        }
+
         return $this->render('system-settings', [
-            'googleCloud' => $displaySettings,
-            'googleMaps'  => $googleMaps,
-            'usageStats'  => $usageStats,
-            'activeTab'   => Yii::$app->request->get('tab', 'general'),
+            'googleCloud'  => $displaySettings,
+            'googleMaps'   => $googleMaps,
+            'usageStats'   => $usageStats,
+            'smsSettings'  => $smsDisplay,
+            'waSettings'   => $waDisplay,
+            'activeTab'    => Yii::$app->request->get('tab', 'general'),
         ]);
     }
 
@@ -450,12 +545,11 @@ class SiteController extends Controller
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 15,
-            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYPEER => !YII_DEBUG,
         ]);
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
-        curl_close($ch);
 
         if ($curlError) {
             return ['success' => false, 'error' => "خطأ في الاتصال: {$curlError}"];
@@ -489,6 +583,118 @@ class SiteController extends Controller
         }
 
         return ['success' => false, 'error' => $errorMsg];
+    }
+
+    /**
+     * اختبار اتصال SMS API (AJAX)
+     */
+    public function actionTestSmsConnection()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (!Yii::$app->request->isAjax) {
+            return ['success' => false, 'error' => 'طلب غير صالح'];
+        }
+
+        $provider = SystemSettings::get('sms_api', 'provider', '');
+        $apiUrl   = SystemSettings::get('sms_api', 'api_url', '');
+        $apiKey   = SystemSettings::get('sms_api', 'api_key', '');
+        $username = SystemSettings::get('sms_api', 'username', '');
+
+        if (empty($apiUrl) && empty($apiKey)) {
+            return ['success' => false, 'error' => 'لم يتم إعداد بيانات SMS API بعد — أدخل رابط API والمفتاح أولاً'];
+        }
+
+        try {
+            $ch = curl_init($apiUrl);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 15,
+                CURLOPT_SSL_VERIFYPEER => !YII_DEBUG,
+                CURLOPT_NOBODY         => true,
+            ]);
+            curl_exec($ch);
+            $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($curlError) {
+                return ['success' => false, 'error' => "خطأ في الاتصال بالسيرفر: {$curlError}"];
+            }
+
+            if ($httpCode >= 200 && $httpCode < 500) {
+                return [
+                    'success' => true,
+                    'message' => "السيرفر يستجيب (HTTP {$httpCode}) — المزوّد: " . ($provider ?: 'غير محدد'),
+                ];
+            }
+
+            return ['success' => false, 'error' => "السيرفر أرجع كود خطأ: HTTP {$httpCode}"];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * اختبار اتصال WhatsApp Business API (AJAX)
+     */
+    public function actionTestWhatsappConnection()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (!Yii::$app->request->isAjax) {
+            return ['success' => false, 'error' => 'طلب غير صالح'];
+        }
+
+        $phoneNumberId = SystemSettings::get('whatsapp_api', 'phone_number_id', '');
+        $accessToken   = SystemSettings::get('whatsapp_api', 'access_token', '');
+        $apiVersion    = SystemSettings::get('whatsapp_api', 'api_version', 'v21.0');
+
+        if (empty($accessToken) || empty($phoneNumberId)) {
+            return ['success' => false, 'error' => 'لم يتم إعداد Access Token أو Phone Number ID بعد'];
+        }
+
+        try {
+            $url = "https://graph.facebook.com/{$apiVersion}/{$phoneNumberId}";
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 15,
+                CURLOPT_SSL_VERIFYPEER => !YII_DEBUG,
+                CURLOPT_HTTPHEADER     => ["Authorization: Bearer {$accessToken}"],
+            ]);
+            $response  = curl_exec($ch);
+            $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($curlError) {
+                return ['success' => false, 'error' => "خطأ في الاتصال: {$curlError}"];
+            }
+
+            $data = json_decode($response, true);
+
+            if ($httpCode === 200 && !empty($data['id'])) {
+                $phoneName = $data['verified_name'] ?? $data['display_phone_number'] ?? $data['id'];
+                return [
+                    'success' => true,
+                    'message' => "الاتصال ناجح! الرقم: {$phoneName}",
+                ];
+            }
+
+            $errorMsg = $data['error']['message'] ?? "HTTP {$httpCode}";
+            $errorCode = $data['error']['code'] ?? '';
+            $hint = '';
+            if ($errorCode == 190) {
+                $hint = ' — Access Token منتهي الصلاحية أو غير صالح';
+            } elseif ($errorCode == 100) {
+                $hint = ' — Phone Number ID غير صحيح';
+            }
+
+            return ['success' => false, 'error' => "فشل: {$errorMsg}{$hint}"];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
     }
 
     /**

@@ -2,8 +2,7 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
-use kartik\money\MaskMoney;
+use backend\helpers\FlatpickrWidget;
 use kartik\select2\Select2;
 use yii\helpers\ArrayHelper;
 use backend\modules\customers\models\Customers;
@@ -148,12 +147,10 @@ $this->registerJsFile('/js/Tafqeet.js');
             </div>
             <div class="col-sm-6 col-xs-6">
                 <?=
-                $form->field($model, 'Date_of_sale')->widget(DatePicker::classname(), [
+                $form->field($model, 'Date_of_sale')->widget(FlatpickrWidget::class, [
                     'options' => ['placeholder' => 'Enter Date of sale ...'],
                     'pluginOptions' => [
-                        'autoclose' => true,
-                        'format' => 'yyyy-mm-dd',
-                        'multidate' => false
+                        'dateFormat' => 'Y-m-d',
                     ]
                 ]);
                 ?>
@@ -162,30 +159,22 @@ $this->registerJsFile('/js/Tafqeet.js');
         <div class="row">
             <div class="col-sm-6 col-xs-6">
                 <?=
-                $form->field($model, 'first_installment_value')->widget(MaskMoney::classname(), [
-                    'pluginOptions' => [
-                        'prefix' => html_entity_decode('$ '), // the Indian Rupee Symbol
-                        'suffix' => '',
-                        'affixesStay' => true,
-                        'thousands' => ',',
-                        'decimal' => '.',
-                        'precision' => 0,
-                        'allowZero' => false,
-                        'allowNegative' => false,
-                    ], 'pluginEvents' => [
-                        "change" => "function() {installment_table()}",
-                    ],
+                $form->field($model, 'first_installment_value')->textInput([
+                    'type' => 'number',
+                    'step' => '1',
+                    'min' => '0',
+                    'class' => 'form-control',
+                    'placeholder' => '0',
+                    'onchange' => 'installment_table()',
                 ]);
                 ?>
             </div>
             <div class="col-sm-6 col-xs-6">
                 <?=
-                $form->field($model, 'first_installment_date')->widget(DatePicker::classname(), [
+                $form->field($model, 'first_installment_date')->widget(FlatpickrWidget::class, [
                     'options' => ['placeholder' => 'Enter  Date of first Income sale ...'],
                     'pluginOptions' => [
-                        'autoclose' => true,
-                        'format' => 'yyyy-mm-dd',
-                        'multidate' => false
+                        'dateFormat' => 'Y-m-d',
                     ], 'pluginEvents' => [
                         "change" => "function() {installment_table()}",
                     ],
@@ -196,19 +185,13 @@ $this->registerJsFile('/js/Tafqeet.js');
         <div class="row">
             <div class="col-sm-2 col-xs-2">
                 <?=
-                $form->field($model, 'total_value')->widget(MaskMoney::classname(), [
-                    'pluginOptions' => [
-                        'prefix' => html_entity_decode('$ '), // the Indian Rupee Symbol
-                        'suffix' => '',
-                        'affixesStay' => true,
-                        'thousands' => '',
-                        'decimal' => '.',
-                        'precision' => 0,
-                        'allowZero' => false,
-                        'allowNegative' => false,
-                    ], 'pluginEvents' => [
-                        "change" => "function() {installment_table()}",
-                    ],
+                $form->field($model, 'total_value')->textInput([
+                    'type' => 'number',
+                    'step' => '1',
+                    'min' => '0',
+                    'class' => 'form-control',
+                    'placeholder' => '0',
+                    'onchange' => 'installment_table()',
                 ]);
                 ?>
             </div>
@@ -220,19 +203,13 @@ $this->registerJsFile('/js/Tafqeet.js');
         <div class="row">
             <div class="col-sm-6 col-xs-6">
                 <?=
-                $form->field($model, 'monthly_installment_value')->widget(MaskMoney::classname(), [
-                    'pluginOptions' => [
-                        'prefix' => html_entity_decode('$ '), // the Indian Rupee Symbol
-                        'suffix' => '',
-                        'affixesStay' => true,
-                        'thousands' => ',',
-                        'decimal' => '.',
-                        'precision' => 0,
-                        'allowZero' => false,
-                        'allowNegative' => false,
-                    ], 'pluginEvents' => [
-                        "change" => "function() {installment_table()}",
-                    ],
+                $form->field($model, 'monthly_installment_value')->textInput([
+                    'type' => 'number',
+                    'step' => '1',
+                    'min' => '0',
+                    'class' => 'form-control',
+                    'placeholder' => '0',
+                    'onchange' => 'installment_table()',
                 ]);
                 ?>
             </div>

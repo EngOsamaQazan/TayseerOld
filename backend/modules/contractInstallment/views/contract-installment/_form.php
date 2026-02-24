@@ -14,7 +14,7 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use backend\modules\incomeCategory\models\IncomeCategory;
 
@@ -86,9 +86,9 @@ $deservedAmount = $amountShouldBePaid - $paidAmount;
         <!-- التاريخ والمبلغ -->
         <div class="row">
             <div class="col-md-6">
-                <?= $form->field($model, 'date')->widget(DatePicker::class, [
+                <?= $form->field($model, 'date')->widget(FlatpickrWidget::class, [
                     'options' => ['placeholder' => Yii::t('app', 'اختر تاريخ الدفع ...')],
-                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                 ])->label(Yii::t('app', 'تاريخ الدفع')) ?>
             </div>
             <div class="col-md-6">

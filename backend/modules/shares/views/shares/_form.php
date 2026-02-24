@@ -3,7 +3,7 @@
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use yii\helpers\ArrayHelper;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 
 /* @var $this yii\web\View */
 /* @var $model app\models\Shares */
@@ -18,11 +18,10 @@ use kartik\date\DatePicker;
 
     <?= $form->field($model, 'amount')->textInput() ?>
 
-      <?= $form->field($model, 'date')->widget(DatePicker::classname(), [
+      <?= $form->field($model, 'date')->widget(FlatpickrWidget::class, [
     'options' => ['placeholder' => 'Enter payment date ...'],
     'pluginOptions' => [
-        'autoclose'=>true,
-        'format' => 'yyyy-mm-dd'
+        'dateFormat' => 'Y-m-d'
     ]
 ]);?>
 

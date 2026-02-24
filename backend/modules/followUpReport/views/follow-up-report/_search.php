@@ -3,7 +3,7 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 
 /* @var $this yii\web\View */
 /* @var $model backend\models\QuestionSearch */
@@ -36,25 +36,22 @@ use kartik\date\DatePicker;
     <div class="row">
         <div class="col-md-4">
             <?=
-            $form->field($model, 'Date_of_sale')->widget(DatePicker::classname(), ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+            $form->field($model, 'Date_of_sale')->widget(FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d'
             ]]);
             ?>
         </div>
         <div class="col-md-4">
             <?=
-            $form->field($model, 'first_installment_date')->widget(DatePicker::classname(), ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+            $form->field($model, 'first_installment_date')->widget(FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d'
             ]]);
             ?>
         </div>
         <div class="col-md-4">
             <?=
-            $form->field($model, 'date_time')->widget(DatePicker::classname(), ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+            $form->field($model, 'date_time')->widget(FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d'
             ]]);
             ?>
         </div>
@@ -62,17 +59,15 @@ use kartik\date\DatePicker;
     <div class="row">
         <div class="col-md-4">
             <?=
-            $form->field($model, 'promise_to_pay_at')->widget(DatePicker::classname(), ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+            $form->field($model, 'promise_to_pay_at')->widget(FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d'
             ]]);
             ?>
         </div>
         <div class="col-md-4">
             <?=
-            $form->field($model, 'reminder')->widget(DatePicker::classname(), ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+            $form->field($model, 'reminder')->widget(FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d'
             ]]);
             ?>
         </div>

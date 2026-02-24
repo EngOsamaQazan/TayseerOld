@@ -14,17 +14,15 @@ use yii\widgets\ActiveForm;
         <div class="row">
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'date_from')->widget(kartik\date\DatePicker::classname(), ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+                $form->field($model, 'date_from')->widget(\backend\helpers\FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d'
                 ]]);
                 ?>
             </div>
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'date_to')->widget(kartik\date\DatePicker::classname(), ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+                $form->field($model, 'date_to')->widget(\backend\helpers\FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d'
                 ]]);
                 ?>
             </div>

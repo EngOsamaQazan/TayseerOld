@@ -1,7 +1,7 @@
 <?php
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use borales\extensions\phoneInput\PhoneInput;
+use backend\helpers\PhoneInputWidget;
 /* @var $this yii\web\View */
 /* @var $model common\models\Court */
 /* @var $form yii\widgets\ActiveForm */
@@ -35,10 +35,8 @@ use borales\extensions\phoneInput\PhoneInput;
 <div class="col-lg-6">
     <label class="control-label"> رقم الهاتف </label>
     <br>
-    <?= $form->field($model, 'phone_number')->widget(PhoneInput::className(), [
-        'jsOptions' => [
-            'preferredCountries' => ['jo'],
-        ]
+    <?= $form->field($model, 'phone_number')->widget(PhoneInputWidget::class, [
+        'options' => ['class' => 'form-control'],
     ])->label(false);?>
 </div>
 </div>

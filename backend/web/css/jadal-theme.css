@@ -1576,12 +1576,17 @@ input[type="number"] {
   text-align: left !important;
 }
 
-/* Date pickers - keep standard width, just ensure LTR for dates */
-.krajee-datepicker,
-.kv-date-picker {
-  direction: ltr !important;
-  text-align: left !important;
-}
+/* Flatpickr — theme overrides */
+.flatpickr-calendar{font-family:'Tajawal','Cairo',sans-serif !important;border-radius:10px !important;box-shadow:0 8px 24px rgba(0,0,0,.12) !important;border:1px solid #E2E8F0 !important}
+.flatpickr-months .flatpickr-month{background:#FAFBFC !important;border-radius:10px 10px 0 0}
+.flatpickr-current-month{font-weight:700 !important;color:#1E293B !important}
+.flatpickr-day.selected,.flatpickr-day.selected:hover{background:#800020 !important;border-color:#800020 !important}
+.flatpickr-day.today{border-color:#800020 !important;color:#800020 !important}
+.flatpickr-day.today.selected{color:#fff !important}
+.flatpickr-day:hover{background:#FDF2F8 !important;border-color:#FCE7F3 !important}
+.flatpickr-months .flatpickr-prev-month:hover svg,.flatpickr-months .flatpickr-next-month:hover svg{fill:#800020 !important}
+.fp-wrap .form-control{padding-left:32px !important}
+.fp-wrap .fp-icon{z-index:1}
 
 /* Better form layout */
 .form-horizontal .control-label {
@@ -1904,24 +1909,30 @@ div.iradio_square-blue {
    44. PHONE INPUT WIDGET RTL
    ============================================================ */
 
-/* International phone input fix */
-.intl-tel-input {
+/* International phone input (intl-tel-input v26) */
+.iti {
   direction: ltr !important;
   width: 100% !important;
 }
 
-.intl-tel-input .form-control {
+.iti input[type="tel"] {
   direction: ltr !important;
   text-align: left !important;
-  padding-right: 12px !important;
+  width: 100% !important;
 }
 
-.intl-tel-input .country-list {
+.iti__country-list {
   direction: ltr;
   text-align: left;
 }
 
-/* Fix 219% width override from customer form */
+.iti__search-input {
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  padding: 6px 10px !important;
+}
+
+/* Fix width override from customer form */
 #customers-primary_phone_number {
   width: 100% !important;
 }
@@ -2005,14 +2016,8 @@ legend {
    47. KARTIK DATEPICKER RTL FIX
    ============================================================ */
 
-.krajee-datepicker {
-  direction: ltr !important;
-  text-align: left !important;
-}
-
-.kv-date-picker {
-  direction: ltr !important;
-}
+/* Flatpickr search form compact */
+.fp-wrap input.form-control{direction:ltr !important;text-align:left !important}
 
 /* Date picker input group */
 .date .input-group-addon {
@@ -2388,18 +2393,13 @@ form[id$="-search"] label,
   font-size: 12px;
 }
 
-/* Kartik DatePicker inside search forms - compact */
-form[id$="_search"] .kv-date-picker .form-control,
-form[id$="-search"] .kv-date-picker .form-control,
-form[id$="_search"] .krajee-datepicker,
-form[id$="-search"] .krajee-datepicker {
+/* Flatpickr inside search forms - compact */
+form[id$="_search"] .fp-wrap .form-control,
+form[id$="-search"] .fp-wrap .form-control {
   height: 32px !important;
-  padding: 4px 10px !important;
+  padding: 4px 10px 4px 28px !important;
+  font-size: 12px;
 }
-
-form[id$="_search"] .input-group-addon,
-form[id$="-search"] .input-group-addon {
-  padding: 4px 8px;
   font-size: 13px;
 }
 
@@ -3253,7 +3253,7 @@ fieldset legend i {
   }
   
   /* PhoneInput */
-  .intl-tel-input {
+  .iti {
     width: 100% !important;
   }
   

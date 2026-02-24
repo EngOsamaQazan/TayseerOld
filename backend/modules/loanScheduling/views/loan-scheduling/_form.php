@@ -8,7 +8,7 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 
 /* @var $model backend\modules\loanScheduling\models\LoanScheduling */
 
@@ -178,15 +178,15 @@ if (!empty($model->contract_id)) {
 </div>
 <div class="row">
     <div class="col-sm-6">
-        <?= $form->field($model, 'first_installment_date')->widget(DatePicker::class, [
-            'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd', 'todayHighlight' => true],
+        <?= $form->field($model, 'first_installment_date')->widget(FlatpickrWidget::class, [
+            'pluginOptions' => ['dateFormat' => 'Y-m-d'],
             'pluginEvents' => ['changeDate' => 'function(e){ LoanForm.onFirstDateChange(); }'],
             'options' => ['placeholder' => 'yyyy-mm-dd', 'class' => 'form-control'],
         ])->label('<i class="fa fa-calendar"></i> تاريخ الدفعة الأولى للتسوية') ?>
     </div>
     <div class="col-sm-6">
-        <?= $form->field($model, 'new_installment_date')->widget(DatePicker::class, [
-            'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd', 'todayHighlight' => true],
+        <?= $form->field($model, 'new_installment_date')->widget(FlatpickrWidget::class, [
+            'pluginOptions' => ['dateFormat' => 'Y-m-d'],
             'pluginEvents' => ['changeDate' => 'function(e){ LoanForm.validateNewDate(); }'],
             'options' => ['placeholder' => 'yyyy-mm-dd', 'class' => 'form-control'],
         ])->label('<i class="fa fa-calendar-plus-o"></i> تاريخ القسط الجديد') ?>
@@ -309,8 +309,7 @@ var LoanForm = (function(){
                 d.setMonth(d.getMonth() + 1);
             }
             newEl.value = d.toISOString().split('T')[0];
-            // Trigger DatePicker update
-            $(newEl).datepicker('update', d.toISOString().split('T')[0]);
+            if (newEl._flatpickr) newEl._flatpickr.setDate(newEl.value, false);
         }
         calculate();
         validateNewDate();

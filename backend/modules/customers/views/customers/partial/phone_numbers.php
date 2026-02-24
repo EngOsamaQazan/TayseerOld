@@ -5,7 +5,7 @@
  */
 use yii\helpers\Html;
 use wbraganca\dynamicform\DynamicFormWidget;
-use borales\extensions\phoneInput\PhoneInput;
+use backend\helpers\PhoneInputWidget;
 
 DynamicFormWidget::begin([
     'widgetContainer' => 'dynamicform_wrapper2',
@@ -28,8 +28,8 @@ DynamicFormWidget::begin([
                 <?php if (!$phone->isNewRecord) echo Html::activeHiddenInput($phone, "[{$i}]id") ?>
                 <div class="row">
                     <div class="col-md-3">
-                        <?= $form->field($phone, "[{$i}]phone_number")->widget(PhoneInput::class, [
-                            'jsOptions' => ['preferredCountries' => ['jo']],
+                        <?= $form->field($phone, "[{$i}]phone_number")->widget(PhoneInputWidget::class, [
+                            'options' => ['class' => 'form-control'],
                         ])->label('الهاتف') ?>
                     </div>
                     <div class="col-md-3">

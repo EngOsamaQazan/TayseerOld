@@ -2,9 +2,8 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use wbraganca\dynamicform\DynamicFormWidget;
-use kartik\money\MaskMoney;
 
 /* @var $this yii\web\View */
 /* @var $model app\models\Invoice */
@@ -26,11 +25,10 @@ use kartik\money\MaskMoney;
 
     <?= $form->field($model, 'number')->textInput() ?>
     <?=
-    $form->field($model, 'date')->widget(DatePicker::classname(), [
+    $form->field($model, 'date')->widget(FlatpickrWidget::class, [
         'options' => ['placeholder' => 'Enter birth date ...'],
         'pluginOptions' => [
-            'autoclose' => true,
-            'format' => 'yyyy-mm-dd'
+            'dateFormat' => 'Y-m-d'
         ]
     ]);
     ?>
@@ -73,34 +71,24 @@ use kartik\money\MaskMoney;
                                 </div>
                                 <div class="col-sm-4">
                                     <?=
-                                    $form->field($modelItems, "[{$i}]cost")->widget(MaskMoney::classname(), [
-                                        'pluginOptions' => [
-                                            'prefix' => html_entity_decode('$ '), // the Indian Rupee Symbol
-                                            'suffix' => '',
-                                            'affixesStay' => true,
-                                            'thousands' => ',',
-                                            'decimal' => '.',
-                                            'precision' => 0,
-                                            'allowZero' => false,
-                                            'allowNegative' => false,
-                                        ]
+                                    $form->field($modelItems, "[{$i}]cost")->textInput([
+                                        'type' => 'number',
+                                        'step' => '1',
+                                        'min' => '0',
+                                        'class' => 'form-control',
+                                        'placeholder' => '0',
                                     ]);
                                     ?>
 
                                 </div>
                                 <div class="col-sm-4">
                                     <?=
-                                    $form->field($modelItems, "[{$i}]price")->widget(MaskMoney::classname(), [
-                                        'pluginOptions' => [
-                                            'prefix' => html_entity_decode('$ '), // the Indian Rupee Symbol
-                                            'suffix' => '',
-                                            'affixesStay' => true,
-                                            'thousands' => ',',
-                                            'decimal' => '.',
-                                            'precision' => 0,
-                                            'allowZero' => false,
-                                            'allowNegative' => false,
-                                        ]
+                                    $form->field($modelItems, "[{$i}]price")->textInput([
+                                        'type' => 'number',
+                                        'step' => '1',
+                                        'min' => '0',
+                                        'class' => 'form-control',
+                                        'placeholder' => '0',
                                     ]);
                                     ?>
 

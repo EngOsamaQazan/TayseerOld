@@ -1,7 +1,7 @@
 <?
 
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 
 /* @var $model */
 
@@ -54,17 +54,15 @@ use kartik\date\DatePicker;
         <div class="row">
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'date_from')->widget(kartik\date\DatePicker::class, ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+                $form->field($model, 'date_from')->widget(\backend\helpers\FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d'
                 ]]);
                 ?>
             </div>
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'date_to')->widget(kartik\date\DatePicker::class, ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+                $form->field($model, 'date_to')->widget(\backend\helpers\FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d'
                 ]]);
                 ?>
             </div>
@@ -137,17 +135,15 @@ use kartik\date\DatePicker;
         <div class="row">
             <div class="col-md-6">
                 <?=
-                $form->field($model, 'from_date')->widget(kartik\date\DatePicker::class, ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+                $form->field($model, 'from_date')->widget(\backend\helpers\FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d'
                 ]]);
                 ?>
             </div>
             <div class="col-md-6">
                 <?=
-                $form->field($model, 'to_date')->widget(kartik\date\DatePicker::class, ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+                $form->field($model, 'to_date')->widget(\backend\helpers\FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d'
                 ]]);
                 ?>
             </div>

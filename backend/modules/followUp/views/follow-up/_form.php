@@ -8,7 +8,7 @@ use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\bootstrap\Modal;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use johnitvn\ajaxcrud\CrudAsset;
 use backend\modules\contracts\models\Contracts;
 use backend\modules\followUp\helper\ContractCalculations;
@@ -81,14 +81,14 @@ $form = ActiveForm::begin($formConfig);
             <?= $form->field($model, 'connection_goal')->dropDownList([1 => 'تحصيل', 2 => 'مصالحة', 3 => 'إنهاء عقد'], ['prompt' => '-- الهدف --'])->label('هدف الاتصال') ?>
         </div>
         <div class="col-md-3">
-            <?= $form->field($model, 'reminder')->widget(DatePicker::class, [
-                'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+            <?= $form->field($model, 'reminder')->widget(FlatpickrWidget::class, [
+                'pluginOptions' => ['dateFormat' => 'Y-m-d'],
             ])->label('تاريخ التذكير') ?>
         </div>
         <div class="col-md-3">
-            <?= $form->field($model, 'promise_to_pay_at')->widget(DatePicker::class, [
+            <?= $form->field($model, 'promise_to_pay_at')->widget(FlatpickrWidget::class, [
                 'options' => ['placeholder' => 'تاريخ الوعد بالدفع'],
-                'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                'pluginOptions' => ['dateFormat' => 'Y-m-d'],
             ])->label('وعد بالدفع') ?>
         </div>
         <div class="col-md-3">

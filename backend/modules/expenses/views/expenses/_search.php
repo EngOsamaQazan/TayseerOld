@@ -14,7 +14,7 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use kartik\select2\Select2;
 
 /* ═══ بيانات مرجعية (كاش) ═══ */
@@ -55,20 +55,20 @@ $advancedActive = !empty($model->created_by)
         <!-- التاريخ (من / إلى) -->
         <div class="fin-f-group fin-f-group--date">
             <label class="fin-f-lbl"><i class="fa fa-calendar"></i> من</label>
-            <?= DatePicker::widget([
+            <?= FlatpickrWidget::widget([
                 'model'     => $model,
                 'attribute' => 'date_from',
                 'options'   => ['placeholder' => 'من تاريخ', 'class' => 'fin-input'],
-                'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                'pluginOptions' => ['dateFormat' => 'Y-m-d'],
             ]) ?>
         </div>
         <div class="fin-f-group fin-f-group--date">
             <label class="fin-f-lbl"><i class="fa fa-calendar"></i> إلى</label>
-            <?= DatePicker::widget([
+            <?= FlatpickrWidget::widget([
                 'model'     => $model,
                 'attribute' => 'date_to',
                 'options'   => ['placeholder' => 'إلى تاريخ', 'class' => 'fin-input'],
-                'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                'pluginOptions' => ['dateFormat' => 'Y-m-d'],
             ]) ?>
         </div>
 

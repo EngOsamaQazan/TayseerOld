@@ -12,7 +12,7 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 
 $cache = Yii::$app->cache;
 $p = Yii::$app->params;
@@ -41,10 +41,10 @@ $hasAdvanced = !empty($model->created_by) || !empty($model->Restriction) || !emp
         </div>
         <div class="fin-f-field fin-f--grow">
             <label><i class="fa fa-calendar"></i> التاريخ</label>
-            <?= DatePicker::widget([
+            <?= FlatpickrWidget::widget([
                 'model' => $model, 'attribute' => 'date',
                 'options' => ['placeholder' => 'اختر التاريخ', 'class' => 'fin-f-input'],
-                'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd', 'todayHighlight' => true],
+                'pluginOptions' => ['dateFormat' => 'Y-m-d'],
             ]) ?>
         </div>
         <div class="fin-f-btns">

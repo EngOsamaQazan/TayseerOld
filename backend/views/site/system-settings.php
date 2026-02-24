@@ -4,6 +4,8 @@
  * @var yii\web\View $this
  * @var array $googleCloud
  * @var array $usageStats
+ * @var array $smsSettings
+ * @var array $waSettings
  * @var string $activeTab
  */
 
@@ -56,6 +58,24 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                     <?php if ($gcActive && $gmActive): ?>
                         <span class="sys-nav-badge active"><i class="fa fa-check-circle"></i></span>
                     <?php elseif ($gcActive || $gmActive): ?>
+                        <span class="sys-nav-badge" style="background:#f59e0b;color:#fff"><i class="fa fa-adjust"></i></span>
+                    <?php else: ?>
+                        <span class="sys-nav-badge inactive"><i class="fa fa-times-circle"></i></span>
+                    <?php endif; ?>
+                </a>
+                <a href="#" class="sys-nav-item <?= $activeTab === 'messaging' ? 'active' : '' ?>" data-tab="messaging">
+                    <div class="sys-nav-icon"><i class="fa fa-comments"></i></div>
+                    <div class="sys-nav-text">
+                        <span class="sys-nav-label">خدمات الرسائل</span>
+                        <span class="sys-nav-sub">SMS API · WhatsApp Business</span>
+                    </div>
+                    <?php
+                    $smsActive = !empty($smsSettings['enabled']) && $smsSettings['enabled'] === '1';
+                    $waActive  = !empty($waSettings['enabled']) && $waSettings['enabled'] === '1';
+                    ?>
+                    <?php if ($smsActive && $waActive): ?>
+                        <span class="sys-nav-badge active"><i class="fa fa-check-circle"></i></span>
+                    <?php elseif ($smsActive || $waActive): ?>
                         <span class="sys-nav-badge" style="background:#f59e0b;color:#fff"><i class="fa fa-adjust"></i></span>
                     <?php else: ?>
                         <span class="sys-nav-badge inactive"><i class="fa fa-times-circle"></i></span>
@@ -1148,6 +1168,806 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                 </div><!-- /g-panel-costs -->
             </div>
 
+            <!-- ═══════════ Messaging Services Tab ═══════════ -->
+            <div class="sys-tab-content <?= $activeTab === 'messaging' ? 'active' : '' ?>" id="tab-messaging">
+
+                <?php $msgInnerTab = 'sms'; ?>
+                <!-- Inner Tabs Bar -->
+                <div class="g-inner-tabs">
+                    <button type="button" class="g-inner-tab active" data-inner="sms">
+                        <i class="fa fa-mobile"></i> SMS API
+                    </button>
+                    <button type="button" class="g-inner-tab" data-inner="whatsapp">
+                        <i class="fa fa-whatsapp"></i> WhatsApp Business
+                    </button>
+                </div>
+
+                <!-- ════════════════════════════════════════════════ -->
+                <!--  SMS API Panel                                  -->
+                <!-- ════════════════════════════════════════════════ -->
+                <div class="g-inner-panel active" id="g-panel-sms">
+                <form method="post" action="<?= Url::to(['system-settings']) ?>" id="sms-settings-form">
+                    <?= Html::hiddenInput(Yii::$app->request->csrfParam, Yii::$app->request->csrfToken) ?>
+                    <input type="hidden" name="settings_tab" value="sms_api">
+
+                    <!-- Connection Status -->
+                    <div class="sys-card sys-status-card">
+                        <div class="sys-card-header">
+                            <div class="sys-card-title">
+                                <i class="fa fa-signal"></i> حالة الاتصال
+                            </div>
+                            <button type="button" class="sys-test-btn" id="btn-test-sms" onclick="testSmsConnection()">
+                                <i class="fa fa-plug"></i> اختبار الاتصال
+                            </button>
+                        </div>
+                        <div class="sys-card-body">
+                            <div class="sys-connection-status" id="sms-connection-status">
+                                <?php if (!empty($smsSettings['enabled']) && $smsSettings['enabled'] === '1' && !empty($smsSettings['has_api_key'])): ?>
+                                    <div class="sys-status-indicator configured">
+                                        <i class="fa fa-check-circle fa-2x"></i>
+                                        <div>
+                                            <strong>تم التكوين</strong>
+                                            <p>بيانات SMS API محفوظة — اضغط "اختبار الاتصال" للتحقق</p>
+                                        </div>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="sys-status-indicator not-configured">
+                                        <i class="fa fa-exclamation-circle fa-2x"></i>
+                                        <div>
+                                            <strong>غير مكوّن</strong>
+                                            <p>أدخل بيانات مزوّد خدمة الرسائل النصية لتفعيل إرسال SMS</p>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Toggle Enable -->
+                    <div class="sys-card">
+                        <div class="sys-card-body">
+                            <div class="sys-toggle-row">
+                                <div class="sys-toggle-info">
+                                    <i class="fa fa-power-off sys-toggle-icon"></i>
+                                    <div>
+                                        <strong>تفعيل خدمة الرسائل النصية SMS</strong>
+                                        <p>عند التفعيل، سيتم إرسال رسائل SMS للعملاء (تذكيرات، إشعارات، تأكيدات)</p>
+                                    </div>
+                                </div>
+                                <label class="sys-switch">
+                                    <input type="hidden" name="sms_enabled" value="0">
+                                    <input type="checkbox" name="sms_enabled" value="1" <?= (!empty($smsSettings['enabled']) && $smsSettings['enabled'] === '1') ? 'checked' : '' ?>>
+                                    <span class="sys-switch-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ Setup Guide (Collapsible) ═══════════ -->
+                    <div class="sys-card sys-guide-card">
+                        <div class="sys-card-header sys-guide-toggle" onclick="toggleSmsGuide()">
+                            <div class="sys-card-title">
+                                <i class="fa fa-graduation-cap"></i> دليل الإعداد خطوة بخطوة
+                            </div>
+                            <div class="sys-guide-toggle-hint">
+                                <span id="sms-guide-toggle-text">عرض الدليل</span>
+                                <i class="fa fa-chevron-down" id="sms-guide-chevron"></i>
+                            </div>
+                        </div>
+                        <div class="sys-guide-body" id="sms-setup-guide" style="display:none;">
+
+                            <!-- Step Progress -->
+                            <div class="gc-steps-progress">
+                                <div class="gc-step-dot active" data-step="s1"><span>1</span></div>
+                                <div class="gc-step-line"></div>
+                                <div class="gc-step-dot" data-step="s2"><span>2</span></div>
+                                <div class="gc-step-line"></div>
+                                <div class="gc-step-dot" data-step="s3"><span>3</span></div>
+                                <div class="gc-step-line"></div>
+                                <div class="gc-step-dot" data-step="s4"><span>4</span></div>
+                            </div>
+
+                            <!-- Step 1: Choose Provider -->
+                            <div class="gc-step active" id="sms-step-1">
+                                <div class="gc-step-header">
+                                    <div class="gc-step-number">1</div>
+                                    <div>
+                                        <h3>اختيار مزوّد خدمة SMS</h3>
+                                        <p>اختر مزوّد خدمة رسائل نصية يدعم منطقتك</p>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-instructions">
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">1</span>
+                                        <span>اختر أحد المزوّدين المعروفين مثل:
+                                            <strong>Twilio</strong> · <strong>Vonage (Nexmo)</strong> · <strong>Unifonic</strong> · <strong>Gateway.sa</strong> · <strong>Taqnyat</strong>
+                                        </span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">2</span>
+                                        <span>أنشئ حساباً جديداً في موقع المزوّد</span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">3</span>
+                                        <span>فعّل حسابك واشحن رصيداً (بعض المزوّدين يوفرون رصيداً تجريبياً مجانياً)</span>
+                                    </div>
+                                    <div class="gc-instruction-item gc-note-item">
+                                        <i class="fa fa-info-circle"></i>
+                                        <span>المزوّدون المحليون مثل <strong>Unifonic</strong> و <strong>Taqnyat</strong> يوفّرون أسعاراً أفضل للرسائل داخل المملكة العربية السعودية والأردن</span>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-nav">
+                                    <div></div>
+                                    <button type="button" class="gc-next-btn" onclick="goToSmsStep(2)">الخطوة التالية <i class="fa fa-arrow-left"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Get API Credentials -->
+                            <div class="gc-step" id="sms-step-2">
+                                <div class="gc-step-header">
+                                    <div class="gc-step-number">2</div>
+                                    <div>
+                                        <h3>الحصول على بيانات API</h3>
+                                        <p>استخرج بيانات الاعتماد من لوحة تحكم المزوّد</p>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-instructions">
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">1</span>
+                                        <span>سجّل الدخول إلى لوحة تحكم المزوّد</span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">2</span>
+                                        <span>اذهب إلى قسم <strong>API Settings</strong> أو <strong>Developer</strong> أو <strong>Integrations</strong></span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">3</span>
+                                        <span>انسخ <strong>API Key</strong> (أو Account SID) و <strong>API Secret</strong> (أو Auth Token)</span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">4</span>
+                                        <span>انسخ <strong>رابط API</strong> (API URL/Endpoint) — عادةً يكون بالشكل: <code>https://api.provider.com/v1/messages</code></span>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-nav">
+                                    <button type="button" class="gc-prev-btn" onclick="goToSmsStep(1)"><i class="fa fa-arrow-right"></i> السابق</button>
+                                    <button type="button" class="gc-next-btn" onclick="goToSmsStep(3)">الخطوة التالية <i class="fa fa-arrow-left"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Configure Sender ID -->
+                            <div class="gc-step" id="sms-step-3">
+                                <div class="gc-step-header">
+                                    <div class="gc-step-number">3</div>
+                                    <div>
+                                        <h3>إعداد اسم المرسل (Sender ID)</h3>
+                                        <p>تسجيل اسم المرسل الذي سيظهر للعملاء عند استلام الرسالة</p>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-instructions">
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">1</span>
+                                        <span>من لوحة تحكم المزوّد، اذهب إلى <strong>Sender IDs</strong> أو <strong>اسم المرسل</strong></span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">2</span>
+                                        <span>سجّل اسم المرسل (مثلاً: <code>TAYSEER</code> أو اسم شركتك)</span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">3</span>
+                                        <span>انتظر الموافقة (قد تستغرق 1-3 أيام عمل في بعض الدول)</span>
+                                    </div>
+                                    <div class="gc-instruction-item gc-note-item gc-warning-item">
+                                        <i class="fa fa-exclamation-triangle"></i>
+                                        <span>في السعودية والأردن، يجب تسجيل Sender ID رسمياً عبر المزوّد — الأسماء غير المسجّلة قد تُحجب</span>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-nav">
+                                    <button type="button" class="gc-prev-btn" onclick="goToSmsStep(2)"><i class="fa fa-arrow-right"></i> السابق</button>
+                                    <button type="button" class="gc-next-btn" onclick="goToSmsStep(4)">الخطوة الأخيرة <i class="fa fa-arrow-left"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Step 4: Fill Form -->
+                            <div class="gc-step" id="sms-step-4">
+                                <div class="gc-step-header">
+                                    <div class="gc-step-number">4</div>
+                                    <div>
+                                        <h3>إدخال البيانات وحفظ الإعدادات</h3>
+                                        <p>أدخل جميع البيانات التي حصلت عليها في النموذج أدناه</p>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-instructions">
+                                    <div class="gc-instruction-item gc-note-item gc-success-item">
+                                        <i class="fa fa-check-circle"></i>
+                                        <span>بعد ملء الحقول أدناه، اضغط <strong>"حفظ الإعدادات"</strong> ثم <strong>"اختبار الاتصال"</strong> للتأكد من صحة البيانات</span>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-nav">
+                                    <button type="button" class="gc-prev-btn" onclick="goToSmsStep(3)"><i class="fa fa-arrow-right"></i> السابق</button>
+                                    <button type="button" class="gc-next-btn gc-done-btn" onclick="toggleSmsGuide()"><i class="fa fa-check"></i> إغلاق الدليل</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ Credentials Card ═══════════ -->
+                    <div class="sys-card">
+                        <div class="sys-card-header">
+                            <div class="sys-card-title">
+                                <i class="fa fa-key"></i> بيانات اعتماد SMS API
+                            </div>
+                            <span class="sys-card-badge"><i class="fa fa-lock"></i> مشفّرة</span>
+                        </div>
+                        <div class="sys-card-body">
+                            <div class="sys-form-grid">
+                                <div class="sys-field">
+                                    <label class="sys-label" for="sms_provider">
+                                        <i class="fa fa-building"></i> مزوّد الخدمة (Provider)
+                                    </label>
+                                    <select class="sys-input" id="sms_provider" name="sms_provider">
+                                        <option value="">— اختر المزوّد —</option>
+                                        <option value="twilio" <?= ($smsSettings['provider'] ?? '') === 'twilio' ? 'selected' : '' ?>>Twilio</option>
+                                        <option value="vonage" <?= ($smsSettings['provider'] ?? '') === 'vonage' ? 'selected' : '' ?>>Vonage (Nexmo)</option>
+                                        <option value="unifonic" <?= ($smsSettings['provider'] ?? '') === 'unifonic' ? 'selected' : '' ?>>Unifonic</option>
+                                        <option value="taqnyat" <?= ($smsSettings['provider'] ?? '') === 'taqnyat' ? 'selected' : '' ?>>Taqnyat (تقنيات)</option>
+                                        <option value="gateway_sa" <?= ($smsSettings['provider'] ?? '') === 'gateway_sa' ? 'selected' : '' ?>>Gateway.sa</option>
+                                        <option value="msegat" <?= ($smsSettings['provider'] ?? '') === 'msegat' ? 'selected' : '' ?>>Msegat</option>
+                                        <option value="other" <?= ($smsSettings['provider'] ?? '') === 'other' ? 'selected' : '' ?>>مزوّد آخر</option>
+                                    </select>
+                                </div>
+
+                                <div class="sys-field">
+                                    <label class="sys-label" for="sms_sender_id">
+                                        <i class="fa fa-id-card"></i> اسم المرسل (Sender ID)
+                                    </label>
+                                    <input type="text" class="sys-input" id="sms_sender_id" name="sms_sender_id"
+                                           value="<?= Html::encode($smsSettings['sender_id'] ?? '') ?>"
+                                           placeholder="TAYSEER"
+                                           dir="ltr">
+                                </div>
+
+                                <div class="sys-field sys-field-full">
+                                    <label class="sys-label" for="sms_api_url">
+                                        <i class="fa fa-link"></i> رابط API (Endpoint URL)
+                                    </label>
+                                    <input type="url" class="sys-input" id="sms_api_url" name="sms_api_url"
+                                           value="<?= Html::encode($smsSettings['api_url'] ?? '') ?>"
+                                           placeholder="https://api.provider.com/v1/messages"
+                                           dir="ltr">
+                                    <p class="sys-field-hint">رابط إرسال الرسائل الأساسي الخاص بالمزوّد</p>
+                                </div>
+
+                                <div class="sys-field">
+                                    <label class="sys-label" for="sms_api_key">
+                                        <i class="fa fa-key"></i> مفتاح API (API Key / Account SID)
+                                    </label>
+                                    <input type="text" class="sys-input" id="sms_api_key" name="sms_api_key"
+                                           value="<?= !empty($smsSettings['has_api_key']) ? '••••••••••' : '' ?>"
+                                           placeholder="أدخل مفتاح API"
+                                           dir="ltr">
+                                    <?php if (!empty($smsSettings['has_api_key'])): ?>
+                                        <div class="sys-key-notice">
+                                            <i class="fa fa-check-circle"></i>
+                                            مفتاح محفوظ ومشفّر — اتركه كما هو للاحتفاظ بالمفتاح الحالي
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+
+                                <div class="sys-field">
+                                    <label class="sys-label" for="sms_api_secret">
+                                        <i class="fa fa-shield"></i> كلمة سر API (API Secret / Auth Token)
+                                    </label>
+                                    <input type="text" class="sys-input" id="sms_api_secret" name="sms_api_secret"
+                                           value="<?= !empty($smsSettings['has_api_secret']) ? '••••••••••' : '' ?>"
+                                           placeholder="أدخل كلمة سر API"
+                                           dir="ltr">
+                                    <?php if (!empty($smsSettings['has_api_secret'])): ?>
+                                        <div class="sys-key-notice">
+                                            <i class="fa fa-check-circle"></i>
+                                            كلمة السر محفوظة ومشفّرة
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+
+                                <div class="sys-field">
+                                    <label class="sys-label" for="sms_username">
+                                        <i class="fa fa-user"></i> اسم المستخدم (اختياري)
+                                    </label>
+                                    <input type="text" class="sys-input" id="sms_username" name="sms_username"
+                                           value="<?= Html::encode($smsSettings['username'] ?? '') ?>"
+                                           placeholder="اسم المستخدم لدى المزوّد"
+                                           dir="ltr">
+                                    <p class="sys-field-hint">بعض المزوّدين يطلبون اسم مستخدم بالإضافة إلى مفتاح API</p>
+                                </div>
+
+                                <div class="sys-field">
+                                    <label class="sys-label" for="sms_password">
+                                        <i class="fa fa-lock"></i> كلمة المرور (اختياري)
+                                    </label>
+                                    <input type="password" class="sys-input" id="sms_password" name="sms_password"
+                                           value="<?= !empty($smsSettings['has_password']) ? '••••••••••' : '' ?>"
+                                           placeholder="كلمة المرور لدى المزوّد"
+                                           dir="ltr">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Save Button -->
+                    <div class="sys-form-actions">
+                        <button type="submit" class="sys-save-btn">
+                            <i class="fa fa-save"></i> حفظ الإعدادات
+                        </button>
+                        <button type="button" class="sys-cancel-btn" onclick="window.location.reload()">
+                            <i class="fa fa-undo"></i> إلغاء التغييرات
+                        </button>
+                    </div>
+                </form>
+                </div><!-- /g-panel-sms -->
+
+                <!-- ════════════════════════════════════════════════ -->
+                <!--  WhatsApp Business API Panel                    -->
+                <!-- ════════════════════════════════════════════════ -->
+                <div class="g-inner-panel" id="g-panel-whatsapp">
+                <form method="post" action="<?= Url::to(['system-settings']) ?>" id="wa-settings-form">
+                    <?= Html::hiddenInput(Yii::$app->request->csrfParam, Yii::$app->request->csrfToken) ?>
+                    <input type="hidden" name="settings_tab" value="whatsapp_api">
+
+                    <!-- Connection Status -->
+                    <div class="sys-card sys-status-card">
+                        <div class="sys-card-header">
+                            <div class="sys-card-title">
+                                <i class="fa fa-signal"></i> حالة الاتصال
+                            </div>
+                            <button type="button" class="sys-test-btn" id="btn-test-whatsapp" onclick="testWhatsappConnection()">
+                                <i class="fa fa-plug"></i> اختبار الاتصال
+                            </button>
+                        </div>
+                        <div class="sys-card-body">
+                            <div class="sys-connection-status" id="wa-connection-status">
+                                <?php if (!empty($waSettings['enabled']) && $waSettings['enabled'] === '1' && !empty($waSettings['has_access_token'])): ?>
+                                    <div class="sys-status-indicator configured">
+                                        <i class="fa fa-check-circle fa-2x"></i>
+                                        <div>
+                                            <strong>تم التكوين</strong>
+                                            <p>بيانات WhatsApp Business API محفوظة — اضغط "اختبار الاتصال" للتحقق</p>
+                                        </div>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="sys-status-indicator not-configured">
+                                        <i class="fa fa-exclamation-circle fa-2x"></i>
+                                        <div>
+                                            <strong>غير مكوّن</strong>
+                                            <p>أدخل بيانات Meta WhatsApp Business API لتفعيل إرسال رسائل WhatsApp</p>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Toggle Enable -->
+                    <div class="sys-card">
+                        <div class="sys-card-body">
+                            <div class="sys-toggle-row">
+                                <div class="sys-toggle-info">
+                                    <i class="fa fa-power-off sys-toggle-icon"></i>
+                                    <div>
+                                        <strong>تفعيل خدمة WhatsApp Business API</strong>
+                                        <p>عند التفعيل، سيتم إرسال رسائل WhatsApp للعملاء عبر واجهة Meta الرسمية</p>
+                                    </div>
+                                </div>
+                                <label class="sys-switch">
+                                    <input type="hidden" name="wa_enabled" value="0">
+                                    <input type="checkbox" name="wa_enabled" value="1" <?= (!empty($waSettings['enabled']) && $waSettings['enabled'] === '1') ? 'checked' : '' ?>>
+                                    <span class="sys-switch-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ Setup Guide (Collapsible) ═══════════ -->
+                    <div class="sys-card sys-guide-card">
+                        <div class="sys-card-header sys-guide-toggle" onclick="toggleWaGuide()">
+                            <div class="sys-card-title">
+                                <i class="fa fa-graduation-cap"></i> دليل الإعداد خطوة بخطوة
+                            </div>
+                            <div class="sys-guide-toggle-hint">
+                                <span id="wa-guide-toggle-text">عرض الدليل</span>
+                                <i class="fa fa-chevron-down" id="wa-guide-chevron"></i>
+                            </div>
+                        </div>
+                        <div class="sys-guide-body" id="wa-setup-guide" style="display:none;">
+
+                            <!-- Step Progress -->
+                            <div class="gc-steps-progress">
+                                <div class="gc-step-dot active" data-step="w1"><span>1</span></div>
+                                <div class="gc-step-line"></div>
+                                <div class="gc-step-dot" data-step="w2"><span>2</span></div>
+                                <div class="gc-step-line"></div>
+                                <div class="gc-step-dot" data-step="w3"><span>3</span></div>
+                                <div class="gc-step-line"></div>
+                                <div class="gc-step-dot" data-step="w4"><span>4</span></div>
+                                <div class="gc-step-line"></div>
+                                <div class="gc-step-dot" data-step="w5"><span>5</span></div>
+                                <div class="gc-step-line"></div>
+                                <div class="gc-step-dot" data-step="w6"><span>6</span></div>
+                            </div>
+
+                            <!-- Step 1: Create Meta Business Account -->
+                            <div class="gc-step active" id="wa-step-1">
+                                <div class="gc-step-header">
+                                    <div class="gc-step-number">1</div>
+                                    <div>
+                                        <h3>إنشاء حساب Meta Business</h3>
+                                        <p>تحتاج حساب أعمال في Meta (Facebook) لاستخدام WhatsApp Business API</p>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-instructions">
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">1</span>
+                                        <span>اذهب إلى <a href="https://business.facebook.com/" target="_blank" class="gc-link">business.facebook.com</a></span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">2</span>
+                                        <span>أنشئ حساب أعمال جديد أو استخدم حساباً موجوداً</span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">3</span>
+                                        <span>أكمل عملية التحقق من النشاط التجاري (Business Verification) — قد تستغرق 1-3 أيام</span>
+                                    </div>
+                                    <div class="gc-instruction-item gc-note-item">
+                                        <i class="fa fa-info-circle"></i>
+                                        <span>التحقق مطلوب لإرسال رسائل لأرقام غير محفوظة وللحصول على حصة إرسال أعلى</span>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-nav">
+                                    <div></div>
+                                    <button type="button" class="gc-next-btn" onclick="goToWaStep(2)">الخطوة التالية <i class="fa fa-arrow-left"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Create App in Meta Developers -->
+                            <div class="gc-step" id="wa-step-2">
+                                <div class="gc-step-header">
+                                    <div class="gc-step-number">2</div>
+                                    <div>
+                                        <h3>إنشاء تطبيق في Meta for Developers</h3>
+                                        <p>أنشئ تطبيقاً من نوع "Business" لربط WhatsApp API</p>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-instructions">
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">1</span>
+                                        <span>اذهب إلى <a href="https://developers.facebook.com/apps/" target="_blank" class="gc-link">developers.facebook.com/apps</a></span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">2</span>
+                                        <span>اضغط <strong>Create App</strong> → اختر نوع <strong>"Business"</strong></span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">3</span>
+                                        <span>أدخل اسم التطبيق (مثلاً: <code>Tayseer WhatsApp</code>) واربطه بحساب الأعمال</span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">4</span>
+                                        <span>من لوحة التطبيق، اضغط <strong>Add Product</strong> → اختر <strong>WhatsApp</strong> → <strong>Set Up</strong></span>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-nav">
+                                    <button type="button" class="gc-prev-btn" onclick="goToWaStep(1)"><i class="fa fa-arrow-right"></i> السابق</button>
+                                    <button type="button" class="gc-next-btn" onclick="goToWaStep(3)">الخطوة التالية <i class="fa fa-arrow-left"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Add Phone Number -->
+                            <div class="gc-step" id="wa-step-3">
+                                <div class="gc-step-header">
+                                    <div class="gc-step-number">3</div>
+                                    <div>
+                                        <h3>إضافة رقم هاتف</h3>
+                                        <p>ربط رقم هاتف بحساب WhatsApp Business</p>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-instructions">
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">1</span>
+                                        <span>من لوحة التطبيق → <strong>WhatsApp</strong> → <strong>Getting Started</strong></span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">2</span>
+                                        <span>اضغط <strong>Add Phone Number</strong> وأدخل رقم الهاتف الذي تريد إرسال الرسائل منه</span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">3</span>
+                                        <span>أكمل عملية التحقق عبر SMS أو مكالمة هاتفية</span>
+                                    </div>
+                                    <div class="gc-instruction-item gc-note-item gc-warning-item">
+                                        <i class="fa fa-exclamation-triangle"></i>
+                                        <span>الرقم يجب أن <strong>لا يكون مربوطاً</strong> بتطبيق WhatsApp عادي أو WhatsApp Business على الهاتف</span>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-nav">
+                                    <button type="button" class="gc-prev-btn" onclick="goToWaStep(2)"><i class="fa fa-arrow-right"></i> السابق</button>
+                                    <button type="button" class="gc-next-btn" onclick="goToWaStep(4)">الخطوة التالية <i class="fa fa-arrow-left"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Step 4: Get Access Token -->
+                            <div class="gc-step" id="wa-step-4">
+                                <div class="gc-step-header">
+                                    <div class="gc-step-number">4</div>
+                                    <div>
+                                        <h3>الحصول على Access Token</h3>
+                                        <p>إنشاء رمز وصول دائم (Permanent Token) للتطبيق</p>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-instructions">
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">1</span>
+                                        <span>من لوحة التطبيق → <strong>WhatsApp</strong> → <strong>API Setup</strong></span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">2</span>
+                                        <span>ستجد <strong>Temporary Access Token</strong> — هذا صالح لـ 24 ساعة فقط (للاختبار)</span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">3</span>
+                                        <span>للحصول على <strong>Permanent Token</strong>:
+                                            اذهب إلى <a href="https://business.facebook.com/settings/system-users" target="_blank" class="gc-link">Business Settings → System Users</a>
+                                        </span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">4</span>
+                                        <span>أنشئ <strong>System User</strong> جديد → اختر صلاحية <strong>Admin</strong></span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">5</span>
+                                        <span>اضغط <strong>Generate New Token</strong> → اختر التطبيق → فعّل صلاحيات: <code>whatsapp_business_management</code> و <code>whatsapp_business_messaging</code></span>
+                                    </div>
+                                    <div class="gc-instruction-item gc-note-item gc-warning-item">
+                                        <i class="fa fa-exclamation-triangle"></i>
+                                        <span>انسخ Token فوراً — <strong>لن يظهر مرة أخرى!</strong></span>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-nav">
+                                    <button type="button" class="gc-prev-btn" onclick="goToWaStep(3)"><i class="fa fa-arrow-right"></i> السابق</button>
+                                    <button type="button" class="gc-next-btn" onclick="goToWaStep(5)">الخطوة التالية <i class="fa fa-arrow-left"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Step 5: Get IDs -->
+                            <div class="gc-step" id="wa-step-5">
+                                <div class="gc-step-header">
+                                    <div class="gc-step-number">5</div>
+                                    <div>
+                                        <h3>نسخ المعرّفات المطلوبة</h3>
+                                        <p>استخرج Phone Number ID و WhatsApp Business Account ID</p>
+                                    </div>
+                                </div>
+
+                                <!-- Field Mapping -->
+                                <div class="gc-field-mapping">
+                                    <div class="gc-mapping-title"><i class="fa fa-exchange"></i> ربط الحقول من لوحة Meta</div>
+                                    <div class="gc-mapping-grid">
+                                        <div class="gc-mapping-row">
+                                            <div class="gc-mapping-from">
+                                                <span class="gc-mapping-num">1</span>
+                                                <code>Phone Number ID</code>
+                                            </div>
+                                            <i class="fa fa-long-arrow-left gc-mapping-arrow"></i>
+                                            <div class="gc-mapping-to">من صفحة API Setup → القسم العلوي</div>
+                                        </div>
+                                        <div class="gc-mapping-row">
+                                            <div class="gc-mapping-from">
+                                                <span class="gc-mapping-num">2</span>
+                                                <code>WABA ID</code>
+                                            </div>
+                                            <i class="fa fa-long-arrow-left gc-mapping-arrow"></i>
+                                            <div class="gc-mapping-to">WhatsApp Business Account ID — من API Setup</div>
+                                        </div>
+                                        <div class="gc-mapping-row">
+                                            <div class="gc-mapping-from">
+                                                <span class="gc-mapping-num">3</span>
+                                                <code>App ID</code>
+                                            </div>
+                                            <i class="fa fa-long-arrow-left gc-mapping-arrow"></i>
+                                            <div class="gc-mapping-to">من Settings → Basic في لوحة التطبيق</div>
+                                        </div>
+                                        <div class="gc-mapping-row">
+                                            <div class="gc-mapping-from">
+                                                <span class="gc-mapping-num">4</span>
+                                                <code>App Secret</code>
+                                            </div>
+                                            <i class="fa fa-long-arrow-left gc-mapping-arrow"></i>
+                                            <div class="gc-mapping-to">من Settings → Basic → App Secret (اضغط Show)</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-instructions">
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">1</span>
+                                        <span>من <strong>WhatsApp → API Setup</strong>: انسخ <strong>Phone Number ID</strong> و <strong>WhatsApp Business Account ID</strong></span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">2</span>
+                                        <span>من <strong>App Settings → Basic</strong>: انسخ <strong>App ID</strong> و <strong>App Secret</strong></span>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-nav">
+                                    <button type="button" class="gc-prev-btn" onclick="goToWaStep(4)"><i class="fa fa-arrow-right"></i> السابق</button>
+                                    <button type="button" class="gc-next-btn" onclick="goToWaStep(6)">الخطوة الأخيرة <i class="fa fa-arrow-left"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Step 6: Fill & Save -->
+                            <div class="gc-step" id="wa-step-6">
+                                <div class="gc-step-header">
+                                    <div class="gc-step-number">6</div>
+                                    <div>
+                                        <h3>إدخال البيانات وحفظ الإعدادات</h3>
+                                        <p>أدخل جميع البيانات في النموذج أدناه واضغط حفظ</p>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-instructions">
+                                    <div class="gc-instruction-item gc-note-item gc-success-item">
+                                        <i class="fa fa-check-circle"></i>
+                                        <span>بعد ملء الحقول أدناه، اضغط <strong>"حفظ الإعدادات"</strong> ثم <strong>"اختبار الاتصال"</strong> للتأكد</span>
+                                    </div>
+                                    <div class="gc-instruction-item gc-note-item">
+                                        <i class="fa fa-info-circle"></i>
+                                        <span>أول <strong>1,000 محادثة/شهر مجانية</strong> (Service Conversations) — بعدها تُحسب حسب نوع المحادثة والبلد</span>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-nav">
+                                    <button type="button" class="gc-prev-btn" onclick="goToWaStep(5)"><i class="fa fa-arrow-right"></i> السابق</button>
+                                    <button type="button" class="gc-next-btn gc-done-btn" onclick="toggleWaGuide()"><i class="fa fa-check"></i> إغلاق الدليل</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ Credentials Card ═══════════ -->
+                    <div class="sys-card">
+                        <div class="sys-card-header">
+                            <div class="sys-card-title">
+                                <i class="fa fa-key"></i> بيانات اعتماد WhatsApp Business API
+                            </div>
+                            <span class="sys-card-badge"><i class="fa fa-lock"></i> مشفّرة</span>
+                        </div>
+                        <div class="sys-card-body">
+                            <div class="sys-form-grid">
+                                <div class="sys-field">
+                                    <label class="sys-label" for="wa_phone_number_id">
+                                        <i class="fa fa-phone"></i> معرّف رقم الهاتف (Phone Number ID)
+                                    </label>
+                                    <input type="text" class="sys-input" id="wa_phone_number_id" name="wa_phone_number_id"
+                                           value="<?= Html::encode($waSettings['phone_number_id'] ?? '') ?>"
+                                           placeholder="123456789012345"
+                                           dir="ltr">
+                                    <p class="sys-field-hint">من WhatsApp → API Setup في لوحة Meta Developers</p>
+                                </div>
+
+                                <div class="sys-field">
+                                    <label class="sys-label" for="wa_waba_id">
+                                        <i class="fa fa-building"></i> معرّف حساب الأعمال (WABA ID)
+                                    </label>
+                                    <input type="text" class="sys-input" id="wa_waba_id" name="wa_waba_id"
+                                           value="<?= Html::encode($waSettings['waba_id'] ?? '') ?>"
+                                           placeholder="123456789012345"
+                                           dir="ltr">
+                                    <p class="sys-field-hint">WhatsApp Business Account ID — من نفس صفحة API Setup</p>
+                                </div>
+
+                                <div class="sys-field sys-field-full">
+                                    <label class="sys-label" for="wa_access_token">
+                                        <i class="fa fa-ticket"></i> رمز الوصول (Access Token)
+                                    </label>
+                                    <div class="sys-key-wrapper">
+                                        <textarea class="sys-textarea" id="wa_access_token" name="wa_access_token"
+                                                  rows="3" dir="ltr"
+                                                  placeholder="EAAxxxxxxxx..."><?= !empty($waSettings['has_access_token']) ? '••••••••••' : '' ?></textarea>
+                                        <?php if (!empty($waSettings['has_access_token'])): ?>
+                                            <div class="sys-key-notice">
+                                                <i class="fa fa-check-circle"></i>
+                                                Access Token محفوظ ومشفّر — اتركه كما هو للاحتفاظ بالرمز الحالي، أو الصق رمزاً جديداً
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <p class="sys-field-hint">استخدم Permanent Token من System User — الرمز المؤقت ينتهي خلال 24 ساعة</p>
+                                </div>
+
+                                <div class="sys-field">
+                                    <label class="sys-label" for="wa_app_id">
+                                        <i class="fa fa-cube"></i> معرّف التطبيق (App ID)
+                                    </label>
+                                    <input type="text" class="sys-input" id="wa_app_id" name="wa_app_id"
+                                           value="<?= Html::encode($waSettings['app_id'] ?? '') ?>"
+                                           placeholder="123456789012345"
+                                           dir="ltr">
+                                    <p class="sys-field-hint">من App Settings → Basic في لوحة Meta Developers</p>
+                                </div>
+
+                                <div class="sys-field">
+                                    <label class="sys-label" for="wa_app_secret">
+                                        <i class="fa fa-shield"></i> سر التطبيق (App Secret)
+                                    </label>
+                                    <input type="text" class="sys-input" id="wa_app_secret" name="wa_app_secret"
+                                           value="<?= !empty($waSettings['has_app_secret']) ? '••••••••••' : '' ?>"
+                                           placeholder="أدخل App Secret"
+                                           dir="ltr">
+                                    <?php if (!empty($waSettings['has_app_secret'])): ?>
+                                        <div class="sys-key-notice">
+                                            <i class="fa fa-check-circle"></i>
+                                            App Secret محفوظ ومشفّر
+                                        </div>
+                                    <?php endif; ?>
+                                    <p class="sys-field-hint">من App Settings → Basic → App Secret (اضغط Show)</p>
+                                </div>
+
+                                <div class="sys-field">
+                                    <label class="sys-label" for="wa_webhook_verify_token">
+                                        <i class="fa fa-check-square"></i> رمز تحقق Webhook (Verify Token)
+                                    </label>
+                                    <input type="text" class="sys-input" id="wa_webhook_verify_token" name="wa_webhook_verify_token"
+                                           value="<?= Html::encode($waSettings['webhook_verify_token'] ?? '') ?>"
+                                           placeholder="أي نص عشوائي تختاره أنت"
+                                           dir="ltr">
+                                    <p class="sys-field-hint">نص عشوائي تختاره — يُستخدم عند إعداد Webhook في لوحة Meta</p>
+                                </div>
+
+                                <div class="sys-field">
+                                    <label class="sys-label" for="wa_api_version">
+                                        <i class="fa fa-code-fork"></i> إصدار API (API Version)
+                                    </label>
+                                    <select class="sys-input" id="wa_api_version" name="wa_api_version">
+                                        <option value="v21.0" <?= ($waSettings['api_version'] ?? 'v21.0') === 'v21.0' ? 'selected' : '' ?>>v21.0 (مستقر)</option>
+                                        <option value="v20.0" <?= ($waSettings['api_version'] ?? '') === 'v20.0' ? 'selected' : '' ?>>v20.0</option>
+                                        <option value="v19.0" <?= ($waSettings['api_version'] ?? '') === 'v19.0' ? 'selected' : '' ?>>v19.0</option>
+                                    </select>
+                                    <p class="sys-field-hint">إصدار Graph API — استخدم الأحدث ما لم يكن لديك سبب محدد</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Save Button -->
+                    <div class="sys-form-actions">
+                        <button type="submit" class="sys-save-btn">
+                            <i class="fa fa-save"></i> حفظ الإعدادات
+                        </button>
+                        <button type="button" class="sys-cancel-btn" onclick="window.location.reload()">
+                            <i class="fa fa-undo"></i> إلغاء التغييرات
+                        </button>
+                    </div>
+                </form>
+                </div><!-- /g-panel-whatsapp -->
+
+            </div><!-- /tab-messaging -->
+
             <!-- ═══════════ General Settings Tab ═══════════ -->
             <div class="sys-tab-content <?= $activeTab === 'general' ? 'active' : '' ?>" id="tab-general">
 
@@ -1584,6 +2404,8 @@ python scripts/backup/backup.py --dry-run</code></pre>
 <?php
 $testUrl = Url::to(['test-google-connection']);
 $testMapsUrl = Url::to(['test-maps-connection']);
+$testSmsUrl = Url::to(['test-sms-connection']);
+$testWhatsappUrl = Url::to(['test-whatsapp-connection']);
 $googleStatsUrl = Url::to(['/customers/smart-media/google-stats']);
 $js = <<<JS
 // دليل خريطة Google — طيّ/فتح
@@ -1852,12 +2674,13 @@ window.copyJsonValue = function(el, fieldId) {
     }, 2000);
 };
 
-// ═══ Inner tabs within Google APIs section ═══
+// ═══ Inner tabs (scoped to parent tab-content) ═══
 $('.g-inner-tab').on('click', function() {
     var panel = $(this).data('inner');
-    $('.g-inner-tab').removeClass('active');
+    var container = $(this).closest('.sys-tab-content');
+    container.find('.g-inner-tab').removeClass('active');
     $(this).addClass('active');
-    $('.g-inner-panel').removeClass('active');
+    container.find('.g-inner-panel').removeClass('active');
     $('#g-panel-' + panel).addClass('active');
 });
 
@@ -1952,94 +2775,99 @@ function fillCostPanels(data) {
 
 // Test connection
 window.testGoogleConnection = function() {
-    var btn = $('#btn-test-connection');
-    var statusDiv = $('#connection-status');
-    
-    btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الاختبار...');
-    
-    $.ajax({
-        url: '{$testUrl}',
-        type: 'POST',
-        dataType: 'json',
-        data: { _csrf: $('meta[name="csrf-token"]').attr('content') || $('input[name="_csrf"]').val() },
-        success: function(res) {
-            if (res.success) {
-                statusDiv.html(
-                    '<div class="sys-status-indicator connected">' +
-                    '  <i class="fa fa-check-circle fa-2x"></i>' +
-                    '  <div><strong>متصل بنجاح!</strong>' +
-                    '  <p>' + res.message + (res.project_id ? ' — المشروع: ' + res.project_id : '') + '</p></div>' +
-                    '</div>'
-                );
-            } else {
-                statusDiv.html(
-                    '<div class="sys-status-indicator error">' +
-                    '  <i class="fa fa-times-circle fa-2x"></i>' +
-                    '  <div><strong>فشل الاتصال</strong>' +
-                    '  <p>' + res.error + '</p></div>' +
-                    '</div>'
-                );
-            }
+    var btn = document.getElementById('btn-test-connection');
+    var statusDiv = document.getElementById('connection-status');
+    if (!btn || !statusDiv) { console.error('Vision test: btn or statusDiv not found'); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الاختبار...';
+
+    fetch('{$testUrl}', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded'
         },
-        error: function() {
-            statusDiv.html(
+        credentials: 'same-origin'
+    })
+    .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    })
+    .then(function(res) {
+        if (res.success) {
+            statusDiv.innerHTML =
+                '<div class="sys-status-indicator connected">' +
+                '<i class="fa fa-check-circle fa-2x"></i>' +
+                '<div><strong>متصل بنجاح!</strong>' +
+                '<p>' + (res.message || '') + (res.project_id ? ' — المشروع: ' + res.project_id : '') + '</p></div></div>';
+        } else {
+            statusDiv.innerHTML =
                 '<div class="sys-status-indicator error">' +
-                '  <i class="fa fa-times-circle fa-2x"></i>' +
-                '  <div><strong>خطأ في الشبكة</strong>' +
-                '  <p>لم يتم الاتصال بالخادم</p></div>' +
-                '</div>'
-            );
-        },
-        complete: function() {
-            btn.prop('disabled', false).html('<i class="fa fa-plug"></i> اختبار الاتصال');
+                '<i class="fa fa-times-circle fa-2x"></i>' +
+                '<div><strong>فشل الاتصال</strong>' +
+                '<p>' + (res.error || 'خطأ غير معروف') + '</p></div></div>';
         }
+    })
+    .catch(function(err) {
+        console.error('Vision API test error:', err);
+        statusDiv.innerHTML =
+            '<div class="sys-status-indicator error">' +
+            '<i class="fa fa-times-circle fa-2x"></i>' +
+            '<div><strong>خطأ في الاتصال</strong>' +
+            '<p>' + err.message + '</p></div></div>';
+    })
+    .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-plug"></i> اختبار الاتصال';
     });
 };
 
 // ═══ Maps API: Test connection ═══
 window.testMapsConnection = function() {
     var btn = document.getElementById('btn-test-maps');
-    var statusDiv = $('#gm-connection-status');
+    var statusDiv = document.getElementById('gm-connection-status');
+    if (!btn || !statusDiv) { console.error('Maps test: btn or statusDiv not found'); return; }
     btn.disabled = true;
     btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الاختبار...';
 
-    $.ajax({
-        url: '{$testMapsUrl}',
-        type: 'POST',
-        dataType: 'json',
-        data: { _csrf: $('meta[name="csrf-token"]').attr('content') || $('input[name="_csrf"]').val() },
-        success: function(res) {
-            if (res.success) {
-                statusDiv.html(
-                    '<div class="sys-status-indicator connected">' +
-                    '  <i class="fa fa-check-circle fa-2x"></i>' +
-                    '  <div><strong>المفتاح يعمل بنجاح!</strong>' +
-                    '  <p>' + (res.message || '') + '</p></div>' +
-                    '</div>'
-                );
-            } else {
-                statusDiv.html(
-                    '<div class="sys-status-indicator error">' +
-                    '  <i class="fa fa-times-circle fa-2x"></i>' +
-                    '  <div><strong>المفتاح لا يعمل</strong>' +
-                    '  <p>' + (res.error || 'خطأ غير معروف') + '</p></div>' +
-                    '</div>'
-                );
-            }
+    fetch('{$testMapsUrl}', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded'
         },
-        error: function() {
-            statusDiv.html(
+        credentials: 'same-origin'
+    })
+    .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    })
+    .then(function(res) {
+        if (res.success) {
+            statusDiv.innerHTML =
+                '<div class="sys-status-indicator connected">' +
+                '<i class="fa fa-check-circle fa-2x"></i>' +
+                '<div><strong>المفتاح يعمل بنجاح!</strong>' +
+                '<p>' + (res.message || '') + '</p></div></div>';
+        } else {
+            statusDiv.innerHTML =
                 '<div class="sys-status-indicator error">' +
-                '  <i class="fa fa-times-circle fa-2x"></i>' +
-                '  <div><strong>خطأ في الشبكة</strong>' +
-                '  <p>لم يتم الاتصال بالخادم</p></div>' +
-                '</div>'
-            );
-        },
-        complete: function() {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa fa-plug"></i> اختبار المفتاح';
+                '<i class="fa fa-times-circle fa-2x"></i>' +
+                '<div><strong>المفتاح لا يعمل</strong>' +
+                '<p>' + (res.error || 'خطأ غير معروف') + '</p></div></div>';
         }
+    })
+    .catch(function(err) {
+        console.error('Maps API test error:', err);
+        statusDiv.innerHTML =
+            '<div class="sys-status-indicator error">' +
+            '<i class="fa fa-times-circle fa-2x"></i>' +
+            '<div><strong>خطأ في الاتصال</strong>' +
+            '<p>' + err.message + '</p></div></div>';
+    })
+    .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-plug"></i> اختبار المفتاح';
     });
 };
 
@@ -2065,6 +2893,155 @@ window.copyBackupCmd = function(el) {
         setTimeout(function() { $(el).html(orig); }, 2000);
     });
 };
+
+// ═══════════════════════════════════════════════════════════
+//  SMS API
+// ═══════════════════════════════════════════════════════════
+
+window.toggleSmsGuide = function() {
+    var body = $('#sms-setup-guide');
+    var text = $('#sms-guide-toggle-text');
+    var chevron = $('#sms-guide-chevron');
+    if (body.is(':visible')) {
+        body.slideUp(300);
+        text.text('عرض الدليل');
+        chevron.css('transform', 'rotate(0deg)');
+    } else {
+        body.slideDown(300);
+        text.text('إخفاء الدليل');
+        chevron.css('transform', 'rotate(180deg)');
+    }
+};
+
+window.goToSmsStep = function(step) {
+    $('#sms-setup-guide .gc-step').removeClass('active');
+    $('#sms-step-' + step).addClass('active');
+    $('#sms-setup-guide .gc-step-dot').removeClass('active completed');
+    for (var i = 1; i < step; i++) {
+        $('#sms-setup-guide .gc-step-dot[data-step="s' + i + '"]').addClass('completed');
+    }
+    $('#sms-setup-guide .gc-step-dot[data-step="s' + step + '"]').addClass('active');
+    $('#sms-setup-guide')[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+window.testSmsConnection = function() {
+    var btn = document.getElementById('btn-test-sms');
+    var statusDiv = document.getElementById('sms-connection-status');
+    if (!btn || !statusDiv) return;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الاختبار...';
+
+    fetch('{$testSmsUrl}', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
+        credentials: 'same-origin'
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(res) {
+        if (res.success) {
+            statusDiv.innerHTML =
+                '<div class="sys-status-indicator connected"><i class="fa fa-check-circle fa-2x"></i>' +
+                '<div><strong>الاتصال ناجح!</strong><p>' + (res.message || '') + '</p></div></div>';
+        } else {
+            statusDiv.innerHTML =
+                '<div class="sys-status-indicator error"><i class="fa fa-times-circle fa-2x"></i>' +
+                '<div><strong>فشل الاتصال</strong><p>' + (res.error || 'خطأ غير معروف') + '</p></div></div>';
+        }
+    })
+    .catch(function(err) {
+        statusDiv.innerHTML =
+            '<div class="sys-status-indicator error"><i class="fa fa-times-circle fa-2x"></i>' +
+            '<div><strong>خطأ في الاتصال</strong><p>' + err.message + '</p></div></div>';
+    })
+    .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-plug"></i> اختبار الاتصال';
+    });
+};
+
+// Clear masked SMS fields on focus
+$('#sms_api_key, #sms_api_secret').on('focus', function() {
+    if ($(this).val() === '••••••••••') $(this).val('');
+}).on('blur', function() {
+    if ($(this).val().trim() === '' && $(this).data('has-value')) $(this).val('••••••••••');
+});
+
+// ═══════════════════════════════════════════════════════════
+//  WhatsApp Business API
+// ═══════════════════════════════════════════════════════════
+
+window.toggleWaGuide = function() {
+    var body = $('#wa-setup-guide');
+    var text = $('#wa-guide-toggle-text');
+    var chevron = $('#wa-guide-chevron');
+    if (body.is(':visible')) {
+        body.slideUp(300);
+        text.text('عرض الدليل');
+        chevron.css('transform', 'rotate(0deg)');
+    } else {
+        body.slideDown(300);
+        text.text('إخفاء الدليل');
+        chevron.css('transform', 'rotate(180deg)');
+    }
+};
+
+window.goToWaStep = function(step) {
+    $('#wa-setup-guide .gc-step').removeClass('active');
+    $('#wa-step-' + step).addClass('active');
+    $('#wa-setup-guide .gc-step-dot').removeClass('active completed');
+    for (var i = 1; i < step; i++) {
+        $('#wa-setup-guide .gc-step-dot[data-step="w' + i + '"]').addClass('completed');
+    }
+    $('#wa-setup-guide .gc-step-dot[data-step="w' + step + '"]').addClass('active');
+    $('#wa-setup-guide')[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+window.testWhatsappConnection = function() {
+    var btn = document.getElementById('btn-test-whatsapp');
+    var statusDiv = document.getElementById('wa-connection-status');
+    if (!btn || !statusDiv) return;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الاختبار...';
+
+    fetch('{$testWhatsappUrl}', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
+        credentials: 'same-origin'
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(res) {
+        if (res.success) {
+            statusDiv.innerHTML =
+                '<div class="sys-status-indicator connected"><i class="fa fa-check-circle fa-2x"></i>' +
+                '<div><strong>الاتصال ناجح!</strong><p>' + (res.message || '') + '</p></div></div>';
+        } else {
+            statusDiv.innerHTML =
+                '<div class="sys-status-indicator error"><i class="fa fa-times-circle fa-2x"></i>' +
+                '<div><strong>فشل الاتصال</strong><p>' + (res.error || 'خطأ غير معروف') + '</p></div></div>';
+        }
+    })
+    .catch(function(err) {
+        statusDiv.innerHTML =
+            '<div class="sys-status-indicator error"><i class="fa fa-times-circle fa-2x"></i>' +
+            '<div><strong>خطأ في الاتصال</strong><p>' + err.message + '</p></div></div>';
+    })
+    .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-plug"></i> اختبار الاتصال';
+    });
+};
+
+// Clear masked WA fields on focus
+$('#wa_access_token').on('focus', function() {
+    if ($(this).val() === '••••••••••') $(this).val('');
+}).on('blur', function() {
+    if ($(this).val().trim() === '') $(this).val('••••••••••');
+});
+$('#wa_app_secret').on('focus', function() {
+    if ($(this).val() === '••••••••••') $(this).val('');
+}).on('blur', function() {
+    if ($(this).val().trim() === '') $(this).val('••••••••••');
+});
 JS;
 $this->registerJs($js);
 ?>

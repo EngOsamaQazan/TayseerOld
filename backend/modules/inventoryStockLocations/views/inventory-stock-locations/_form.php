@@ -4,7 +4,7 @@ use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use common\models\User;
 use backend\modules\companies\models\Companies;
-use kartik\date\DatePicker;
+
 use kartik\select2\Select2;
 use yii\helpers\ArrayHelper;
 

@@ -11,7 +11,7 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use kartik\select2\Select2;
 use backend\modules\expenseCategories\models\ExpenseCategories;
 
@@ -53,9 +53,9 @@ $contract_id = Yii::$app->cache->getOrSet(Yii::$app->params['key_contract_id'], 
                     ->label(Yii::t('app', 'رقم المستلم')) ?>
             </div>
             <div class="col-md-6">
-                <?= $form->field($model, 'expenses_date')->widget(DatePicker::class, [
+                <?= $form->field($model, 'expenses_date')->widget(FlatpickrWidget::class, [
                     'options' => ['placeholder' => Yii::t('app', 'تاريخ المصروف')],
-                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                 ])->label(Yii::t('app', 'تاريخ المصروف')) ?>
             </div>
         </div>

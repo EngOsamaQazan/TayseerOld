@@ -10,7 +10,7 @@ use yii\widgets\ActiveForm;
 use yii\data\ActiveDataProvider;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use backend\modules\contracts\models\Contracts;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use yii\widgets\Pjax;
 use common\helper\LoanContract;
 use yii\helpers\ArrayHelper;
@@ -1197,20 +1197,17 @@ CrudAsset::register($this);
             <?= $form->field($model, 'connection_goal')->dropDownList([1 => 'تحصيل', 2 => 'مصالحة', 3 => 'انهاء عقد'], ['prompt' => '']) ?>
         </div>
         <div class="col-sm-3 col-xs-3">
-            <?= $form->field($model, 'reminder')->widget(DatePicker::classname(), ['pluginOptions' => [
-                'autoclose' => true,
-                'format' => 'yyyy-mm-dd'
+            <?= $form->field($model, 'reminder')->widget(FlatpickrWidget::class, ['pluginOptions' => [
+                'dateFormat' => 'Y-m-d'
             ]]);
             ?>
         </div>
         <div class="col-sm-3 col-xs-3">
             <?=
-            $form->field($model, 'promise_to_pay_at')->widget(DatePicker::classname(), [
+            $form->field($model, 'promise_to_pay_at')->widget(FlatpickrWidget::class, [
                 'options' => ['placeholder' => Yii::t('app', 'Enter Date of sale ...')],
                 'pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd',
-                    'multidate' => false
+                    'dateFormat' => 'Y-m-d',
                 ]
             ]);
             ?>

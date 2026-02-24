@@ -81,12 +81,10 @@
         // Re-trigger resize so widgets recalculate dimensions
         $(window).trigger('resize');
 
-        // Re-initialize PhoneInput widgets that were cloned in hidden steps
+        // Refresh PhoneInput widgets when step becomes visible
         var $section = $('.so-section[data-step="' + idx + '"]');
-        $section.find('.intl-tel-input input:not(.iti__tel-input)').each(function() {
-            if (!$(this).parent().hasClass('intl-tel-input')) {
-                // Widget not initialized yet — safe to skip
-            }
+        $section.find('.iti input[type="tel"]').each(function() {
+            if (this._iti) this._iti.handleUtils();
         });
 
         // Scroll to top

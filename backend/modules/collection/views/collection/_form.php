@@ -2,7 +2,7 @@
 
 use backend\modules\divisionsCollection\models\DivisionsCollection;
 use common\helper\LoanContract;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use yii\data\ActiveDataProvider;
 use yii\helpers\Html;
 use yii\helpers\Url;
@@ -19,9 +19,8 @@ use backend\widgets\ExportButtons;
     <?php $form = ActiveForm::begin(); ?>
     <div class="row">
         <div class="col-lg-6">
-            <?= $form->field($model, 'date')->widget(DatePicker::classname(), ['pluginOptions' => [
-                'autoclose' => true,
-                'format' => 'yyyy-mm-dd',
+            <?= $form->field($model, 'date')->widget(FlatpickrWidget::class, ['pluginOptions' => [
+                'dateFormat' => 'Y-m-d',
             ]]);
             ?>
         </div>

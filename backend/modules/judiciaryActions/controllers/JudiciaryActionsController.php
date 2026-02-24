@@ -25,7 +25,7 @@ class JudiciaryActionsController extends Controller
                 'rules' => [
                     ['actions' => ['login', 'error'], 'allow' => true],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'view', 'bulk-delete', 'export-excel', 'export-pdf'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'confirm-delete', 'usage-details', 'view', 'bulk-delete', 'export-excel', 'export-pdf', 'quick-relink'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -35,7 +35,10 @@ class JudiciaryActionsController extends Controller
                 'class' => VerbFilter::class,
                 'actions' => [
                     'delete' => ['post'],
+                    'confirm-delete' => ['get', 'post'],
+                    'usage-details' => ['get'],
                     'bulk-delete' => ['post'],
+                    'quick-relink' => ['post'],
                 ],
             ],
         ];
@@ -180,7 +183,134 @@ class JudiciaryActionsController extends Controller
     }
 
     /**
-     * Delete (soft)
+     * Confirm Delete — shows migration dialog if records exist
+     */
+    public function actionConfirmDelete($id)
+    {
+        $request = Yii::$app->request;
+        $model = $this->findModel($id);
+
+        $usageCount = (int)(new \yii\db\Query())
+            ->from('os_judiciary_customers_actions')
+            ->where(['judiciary_actions_id' => $id])
+            ->andWhere(['or', ['is_deleted' => 0], ['is_deleted' => null]])
+            ->count();
+
+        if ($request->isPost) {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+            $migrateToId = $request->post('migrate_to_id');
+
+            if ($usageCount > 0 && empty($migrateToId)) {
+                $otherActions = \yii\helpers\ArrayHelper::map(
+                    JudiciaryActions::find()
+                        ->where(['is_deleted' => 0])
+                        ->andWhere(['!=', 'id', $id])
+                        ->orderBy(['name' => SORT_ASC])
+                        ->all(),
+                    'id', 'name'
+                );
+                return [
+                    'title' => '<i class="fa fa-trash"></i> حذف الإجراء: ' . Html::encode($model->name),
+                    'content' => $this->renderAjax('_confirm_delete', [
+                        'model' => $model,
+                        'usageCount' => $usageCount,
+                        'otherActions' => $otherActions,
+                        'error' => 'يجب اختيار إجراء بديل لترحيل السجلات إليه',
+                    ]),
+                    'footer' => Html::button('إلغاء', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                        Html::button('<i class="fa fa-trash"></i> تأكيد الحذف', [
+                            'class' => 'btn btn-danger',
+                            'type' => 'submit',
+                        ]),
+                ];
+            }
+
+            if ($usageCount > 0 && !empty($migrateToId) && $migrateToId != $id) {
+                Yii::$app->db->createCommand()->update(
+                    'os_judiciary_customers_actions',
+                    ['judiciary_actions_id' => (int)$migrateToId],
+                    ['and',
+                        ['judiciary_actions_id' => $id],
+                        ['or', ['is_deleted' => 0], ['is_deleted' => null]],
+                    ]
+                )->execute();
+            }
+
+            $model->is_deleted = 1;
+            $model->save(false, ['is_deleted']);
+
+            return ['forceClose' => true, 'forceReload' => '#crud-datatable-pjax'];
+        }
+
+        $otherActions = \yii\helpers\ArrayHelper::map(
+            JudiciaryActions::find()
+                ->where(['is_deleted' => 0])
+                ->andWhere(['!=', 'id', $id])
+                ->orderBy(['name' => SORT_ASC])
+                ->all(),
+            'id', 'name'
+        );
+
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        return [
+            'title' => '<i class="fa fa-trash"></i> حذف الإجراء: ' . Html::encode($model->name),
+            'content' => $this->renderAjax('_confirm_delete', [
+                'model' => $model,
+                'usageCount' => $usageCount,
+                'otherActions' => $otherActions,
+            ]),
+            'footer' => Html::button('إلغاء', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                Html::button('<i class="fa fa-trash"></i> تأكيد الحذف', [
+                    'class' => 'btn btn-danger',
+                    'type' => 'submit',
+                ]),
+        ];
+    }
+
+    /**
+     * Usage Details — shows cases using this judiciary action
+     */
+    public function actionUsageDetails($id)
+    {
+        $model = $this->findModel($id);
+
+        $rows = (new \yii\db\Query())
+            ->select([
+                'jca.id as jca_id',
+                'jca.judiciary_id',
+                'jca.customers_id',
+                'jca.action_date',
+                'jca.note',
+                'j.judiciary_number',
+                'j.contract_id',
+                'j.year',
+                'c.name as customer_name',
+                'ct.type as contract_type',
+                'court.name as court_name',
+            ])
+            ->from('os_judiciary_customers_actions jca')
+            ->leftJoin('os_judiciary j', 'j.id = jca.judiciary_id')
+            ->leftJoin('os_customers c', 'c.id = jca.customers_id')
+            ->leftJoin('os_contracts ct', 'ct.id = j.contract_id')
+            ->leftJoin('os_court court', 'court.id = j.court_id')
+            ->where(['jca.judiciary_actions_id' => $id])
+            ->andWhere(['or', ['jca.is_deleted' => 0], ['jca.is_deleted' => null]])
+            ->orderBy(['jca.action_date' => SORT_DESC])
+            ->all();
+
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        return [
+            'title' => '<i class="fa fa-list"></i> استخدامات: ' . Html::encode($model->name) . ' <span style="color:#94A3B8;font-size:13px">(' . count($rows) . ')</span>',
+            'content' => $this->renderAjax('_usage_details', [
+                'model' => $model,
+                'rows' => $rows,
+            ]),
+            'footer' => Html::button('إغلاق', ['class' => 'btn btn-default', 'data-dismiss' => 'modal']),
+        ];
+    }
+
+    /**
+     * Delete (soft) — direct POST
      */
     public function actionDelete($id)
     {
@@ -214,6 +344,63 @@ class JudiciaryActionsController extends Controller
             return ['forceClose' => true, 'forceReload' => '#crud-datatable-pjax'];
         }
         return $this->redirect(['index']);
+    }
+
+    /**
+     * Quick Relink — move a document/status to a new parent without opening the full edit form
+     */
+    public function actionQuickRelink()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        $itemId      = (int)$request->post('item_id');
+        $newParentId = (int)$request->post('new_parent_id');
+        $oldParentId = (int)$request->post('old_parent_id', 0);
+
+        if (!$itemId || !$newParentId) {
+            return ['success' => false, 'message' => 'بيانات ناقصة'];
+        }
+
+        $item = $this->findModel($itemId);
+
+        if ($item->action_nature === 'document') {
+            if ($oldParentId) {
+                $oldParent = $this->findModel($oldParentId);
+                $oldDocs = array_filter(array_map('intval', explode(',', $oldParent->allowed_documents ?: '')));
+                $oldDocs = array_values(array_diff($oldDocs, [$itemId]));
+                $oldParent->allowed_documents = !empty($oldDocs) ? implode(',', $oldDocs) : null;
+                $oldParent->save(false, ['allowed_documents']);
+            }
+
+            $newParent = $this->findModel($newParentId);
+            $newDocs = array_filter(array_map('intval', explode(',', $newParent->allowed_documents ?: '')));
+            if (!in_array($itemId, $newDocs)) {
+                $newDocs[] = $itemId;
+            }
+            $newParent->allowed_documents = implode(',', $newDocs);
+            $newParent->save(false, ['allowed_documents']);
+
+            $parentIds = array_filter(array_map('intval', explode(',', $item->parent_request_ids ?: '')));
+            if ($oldParentId) $parentIds = array_values(array_diff($parentIds, [$oldParentId]));
+            if (!in_array($newParentId, $parentIds)) $parentIds[] = $newParentId;
+            $item->parent_request_ids = implode(',', $parentIds) ?: null;
+            $item->save(false, ['parent_request_ids']);
+
+            return ['success' => true];
+        }
+
+        if ($item->action_nature === 'doc_status') {
+            $parentIds = array_filter(array_map('intval', explode(',', $item->parent_request_ids ?: '')));
+            if ($oldParentId) $parentIds = array_values(array_diff($parentIds, [$oldParentId]));
+            if (!in_array($newParentId, $parentIds)) $parentIds[] = $newParentId;
+            $item->parent_request_ids = implode(',', $parentIds) ?: null;
+            $item->save(false, ['parent_request_ids']);
+
+            return ['success' => true];
+        }
+
+        return ['success' => false, 'message' => 'طبيعة الإجراء لا تدعم النقل'];
     }
 
     /**

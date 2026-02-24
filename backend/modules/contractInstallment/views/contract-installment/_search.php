@@ -10,7 +10,7 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 ?>
 
 <div class="jadal-search-box box box-primary">
@@ -38,9 +38,9 @@ use kartik\date\DatePicker;
                     ->label(Yii::t('app', 'بواسطة')) ?>
             </div>
             <div class="col-md-4">
-                <?= $form->field($model, 'date')->widget(DatePicker::class, [
+                <?= $form->field($model, 'date')->widget(FlatpickrWidget::class, [
                     'options' => ['placeholder' => Yii::t('app', 'اختر التاريخ')],
-                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                 ])->label(Yii::t('app', 'التاريخ')) ?>
             </div>
             <div class="col-md-4">

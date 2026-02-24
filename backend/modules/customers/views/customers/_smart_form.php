@@ -9,9 +9,9 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use kartik\select2\Select2;
-use borales\extensions\phoneInput\PhoneInput;
+use backend\helpers\PhoneInputWidget;
 use backend\widgets\ImageManagerInputWidget;
 use common\helper\Permissions;
 
@@ -179,9 +179,9 @@ if (!$isNew) {
                         <div><?= $form->field($model, 'sex')->dropDownList([0 => 'ذكر', 1 => 'أنثى'])->label('الجنس') ?></div>
                     </div>
                     <div class="so-grid so-grid-3" style="margin-top: 16px">
-                        <div><?= $form->field($model, 'birth_date')->widget(DatePicker::class, [
+                        <div><?= $form->field($model, 'birth_date')->widget(FlatpickrWidget::class, [
                             'options' => ['placeholder' => 'YYYY-MM-DD', 'required' => true],
-                            'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                            'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                         ])->label('تاريخ الميلاد') ?></div>
                         <div><?= $form->field($model, 'city')->dropDownList(ArrayHelper::map($city, 'id', 'name'), ['prompt' => '-- المدينة --'])->label('مدينة الولادة') ?></div>
                         <div><?= $form->field($model, 'citizen')->dropDownList(ArrayHelper::map($citizen, 'id', 'name'), ['prompt' => '-- الجنسية --'])->label('الجنسية') ?></div>
@@ -191,14 +191,8 @@ if (!$isNew) {
                 <div class="so-fieldset">
                     <h3 class="so-fieldset-title"><i class="fa fa-phone"></i> بيانات التواصل</h3>
                     <div class="so-grid so-grid-3">
-                        <div><?= $form->field($model, 'primary_phone_number')->widget(PhoneInput::class, [
-                            'jsOptions' => [
-                                'preferredCountries' => ['jo'],
-                                'initialCountry' => 'jo',
-                                'separateDialCode' => true,
-                                'placeholderNumberType' => 'MOBILE',
-                            ],
-                            'options' => ['class' => 'form-control', 'inputmode' => 'tel', 'autocomplete' => 'tel', 'placeholder' => '07 9012 3456'],
+                        <div><?= $form->field($model, 'primary_phone_number')->widget(PhoneInputWidget::class, [
+                            'options' => ['class' => 'form-control', 'inputmode' => 'tel', 'autocomplete' => 'tel'],
                         ])->label('الهاتف الرئيسي') ?></div>
                         <div><?= $form->field($model, 'email')->textInput(['type' => 'email', 'placeholder' => 'example@email.com'])->label('البريد الإلكتروني') ?></div>
                         <div><?= $form->field($model, 'hear_about_us')->dropDownList(ArrayHelper::map($hearAboutUs, 'id', 'name'), ['prompt' => '-- كيف سمعت عنا --'])->label('كيف سمعت عنا') ?></div>
@@ -249,9 +243,9 @@ if (!$isNew) {
                                 <input type="number" id="fin-years-at-job" name="CustomerFinancials[years_at_current_job]" class="form-control" value="<?= $financials['years_at_current_job'] ?? '' ?>" step="0.5" min="0" placeholder="0">
                             </div>
                         </div>
-                        <div><?= $form->field($model, 'last_job_query_date')->widget(DatePicker::class, [
+                        <div><?= $form->field($model, 'last_job_query_date')->widget(FlatpickrWidget::class, [
                             'options' => ['placeholder' => 'آخر استعلام'],
-                            'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                            'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                         ])->label('آخر استعلام وظيفي') ?></div>
                     </div>
                 </div>
@@ -329,9 +323,9 @@ if (!$isNew) {
 
                     <!-- 3. آخر استعلام دخل -->
                     <div class="so-ss-row" style="margin-top: 16px">
-                        <?= $form->field($model, 'last_income_query_date')->widget(DatePicker::class, [
+                        <?= $form->field($model, 'last_income_query_date')->widget(FlatpickrWidget::class, [
                             'options' => ['placeholder' => 'آخر استعلام دخل'],
-                            'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                            'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                         ])->label('آخر استعلام دخل') ?>
                     </div>
 

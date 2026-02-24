@@ -69,45 +69,69 @@ $contractModel = $contractCalculations->contract_model;
 </div>
 
 <!-- ═══ نافذة بيانات العميل ═══ -->
-<div class="modal fade" id="customerInfoModal" tabindex="-1" role="dialog">
+<style>
+.ci-modal .modal-header{background:linear-gradient(135deg,var(--ocp-primary,#6B1D3D),#9B2C5A);color:#fff;border-radius:4px 4px 0 0;padding:14px 20px}
+.ci-modal .modal-header .close{color:#fff;opacity:.7;text-shadow:none}
+.ci-modal .modal-header .close:hover{opacity:1}
+.ci-modal .modal-title{font-size:15px;font-weight:700}
+.ci-modal .modal-body{padding:0}
+.ci-section{padding:16px 20px;border-bottom:1px solid #F1F5F9}
+.ci-section:last-child{border-bottom:none}
+.ci-section-title{font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.ci-section-title i{color:var(--ocp-primary,#6B1D3D);font-size:13px}
+.ci-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.ci-field{background:#FAFBFC;border-radius:8px;padding:8px 12px;border:1px solid #F1F5F9}
+.ci-field-label{font-size:10px;font-weight:600;color:#94A3B8;margin-bottom:2px}
+.ci-field-value{font-size:13px;font-weight:600;color:#1E293B;min-height:18px}
+.ci-field.full{grid-column:1/-1}
+.ci-modal .modal-footer{border-top:1px solid #E2E8F0;padding:10px 20px;display:flex;gap:8px;justify-content:flex-end}
+.ci-modal .modal-footer .btn{border-radius:8px;font-size:12px;font-weight:600;padding:8px 16px}
+</style>
+<div class="modal fade ci-modal" id="customerInfoModal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-                <h4 class="modal-title" id="customerInfoTitle"><i class="fa fa-user"></i> بيانات العميل</h4>
+                <h4 class="modal-title" id="customerInfoTitle"><i class="fa fa-user-circle"></i> بيانات العميل</h4>
             </div>
             <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6"><label>الاسم</label><input type="text" class="form-control cu-name" readonly></div>
-                    <div class="col-md-6"><label>الرقم الوطني</label><input type="text" class="form-control cu-id-number" readonly></div>
+                <div class="ci-section">
+                    <div class="ci-section-title"><i class="fa fa-id-card"></i> المعلومات الشخصية</div>
+                    <div class="ci-grid">
+                        <div class="ci-field"><div class="ci-field-label">الاسم الكامل</div><div class="ci-field-value cu-name">—</div></div>
+                        <div class="ci-field"><div class="ci-field-label">الرقم الوطني</div><div class="ci-field-value cu-id-number">—</div></div>
+                        <div class="ci-field"><div class="ci-field-label">تاريخ الميلاد</div><div class="ci-field-value cu-birth-date">—</div></div>
+                        <div class="ci-field"><div class="ci-field-label">المدينة</div><div class="ci-field-value cu-city">—</div></div>
+                        <div class="ci-field"><div class="ci-field-label">الجنس</div><div class="ci-field-value cu-sex">—</div></div>
+                    </div>
                 </div>
-                <div class="row" style="margin-top:10px">
-                    <div class="col-md-4"><label>تاريخ الميلاد</label><input type="text" class="form-control cu-birth-date" readonly></div>
-                    <div class="col-md-4"><label>المدينة</label><input type="text" class="form-control cu-city" readonly></div>
-                    <div class="col-md-4"><label>الجنس</label><input type="text" class="form-control cu-sex" readonly></div>
+                <div class="ci-section">
+                    <div class="ci-section-title"><i class="fa fa-briefcase"></i> معلومات العمل</div>
+                    <div class="ci-grid">
+                        <div class="ci-field"><div class="ci-field-label">الوظيفة</div><div class="ci-field-value cu-job-title">—</div></div>
+                        <div class="ci-field"><div class="ci-field-label">الرقم الوظيفي</div><div class="ci-field-value cu-job-number">—</div></div>
+                        <div class="ci-field"><div class="ci-field-label">البريد الإلكتروني</div><div class="ci-field-value cu-email">—</div></div>
+                    </div>
                 </div>
-                <div class="row" style="margin-top:10px">
-                    <div class="col-md-4"><label>الوظيفة</label><input type="text" class="form-control cu-job-title" readonly></div>
-                    <div class="col-md-4"><label>الرقم الوظيفي</label><input type="text" class="form-control cu-job-number" readonly></div>
-                    <div class="col-md-4"><label>البريد</label><input type="text" class="form-control cu-email" readonly></div>
+                <div class="ci-section">
+                    <div class="ci-section-title"><i class="fa fa-university"></i> المعلومات المالية</div>
+                    <div class="ci-grid">
+                        <div class="ci-field"><div class="ci-field-label">البنك</div><div class="ci-field-value cu-bank-name">—</div></div>
+                        <div class="ci-field"><div class="ci-field-label">رقم الحساب</div><div class="ci-field-value cu-account-number">—</div></div>
+                        <div class="ci-field"><div class="ci-field-label">الفرع</div><div class="ci-field-value cu-bank-branch">—</div></div>
+                        <div class="ci-field"><div class="ci-field-label">ضمان اجتماعي</div><div class="ci-field-value cu-is-social-security">—</div></div>
+                        <div class="ci-field"><div class="ci-field-label">رقم الضمان</div><div class="ci-field-value cu-social-security-number">—</div></div>
+                        <div class="ci-field"><div class="ci-field-label">يملك عقارات</div><div class="ci-field-value cu-do-have-any-property">—</div></div>
+                    </div>
                 </div>
-                <div class="row" style="margin-top:10px">
-                    <div class="col-md-4"><label>البنك</label><input type="text" class="form-control cu-bank-name" readonly></div>
-                    <div class="col-md-4"><label>رقم الحساب</label><input type="text" class="form-control cu-account-number" readonly></div>
-                    <div class="col-md-4"><label>الفرع</label><input type="text" class="form-control cu-bank-branch" readonly></div>
-                </div>
-                <div class="row" style="margin-top:10px">
-                    <div class="col-md-4"><label>ضمان اجتماعي</label><input type="text" class="form-control cu-is-social-security" readonly></div>
-                    <div class="col-md-4"><label>رقم الضمان</label><input type="text" class="form-control cu-social-security-number" readonly></div>
-                    <div class="col-md-4"><label>يملك عقارات</label><input type="text" class="form-control cu-do-have-any-property" readonly></div>
-                </div>
-                <div class="row" style="margin-top:10px">
-                    <div class="col-md-12"><label>ملاحظات</label><textarea class="form-control cu-notes" readonly rows="2"></textarea></div>
+                <div class="ci-section">
+                    <div class="ci-section-title"><i class="fa fa-sticky-note-o"></i> ملاحظات</div>
+                    <div class="ci-field full"><div class="ci-field-value cu-notes" style="white-space:pre-wrap;min-height:30px">—</div></div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> إغلاق</button>
-                <a class="btn btn-primary" id="cus-link"><i class="fa fa-pencil"></i> تعديل العميل</a>
+                <a class="btn btn-primary" id="cus-link" style="background:var(--ocp-primary,#6B1D3D);border-color:var(--ocp-primary,#6B1D3D)"><i class="fa fa-pencil"></i> تعديل العميل</a>
             </div>
         </div>
     </div>

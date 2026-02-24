@@ -6,7 +6,7 @@ use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
 use kartik\select2\Select2;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use backend\modules\judiciary\models\Judiciary;
 use backend\modules\customers\models\Customers;
 use backend\modules\judiciaryActions\models\JudiciaryActions;
@@ -63,9 +63,9 @@ $isNew = $model->isNewRecord;
         </div>
         <div class="row">
             <div class="col-md-4">
-                <?= $form->field($model, 'action_date')->widget(DatePicker::class, [
+                <?= $form->field($model, 'action_date')->widget(FlatpickrWidget::class, [
                     'options' => ['placeholder' => 'تاريخ الإجراء'],
-                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                    'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                 ])->label('تاريخ الإجراء') ?>
             </div>
             <div class="col-md-4">

@@ -105,13 +105,26 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
 
             <div class="ocp-status-bar__divider"></div>
 
-            <?php // Customer ?>
-            <div class="ocp-status-bar__customer">
-                <span class="ocp-status-bar__customer-name" title="<?= Html::encode($customerName) ?>"><?= Html::encode($customerName) ?></span>
-                <?php if ($customer): ?>
-                <a href="<?= Url::to(['/customers/customers/update', 'id' => $customer->id]) ?>" class="ocp-status-bar__customer-link" title="تعديل بيانات العميل" target="_blank">
-                    <i class="fa fa-external-link"></i>
-                </a>
+            <?php // All contract parties ?>
+            <div class="ocp-status-bar__customer" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <?php
+                $allParties = $contract->contractsCustomers ?? [];
+                if (!empty($allParties)):
+                    foreach ($allParties as $pi => $ccEntry):
+                        $partyCust = $ccEntry->customer ?? null;
+                        if (!$partyCust) continue;
+                        $isClient = $ccEntry->customer_type === 'client';
+                ?>
+                    <?php if ($pi > 0): ?><span style="color:#CBD5E1;font-size:10px">|</span><?php endif; ?>
+                    <span style="display:inline-flex;align-items:center;gap:3px">
+                        <i class="fa <?= $isClient ? 'fa-user' : 'fa-shield' ?>" style="font-size:9px;color:<?= $isClient ? '#BE185D' : '#2563EB' ?>"></i>
+                        <a href="javascript:void(0)" class="custmer-popup ocp-status-bar__customer-name" data-target="#customerInfoModal" data-toggle="modal" customer-id="<?= $partyCust->id ?>" title="<?= Html::encode($partyCust->name) ?> (<?= $isClient ? 'مشتري' : 'كفيل' ?>)" style="cursor:pointer;font-size:12px"><?= Html::encode($partyCust->name) ?></a>
+                    </span>
+                <?php
+                    endforeach;
+                else:
+                ?>
+                    <span class="ocp-status-bar__customer-name"><?= Html::encode($customerName) ?></span>
                 <?php endif; ?>
             </div>
 

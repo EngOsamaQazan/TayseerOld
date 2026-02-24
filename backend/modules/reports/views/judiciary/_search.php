@@ -5,7 +5,7 @@ use yii\helpers\ArrayHelper;
 use backend\modules\judiciaryType\models\JudiciaryType;
 use backend\modules\court\models\Court;
 use backend\modules\lawyers\models\Lawyers;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 
 /* @var $model */
 
@@ -102,18 +102,16 @@ $court = Yii::$app->cache->getOrSet("l1", function () {
         <div class="row">
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'from_income_date')->widget(DatePicker::classname(), ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+                $form->field($model, 'from_income_date')->widget(FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d'
                 ]])->label(Yii::t('app', 'من تاريخ الورود'));
                 ?>
 
             </div>
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'to_income_date')->widget(DatePicker::classname(), ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+                $form->field($model, 'to_income_date')->widget(FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d'
                 ]])->label(Yii::t('app', 'الى تاريخ الورود'));
                 ?>
 

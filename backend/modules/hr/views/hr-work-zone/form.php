@@ -5,10 +5,10 @@ use yii\widgets\ActiveForm;
 use backend\modules\hr\models\HrWorkZone;
 
 $this->title = $model->isNewRecord ? 'إضافة منطقة عمل' : 'تعديل منطقة: ' . $model->name;
-$mapsKey = \common\models\SystemSettings::get('google_apis', 'maps_api_key', '');
+$mapsKey = \common\models\SystemSettings::get('google_maps', 'api_key', '');
 
-$defaultLat = $model->latitude ?: 33.5138;
-$defaultLng = $model->longitude ?: 36.2765;
+$defaultLat = $model->latitude ?: 31.9539;
+$defaultLng = $model->longitude ?: 35.9106;
 $defaultRadius = $model->radius_meters ?: 100;
 ?>
 

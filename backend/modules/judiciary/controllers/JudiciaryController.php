@@ -47,6 +47,8 @@ class JudiciaryController extends Controller
                             'index', 'view', 'report',
                             'cases-report', 'cases-report-data', 'export-cases-report',
                             'print-cases-report', 'print-case', 'add-print-case',
+                            'pdf-page-image', 'pdf-page-count',
+                            'print-overlay',
                             'refresh-persistence-cache',
                             'tab-cases', 'tab-actions', 'tab-persistence', 'tab-legal',
                             'export-cases-excel', 'export-cases-pdf',
@@ -794,23 +796,58 @@ class JudiciaryController extends Controller
     public function actionView($id)
     {
         $request = Yii::$app->request;
+        $model = $this->findModel($id);
+
         if ($request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
             return [
-                'title' => "Judiciary #" . $id,
+                'title' => '<i class="fa fa-gavel"></i> ملف القضية #' . $model->judiciary_number,
                 'content' => $this->renderAjax('view', [
-                    'model' => $this->findModel($id),
+                    'model' => $model,
                 ]),
-                'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                    Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
+                'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    Html::a('<i class="fa fa-pencil"></i> تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary'])
             ];
-        } else {
-            return $this->render('view', [
-                'model' => $this->findModel($id),
-            ]);
         }
+
+        $actionsDP = new \yii\data\ActiveDataProvider([
+            'query' => JudiciaryCustomersActions::find()
+                ->where(['judiciary_id' => $model->id]),
+            'sort' => ['defaultOrder' => ['action_date' => SORT_DESC]],
+            'pagination' => ['pageSize' => 20],
+        ]);
+
+        $lastRequestDate = (new \yii\db\Query())
+            ->select(['jca.action_date'])
+            ->from('os_judiciary_customers_actions jca')
+            ->leftJoin('os_judiciary_actions ja', 'ja.id = jca.judiciary_actions_id')
+            ->where(['jca.judiciary_id' => $model->id])
+            ->andWhere(['ja.action_nature' => 'request'])
+            ->andWhere(['or', ['jca.is_deleted' => 0], ['jca.is_deleted' => null]])
+            ->orderBy(['jca.action_date' => SORT_DESC])
+            ->limit(1)
+            ->scalar();
+
+        return $this->render('view', [
+            'model' => $model,
+            'actionsDP' => $actionsDP,
+            'lastRequestDate' => $lastRequestDate ?: null,
+        ]);
     }
 
+
+    public function actionPdfPageImage($path, $page = 1)
+    {
+        $page = max(1, (int)$page);
+        $images = \backend\helpers\PdfToImageHelper::convertAndCache($path);
+
+        if (empty($images) || !isset($images[$page - 1])) {
+            throw new NotFoundHttpException('Could not render PDF page.');
+        }
+
+        $outFile = Yii::getAlias('@backend/web/' . $images[$page - 1]);
+        return Yii::$app->response->sendFile($outFile, null, ['mimeType' => 'image/png', 'inline' => true]);
+    }
 
     public function actionPrintCase($id)
     {
@@ -834,6 +871,41 @@ class JudiciaryController extends Controller
                 'model' => $model,
             ]);
         }
+    }
+
+    public function actionPrintOverlay($id, $noteIndex = 0)
+    {
+        $model = $this->findModel($id);
+        $contract = $model->contract;
+        $courtName = $model->court ? $model->court->name : '';
+        $address = $model->informAddress ? $model->informAddress->address : '';
+
+        $kambAmount = ($contract->total_value ?: 0) * 1.15;
+        $notes = \backend\modules\contracts\models\PromissoryNote::ensureNotesExist(
+            $contract->id, $kambAmount, $contract->due_date
+        );
+
+        $noteIndex = max(0, min((int)$noteIndex, count($notes) - 1));
+        $note = $notes[$noteIndex] ?? null;
+
+        if (!$note) {
+            throw new NotFoundHttpException('Promissory note not found.');
+        }
+
+        $cc = new \common\components\CompanyChecked();
+        $cc->id = $contract->company_id;
+        $companyInfo = $cc->findCompany();
+        $companyName = $companyInfo ? $companyInfo->name : '';
+
+        $viewFile = Yii::getAlias('@backend/modules/contracts/views/contracts/_print_overlay.php');
+        return $this->renderFile($viewFile, [
+            'model' => $contract,
+            'note' => $note,
+            'courtName' => $courtName,
+            'address' => $address,
+            'judiciaryId' => $model->id,
+            'companyName' => $companyName,
+        ]);
     }
 
     /**

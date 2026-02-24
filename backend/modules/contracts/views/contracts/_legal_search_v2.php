@@ -7,7 +7,7 @@ use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use kartik\select2\Select2;
 
 $cache = Yii::$app->cache;
@@ -79,16 +79,16 @@ $legalContracts = ArrayHelper::map(
         <div class="ct-lf-date-pair">
             <div class="ct-filter-group">
                 <label>من تاريخ</label>
-                <?= $form->field($model, 'from_date', ['template' => '{input}'])->widget(DatePicker::class, [
+                <?= $form->field($model, 'from_date', ['template' => '{input}'])->widget(FlatpickrWidget::class, [
                     'options' => ['placeholder' => 'من', 'aria-label' => 'من تاريخ', 'autocomplete' => 'off'],
-                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd', 'todayHighlight' => true],
+                    'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                 ]) ?>
             </div>
             <div class="ct-filter-group">
                 <label>إلى تاريخ</label>
-                <?= $form->field($model, 'to_date', ['template' => '{input}'])->widget(DatePicker::class, [
+                <?= $form->field($model, 'to_date', ['template' => '{input}'])->widget(FlatpickrWidget::class, [
                     'options' => ['placeholder' => 'إلى', 'aria-label' => 'إلى تاريخ', 'autocomplete' => 'off'],
-                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd', 'todayHighlight' => true],
+                    'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                 ]) ?>
             </div>
         </div>

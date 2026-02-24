@@ -1,6 +1,6 @@
 <?
 use yii\widgets\ActiveForm;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 /* @var $model */
 $users =  Yii::$app->cache->getOrSet(Yii::$app->params["key_users"], function () {
     return Yii::$app->db->createCommand(Yii::$app->params['users_query'])->queryAll();
@@ -49,17 +49,15 @@ $_by  =   Yii::$app->cache->getOrSet(Yii::$app->params["key_income_by"], functio
         <div class="row">
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'date_from')->widget(kartik\date\DatePicker::classname(), ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+                $form->field($model, 'date_from')->widget(\backend\helpers\FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d'
                 ]]);
                 ?>
             </div>
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'date_to')->widget(kartik\date\DatePicker::classname(), ['pluginOptions' => [
-                    'autoclose' => true,
-                    'format' => 'yyyy-mm-dd'
+                $form->field($model, 'date_to')->widget(\backend\helpers\FlatpickrWidget::class, ['pluginOptions' => [
+                    'dateFormat' => 'Y-m-d'
                 ]]);
                 ?>
             </div>

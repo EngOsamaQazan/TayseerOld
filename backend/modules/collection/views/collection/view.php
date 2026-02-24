@@ -2,7 +2,7 @@
 
 use yii\widgets\DetailView;
 use backend\modules\divisionsCollection\models\DivisionsCollection;
-use kartik\date\DatePicker;
+
 use yii\data\ActiveDataProvider;
 use yii\helpers\Html;
 use yii\helpers\Url;

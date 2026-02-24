@@ -6,7 +6,7 @@ use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
 use kartik\select2\Select2;
-use kartik\date\DatePicker;
+use backend\helpers\FlatpickrWidget;
 use backend\modules\court\models\Court;
 use backend\modules\lawyers\models\Lawyers;
 use backend\modules\judiciaryType\models\JudiciaryType;
@@ -70,13 +70,13 @@ $hasFilters = $model->judiciary_number || $model->contract_id || $model->court_i
                 'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
             ])->label('المحامي') ?>
             <?= $form->field($model, 'year')->dropDownList($model->year(), ['prompt' => 'الكل'])->label('السنة') ?>
-            <?= $form->field($model, 'from_income_date')->widget(DatePicker::class, [
+            <?= $form->field($model, 'from_income_date')->widget(FlatpickrWidget::class, [
                 'options' => ['placeholder' => 'من', 'style' => 'font-size:12px'],
-                'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                'pluginOptions' => ['dateFormat' => 'Y-m-d'],
             ])->label('ورود من') ?>
-            <?= $form->field($model, 'to_income_date')->widget(DatePicker::class, [
+            <?= $form->field($model, 'to_income_date')->widget(FlatpickrWidget::class, [
                 'options' => ['placeholder' => 'إلى', 'style' => 'font-size:12px'],
-                'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd'],
+                'pluginOptions' => ['dateFormat' => 'Y-m-d'],
             ])->label('ورود إلى') ?>
             <div class="jud-search-actions">
                 <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class' => 'btn btn-primary']) ?>

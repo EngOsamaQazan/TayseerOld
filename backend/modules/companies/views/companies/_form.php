@@ -31,6 +31,9 @@ use common\helper\Permissions;
 
 .inv-upload-zone { border: 2px dashed var(--inv-border); border-radius: 10px; padding: 24px; text-align: center; background: #fafbfc; transition: all .2s; cursor: pointer; margin-bottom: 10px; }
 .inv-upload-zone:hover { border-color: var(--inv-primary); background: var(--inv-primary-light); }
+.inv-upload-zone-active { border-color: #22c55e !important; background: #f0fdf4 !important; }
+.inv-upload-zone-active i { color: #22c55e !important; }
+.inv-upload-zone-active span { color: #15803d !important; font-weight: 600; }
 .inv-upload-zone i { font-size: 28px; color: #94a3b8; margin-bottom: 6px; display: block; }
 .inv-upload-zone span { font-size: 13px; color: #64748b; }
 .inv-upload-zone input[type="file"] { position: absolute; opacity: 0; width: 0; height: 0; }
@@ -85,12 +88,14 @@ use common\helper\Permissions;
             <div class="inv-card">
                 <div class="inv-card-title"><i class="fa fa-file-text"></i> السجل التجاري</div>
                 <div class="inv-card-body">
-                    <div class="inv-upload-zone" onclick="document.getElementById('regFileInput').click()">
+                    <div class="inv-upload-zone" id="regDropZone" onclick="document.getElementById('regFileInput').click()">
                         <i class="fa fa-cloud-upload"></i>
                         <span>اضغط لرفع ملفات السجل التجاري</span>
                         <input type="file" id="regFileInput" name="Companies[commercial_register_files][]" multiple
-                               accept=".png,.jpg,.jpeg,.gif,.bmp,.webp,.pdf">
+                               accept=".png,.jpg,.jpeg,.gif,.bmp,.webp,.pdf"
+                               onchange="showSelectedFiles(this,'regDropZone','regFileList')">
                     </div>
+                    <ul class="inv-doc-list" id="regFileList"></ul>
                     <div class="inv-logo-hint">PDF, PNG, JPG — يمكنك رفع عدة ملفات</div>
                     <?php $regDocs = $model->getCommercialRegisterList(); ?>
                     <?php if (!empty($regDocs)): ?>
@@ -110,12 +115,14 @@ use common\helper\Permissions;
             <div class="inv-card">
                 <div class="inv-card-title"><i class="fa fa-id-card"></i> رخص المهن</div>
                 <div class="inv-card-body">
-                    <div class="inv-upload-zone" onclick="document.getElementById('licFileInput').click()">
+                    <div class="inv-upload-zone" id="licDropZone" onclick="document.getElementById('licFileInput').click()">
                         <i class="fa fa-cloud-upload"></i>
                         <span>اضغط لرفع ملفات رخص المهن</span>
                         <input type="file" id="licFileInput" name="Companies[trade_license_files][]" multiple
-                               accept=".png,.jpg,.jpeg,.gif,.bmp,.webp,.pdf">
+                               accept=".png,.jpg,.jpeg,.gif,.bmp,.webp,.pdf"
+                               onchange="showSelectedFiles(this,'licDropZone','licFileList')">
                     </div>
+                    <ul class="inv-doc-list" id="licFileList"></ul>
                     <div class="inv-logo-hint">PDF, PNG, JPG — يمكنك رفع عدة ملفات</div>
                     <?php $licDocs = $model->getTradeLicenseList(); ?>
                     <?php if (!empty($licDocs)): ?>
@@ -240,3 +247,30 @@ use common\helper\Permissions;
 
     <?php ActiveForm::end(); ?>
 </div>
+
+<script>
+function showSelectedFiles(input, zoneId, listId) {
+    var zone = document.getElementById(zoneId);
+    var list = document.getElementById(listId);
+    list.innerHTML = '';
+    if (!input.files || input.files.length === 0) {
+        zone.classList.remove('inv-upload-zone-active');
+        return;
+    }
+    zone.classList.add('inv-upload-zone-active');
+    for (var i = 0; i < input.files.length; i++) {
+        var f = input.files[i];
+        var ext = f.name.split('.').pop().toLowerCase();
+        var icon = (ext === 'pdf') ? 'fa-file-pdf-o' : 'fa-file-image-o';
+        var size = f.size < 1024 * 1024
+            ? (f.size / 1024).toFixed(1) + ' KB'
+            : (f.size / (1024 * 1024)).toFixed(1) + ' MB';
+        var li = document.createElement('li');
+        li.innerHTML = '<i class="fa ' + icon + '"></i>'
+            + '<span style="flex:1;color:#334155">' + f.name + '</span>'
+            + '<span style="font-size:11px;color:#94a3b8">' + size + '</span>';
+        list.appendChild(li);
+    }
+    zone.querySelector('span').textContent = input.files.length + ' ملف جاهز للرفع — اضغط حفظ';
+}
+</script>
