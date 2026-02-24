@@ -696,7 +696,21 @@ document.addEventListener('click', function(e) {
     document.querySelectorAll('.ja-panel').forEach(function(p){ p.style.display = 'none'; });
     var panel = document.getElementById(target);
     if (panel) panel.style.display = 'block';
+    try { sessionStorage.setItem('ja-active-tab', target); } catch(ex){}
 });
+
+(function(){
+    try {
+        var saved = sessionStorage.getItem('ja-active-tab');
+        if (saved && document.getElementById(saved)) {
+            document.querySelectorAll('.ja-tab').forEach(function(t){
+                t.classList.toggle('active', t.getAttribute('data-target') === saved);
+            });
+            document.querySelectorAll('.ja-panel').forEach(function(p){ p.style.display = 'none'; });
+            document.getElementById(saved).style.display = 'block';
+        }
+    } catch(ex){}
+})();
 
 function refreshTreeContent() {
     var treeBody = document.querySelector('.ja-tree-body');
