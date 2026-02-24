@@ -278,13 +278,13 @@ $js = <<<JS
             html += '<td>' + esc(r.case_year) + '</td>';
             html += '<td>' + esc(r.court_name) + '</td>';
             html += '<td>' + esc(r.contract_id) + '</td>';
-            html += '<td>' + esc(r.customer_name) + '</td>';
+            html += '<td title="' + esc(r.customer_name_full||r.customer_name) + '">' + esc(r.customer_name) + '</td>';
             html += '<td>' + esc(r.last_action_name) + '</td>';
             html += '<td>' + esc(r.last_action_date) + '</td>';
             html += '<td><span class="cr-badge cr-badge-' + color + '">' + (r.persistence_icon||'') + ' ' + esc(r.persistence_label) + '</span></td>';
             html += '<td>' + esc(r.last_followup_date) + '</td>';
             html += '<td>' + esc(r.last_job_check_date) + '</td>';
-            html += '<td>' + esc(r.lawyer_name) + '</td>';
+            html += '<td title="' + esc(r.lawyer_name_full||r.lawyer_name) + '">' + esc(r.lawyer_name) + '</td>';
             html += '<td>' + esc(r.job_title) + '</td>';
             html += '<td>' + esc(r.job_type) + '</td>';
             html += '</tr>';

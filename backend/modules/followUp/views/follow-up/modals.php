@@ -68,7 +68,7 @@ $contractModel = $contractCalculations->contract_model;
     </div>
 </div>
 
-<!-- ═══ نافذة بيانات العميل ═══ -->
+<!-- ═══ نافذة بيانات العميل (تعديل مباشر) ═══ -->
 <style>
 .ci-modal .modal-header{background:linear-gradient(135deg,var(--ocp-primary,#6B1D3D),#9B2C5A);color:#fff;border-radius:4px 4px 0 0;padding:14px 20px}
 .ci-modal .modal-header .close{color:#fff;opacity:.7;text-shadow:none}
@@ -80,13 +80,50 @@ $contractModel = $contractCalculations->contract_model;
 .ci-section-title{font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .ci-section-title i{color:var(--ocp-primary,#6B1D3D);font-size:13px}
 .ci-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
-.ci-field{background:#FAFBFC;border-radius:8px;padding:8px 12px;border:1px solid #F1F5F9}
+.ci-field{background:#FAFBFC;border-radius:8px;padding:8px 12px;border:1px solid #F1F5F9;cursor:pointer;transition:all .2s}
+.ci-field:hover{border-color:#CBD5E1;background:#F8FAFC}
 .ci-field-label{font-size:10px;font-weight:600;color:#94A3B8;margin-bottom:2px}
 .ci-field-value{font-size:13px;font-weight:600;color:#1E293B;min-height:18px}
 .ci-field.full{grid-column:1/-1}
 .ci-modal .modal-footer{border-top:1px solid #E2E8F0;padding:10px 20px;display:flex;gap:8px;justify-content:flex-end}
 .ci-modal .modal-footer .btn{border-radius:8px;font-size:12px;font-weight:600;padding:8px 16px}
+.ci-input{width:100%;border:1.5px solid #E2E8F0;border-radius:6px;padding:4px 8px;font-size:13px;font-weight:600;color:#1E293B;background:#fff;outline:none;transition:border-color .2s,box-shadow .2s}
+.ci-input:focus{border-color:var(--ocp-primary,#6B1D3D);box-shadow:0 0 0 3px rgba(107,29,61,.1)}
+.ci-input:disabled{background:#FAFBFC;border-color:transparent;color:#1E293B;cursor:pointer;-webkit-appearance:none;appearance:none}
+.ci-input[disabled]::-webkit-calendar-picker-indicator{display:none}
+select.ci-input:disabled{-webkit-appearance:none;-moz-appearance:none;background-image:none}
+select.ci-input:not(:disabled){-webkit-appearance:auto;-moz-appearance:auto}
+textarea.ci-input{resize:vertical;min-height:50px}
+textarea.ci-input:disabled{resize:none}
+.ci-field.ci-editing{border-color:var(--ocp-primary,#6B1D3D);background:#fff;box-shadow:0 0 0 3px rgba(107,29,61,.08)}
+.ci-field .ci-edit-hint{font-size:9px;color:#CBD5E1;margin-top:2px;display:block;transition:opacity .2s}
+.ci-field.ci-editing .ci-edit-hint{opacity:0}
+.ci-save-bar{background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:10px 16px;margin:12px 20px;display:none;align-items:center;gap:10px}
+.ci-save-bar.visible{display:flex}
+.ci-save-bar .ci-save-text{flex:1;font-size:12px;color:#166534;font-weight:600}
+.ci-save-bar .btn-ci-save{background:#16A34A;color:#fff;border:none;border-radius:6px;padding:6px 20px;font-size:12px;font-weight:700;cursor:pointer}
+.ci-save-bar .btn-ci-save:hover{background:#15803D}
+.ci-save-bar .btn-ci-cancel{background:none;border:1px solid #D1D5DB;border-radius:6px;padding:6px 14px;font-size:12px;color:#6B7280;cursor:pointer}
+.ci-save-bar .btn-ci-cancel:hover{background:#F3F4F6}
+@keyframes ciShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
 </style>
+<?php
+$cities = \yii\helpers\ArrayHelper::map(\backend\modules\city\models\City::find()->orderBy('name')->asArray()->all(), 'id', 'name');
+$jobs = \yii\helpers\ArrayHelper::map(\backend\modules\jobs\models\Jobs::find()->orderBy('name')->asArray()->all(), 'id', 'name');
+$banks = \yii\helpers\ArrayHelper::map(\backend\modules\bancks\models\Bancks::find()->orderBy('name')->asArray()->all(), 'id', 'name');
+$statuses = \yii\helpers\ArrayHelper::map(\backend\modules\status\models\Status::find()->asArray()->all(), 'id', 'name');
+$citizens = \yii\helpers\ArrayHelper::map(\backend\modules\citizen\models\Citizen::find()->asArray()->all(), 'id', 'name');
+$hearAboutUs = \yii\helpers\ArrayHelper::map(\backend\modules\hearAboutUs\models\HearAboutUs::find()->asArray()->all(), 'id', 'name');
+
+$selectOpts = function($items, $cls, $field) {
+    $html = '<select class="ci-input ' . $cls . '" data-field="' . $field . '" disabled><option value="">—</option>';
+    foreach ($items as $id => $name) {
+        $html .= '<option value="' . Html::encode($id) . '">' . Html::encode($name) . '</option>';
+    }
+    $html .= '</select>';
+    return $html;
+};
+?>
 <div class="modal fade ci-modal" id="customerInfoModal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -95,43 +132,52 @@ $contractModel = $contractCalculations->contract_model;
                 <h4 class="modal-title" id="customerInfoTitle"><i class="fa fa-user-circle"></i> بيانات العميل</h4>
             </div>
             <div class="modal-body">
+                <input type="hidden" id="ci-customer-id" value="">
+
+                <div class="ci-save-bar" id="ciSaveBar">
+                    <i class="fa fa-info-circle" style="color:#16A34A;font-size:16px"></i>
+                    <span class="ci-save-text">تم تعديل بعض الحقول — اضغط "حفظ" لتطبيق التغييرات</span>
+                    <button type="button" class="btn-ci-cancel" onclick="CiEdit.cancelAll()"><i class="fa fa-undo"></i> تراجع</button>
+                    <button type="button" class="btn-ci-save" onclick="CiEdit.save()"><i class="fa fa-check"></i> حفظ التعديلات</button>
+                </div>
+
                 <div class="ci-section">
                     <div class="ci-section-title"><i class="fa fa-id-card"></i> المعلومات الشخصية</div>
                     <div class="ci-grid">
-                        <div class="ci-field"><div class="ci-field-label">الاسم الكامل</div><div class="ci-field-value cu-name">—</div></div>
-                        <div class="ci-field"><div class="ci-field-label">الرقم الوطني</div><div class="ci-field-value cu-id-number">—</div></div>
-                        <div class="ci-field"><div class="ci-field-label">تاريخ الميلاد</div><div class="ci-field-value cu-birth-date">—</div></div>
-                        <div class="ci-field"><div class="ci-field-label">المدينة</div><div class="ci-field-value cu-city">—</div></div>
-                        <div class="ci-field"><div class="ci-field-label">الجنس</div><div class="ci-field-value cu-sex">—</div></div>
+                        <div class="ci-field"><div class="ci-field-label">الاسم الكامل</div><input type="text" class="ci-input cu-name" data-field="name" disabled><span class="ci-edit-hint">انقر مرتين للتعديل</span></div>
+                        <div class="ci-field"><div class="ci-field-label">الرقم الوطني</div><input type="text" class="ci-input cu-id-number" data-field="id_number" disabled><span class="ci-edit-hint">انقر مرتين للتعديل</span></div>
+                        <div class="ci-field"><div class="ci-field-label">تاريخ الميلاد</div><input type="date" class="ci-input cu-birth-date" data-field="birth_date" disabled><span class="ci-edit-hint">انقر مرتين للتعديل</span></div>
+                        <div class="ci-field"><div class="ci-field-label">المدينة</div><?= $selectOpts($cities, 'cu-city', 'city') ?><span class="ci-edit-hint">انقر مرتين للتعديل</span></div>
+                        <div class="ci-field"><div class="ci-field-label">الجنس</div><select class="ci-input cu-sex" data-field="sex" disabled><option value="">—</option><option value="0">ذكر</option><option value="1">أنثى</option></select><span class="ci-edit-hint">انقر مرتين للتعديل</span></div>
                     </div>
                 </div>
                 <div class="ci-section">
                     <div class="ci-section-title"><i class="fa fa-briefcase"></i> معلومات العمل</div>
                     <div class="ci-grid">
-                        <div class="ci-field"><div class="ci-field-label">الوظيفة</div><div class="ci-field-value cu-job-title">—</div></div>
-                        <div class="ci-field"><div class="ci-field-label">الرقم الوظيفي</div><div class="ci-field-value cu-job-number">—</div></div>
-                        <div class="ci-field"><div class="ci-field-label">البريد الإلكتروني</div><div class="ci-field-value cu-email">—</div></div>
+                        <div class="ci-field"><div class="ci-field-label">الوظيفة</div><?= $selectOpts($jobs, 'cu-job-title', 'job_title') ?><span class="ci-edit-hint">انقر مرتين للتعديل</span></div>
+                        <div class="ci-field"><div class="ci-field-label">الرقم الوظيفي</div><input type="text" class="ci-input cu-job-number" data-field="job_number" disabled><span class="ci-edit-hint">انقر مرتين للتعديل</span></div>
+                        <div class="ci-field"><div class="ci-field-label">البريد الإلكتروني</div><input type="email" class="ci-input cu-email" data-field="email" disabled><span class="ci-edit-hint">انقر مرتين للتعديل</span></div>
                     </div>
                 </div>
                 <div class="ci-section">
                     <div class="ci-section-title"><i class="fa fa-university"></i> المعلومات المالية</div>
                     <div class="ci-grid">
-                        <div class="ci-field"><div class="ci-field-label">البنك</div><div class="ci-field-value cu-bank-name">—</div></div>
-                        <div class="ci-field"><div class="ci-field-label">رقم الحساب</div><div class="ci-field-value cu-account-number">—</div></div>
-                        <div class="ci-field"><div class="ci-field-label">الفرع</div><div class="ci-field-value cu-bank-branch">—</div></div>
-                        <div class="ci-field"><div class="ci-field-label">ضمان اجتماعي</div><div class="ci-field-value cu-is-social-security">—</div></div>
-                        <div class="ci-field"><div class="ci-field-label">رقم الضمان</div><div class="ci-field-value cu-social-security-number">—</div></div>
-                        <div class="ci-field"><div class="ci-field-label">يملك عقارات</div><div class="ci-field-value cu-do-have-any-property">—</div></div>
+                        <div class="ci-field"><div class="ci-field-label">البنك</div><?= $selectOpts($banks, 'cu-bank-name', 'bank_name') ?><span class="ci-edit-hint">انقر مرتين للتعديل</span></div>
+                        <div class="ci-field"><div class="ci-field-label">رقم الحساب</div><input type="text" class="ci-input cu-account-number" data-field="account_number" disabled><span class="ci-edit-hint">انقر مرتين للتعديل</span></div>
+                        <div class="ci-field"><div class="ci-field-label">الفرع</div><input type="text" class="ci-input cu-bank-branch" data-field="bank_branch" disabled><span class="ci-edit-hint">انقر مرتين للتعديل</span></div>
+                        <div class="ci-field"><div class="ci-field-label">ضمان اجتماعي</div><select class="ci-input cu-is-social-security" data-field="is_social_security" disabled><option value="">—</option><option value="0">لا</option><option value="1">نعم</option></select><span class="ci-edit-hint">انقر مرتين للتعديل</span></div>
+                        <div class="ci-field"><div class="ci-field-label">رقم الضمان</div><input type="text" class="ci-input cu-social-security-number" data-field="social_security_number" disabled><span class="ci-edit-hint">انقر مرتين للتعديل</span></div>
+                        <div class="ci-field"><div class="ci-field-label">يملك عقارات</div><select class="ci-input cu-do-have-any-property" data-field="do_have_any_property" disabled><option value="">—</option><option value="0">لا</option><option value="1">نعم</option></select><span class="ci-edit-hint">انقر مرتين للتعديل</span></div>
                     </div>
                 </div>
                 <div class="ci-section">
                     <div class="ci-section-title"><i class="fa fa-sticky-note-o"></i> ملاحظات</div>
-                    <div class="ci-field full"><div class="ci-field-value cu-notes" style="white-space:pre-wrap;min-height:30px">—</div></div>
+                    <div class="ci-field full"><div class="ci-field-label">الملاحظات</div><textarea class="ci-input cu-notes" data-field="notes" rows="2" disabled></textarea><span class="ci-edit-hint">انقر مرتين للتعديل</span></div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> إغلاق</button>
-                <a class="btn btn-primary" id="cus-link" style="background:var(--ocp-primary,#6B1D3D);border-color:var(--ocp-primary,#6B1D3D)"><i class="fa fa-pencil"></i> تعديل العميل</a>
+                <a class="btn btn-primary" id="cus-link" style="background:var(--ocp-primary,#6B1D3D);border-color:var(--ocp-primary,#6B1D3D)" target="_blank"><i class="fa fa-external-link"></i> فتح صفحة العميل</a>
             </div>
         </div>
     </div>

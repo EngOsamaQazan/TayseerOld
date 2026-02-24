@@ -18,6 +18,7 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use \backend\modules\followUpReport\models\FollowUpReport;
 use yii\helpers\Html;
+use backend\helpers\NameHelper;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use common\helper\Permissions;
 use backend\helpers\ExportTrait;
@@ -221,9 +222,17 @@ class JudiciaryController extends Controller
             $rows = $db->createCommand($sql, $params)->queryAll();
         }
 
-        /* تحويل persistence_status */
+        /* تحويل persistence_status + اختصار الأسماء مع الاحتفاظ بالكامل للـ tooltip */
         foreach ($rows as &$row) {
             $this->parsePersistence($row);
+            if (!empty($row['customer_name'])) {
+                $row['customer_name_full'] = $row['customer_name'];
+                $row['customer_name'] = NameHelper::short($row['customer_name']);
+            }
+            if (!empty($row['lawyer_name'])) {
+                $row['lawyer_name_full'] = $row['lawyer_name'];
+                $row['lawyer_name'] = NameHelper::short($row['lawyer_name']);
+            }
         }
         unset($row);
 

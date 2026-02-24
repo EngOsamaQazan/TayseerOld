@@ -14,6 +14,7 @@ use backend\widgets\ExportButtons;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use backend\modules\followUp\helper\ContractCalculations;
 use backend\modules\judiciary\models\Judiciary;
+use backend\helpers\NameHelper;
 
 /* Assets */
 $this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' . time());
@@ -176,7 +177,8 @@ $end   = $begin + count($models) - 1;
                         $calc = new ContractCalculations($cid);
                         $deserved = $calc->deservedAmount();
 
-                        $customerNames = implode('، ', ArrayHelper::map($m->customers, 'id', 'name')) ?: '—';
+                        $customerFullNames = implode('، ', array_map(fn($c) => $c->name, $m->customers)) ?: '—';
+                        $customerNames = implode('، ', array_map(fn($c) => NameHelper::short($c->name), $m->customers)) ?: '—';
 
                         $judRows = $judByContract[$cid] ?? [];
                         $caseCosts = (float)($expByContract[$cid] ?? 0);
@@ -197,7 +199,7 @@ $end   = $begin + count($models) - 1;
                         }
                         $remaining = $totalForRemain - $paid;
 
-                        $sellerName = $m->seller->name ?? '—';
+                        $sellerName = isset($m->seller->name) ? NameHelper::short($m->seller->name) : '—';
                         $followName = $allUsers[$m->followed_by] ?? ($m->followedBy->username ?? '—');
                     ?>
                     <tr data-id="<?= $m->id ?>">
@@ -207,7 +209,7 @@ $end   = $begin + count($models) - 1;
                         <td class="ct-td-seller" data-label="البائع">
                             <?= Html::encode($sellerName) ?>
                         </td>
-                        <td class="ct-td-customer" data-label="العميل" title="<?= Html::encode($customerNames) ?>">
+                        <td class="ct-td-customer" data-label="العميل" title="<?= Html::encode($customerFullNames) ?>">
                             <?= Html::encode($customerNames) ?>
                         </td>
                         <td class="ct-td-money ct-td-due" data-label="المستحق">

@@ -1,5 +1,6 @@
 <?php
 use yii\helpers\Url;
+use backend\helpers\NameHelper;
 
 return [
     [
@@ -13,6 +14,10 @@ return [
     [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'customer_name',
+        'value' => function ($model) {
+            $name = is_object($model) ? ($model->customer_name ?? '') : ($model['customer_name'] ?? '');
+            return NameHelper::short($name);
+        },
     ],
     [
         'class' => '\kartik\grid\DataColumn',

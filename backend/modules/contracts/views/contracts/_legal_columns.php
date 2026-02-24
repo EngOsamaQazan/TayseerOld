@@ -4,6 +4,7 @@ use yii\helpers\Url;
 use yii\bootstrap\ButtonDropdown;
 use common\helper\LoanContract;
 use common\helper\Permissions;
+use backend\helpers\NameHelper;
 return [
     [
         'class' => '\kartik\grid\DataColumn',
@@ -13,7 +14,7 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'seller_id',
         'value' => function ($model) {
-            return $model->seller->name;
+            return NameHelper::short($model->seller->name);
         }
     ],
     [
@@ -21,7 +22,7 @@ return [
         'attribute' => 'customer_name',
         'label' => Yii::t('app', 'Customer Name'),
         'value' => function ($model) {
-            return join(', ', yii\helpers\ArrayHelper::map($model->customers, 'id', 'name'));
+            return join(', ', array_map(fn($c) => NameHelper::short($c->name), $model->customers));
         },
     ],
     [

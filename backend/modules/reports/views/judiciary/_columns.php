@@ -3,6 +3,7 @@
 use yii\helpers\Url;
 use \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActions;
 use \backend\modules\judiciaryActions\models\JudiciaryActions;
+use backend\helpers\NameHelper;
 
 return [
     [
@@ -30,7 +31,9 @@ return [
     [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'lawyer_id',
-        'value' => 'lawyer.name'
+        'value' => function ($model) {
+            return $model->lawyer ? NameHelper::short($model->lawyer->name) : '';
+        }
     ],
     [
         'class' => '\kartik\grid\DataColumn',
@@ -49,9 +52,9 @@ return [
                 });
 
                 if (!empty($judicaryAction)) {
-                    array_push($names_array, $value->name . '(' . $judicaryAction->name . ')<br>');
+                    array_push($names_array, NameHelper::short($value->name) . '(' . $judicaryAction->name . ')<br>');
                 } else {
-                    array_push($names_array, $value->name . '(لا إجرائات متبعه)<br>');
+                    array_push($names_array, NameHelper::short($value->name) . '(لا إجرائات متبعه)<br>');
                 }
             }
             return join('', $names_array);

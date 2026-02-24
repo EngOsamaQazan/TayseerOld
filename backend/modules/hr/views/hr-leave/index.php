@@ -11,6 +11,7 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\widgets\Pjax;
+use backend\helpers\NameHelper;
 
 /** @var yii\web\View $this */
 /** @var string $tab */
@@ -352,7 +353,7 @@ $csrfToken = Yii::$app->request->csrfToken;
                             ?>
                             <tr>
                                 <td style="text-align:center;font-weight:600;color:#aaa"><?= $i++ ?></td>
-                                <td><strong><?= Html::encode($row['employee_name'] ?? '—') ?></strong></td>
+                                <td><strong><?= Html::encode(NameHelper::short($row['employee_name'] ?? '—')) ?></strong></td>
                                 <td>
                                     <span style="color:var(--hr-info,#3498db);font-weight:600">
                                         <?= Html::encode($row['type_title'] ?? ($row['policy_title'] ?? '—')) ?>

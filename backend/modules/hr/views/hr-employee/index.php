@@ -12,6 +12,7 @@ use yii\helpers\Url;
 use kartik\grid\GridView;
 use yii\bootstrap\Modal;
 use yii\widgets\Pjax;
+use backend\helpers\NameHelper;
 use common\helper\Permissions;
 
 /** @var yii\web\View $this */
@@ -186,7 +187,7 @@ $employmentTypeMap = [
                 'header' => 'اسم الموظف',
                 'format' => 'raw',
                 'value' => function ($model) {
-                    $name = Html::encode($model['name'] ?: $model['username']);
+                    $name = Html::encode($model['name'] ? NameHelper::short($model['name']) : $model['username']);
                     $email = Html::encode($model['email'] ?? '');
                     $mobile = Html::encode($model['mobile'] ?? '');
                     $html = '<div class="hr-grid-name-cell">';

@@ -11,6 +11,7 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use kartik\grid\GridView;
 use yii\widgets\Pjax;
+use backend\helpers\NameHelper;
 
 /** @var yii\web\View $this */
 /** @var yii\data\ActiveDataProvider $dataProvider */
@@ -191,7 +192,7 @@ $statusMap = [
                     'format' => 'raw',
                     'value' => function ($model) {
                         $user = $model->user;
-                        $name = $user ? ($user->name ?? $user->username ?? '—') : '—';
+                        $name = $user ? ($user->name ? NameHelper::short($user->name) : ($user->username ?? '—')) : '—';
                         return '<strong>' . Html::encode($name) . '</strong>';
                     },
                 ],

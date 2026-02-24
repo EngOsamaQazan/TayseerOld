@@ -7,6 +7,7 @@ use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\bootstrap\ButtonDropdown;
 use common\helper\Permissions;
+use backend\helpers\NameHelper;
 
 return [
     /* رقم العميل */
@@ -24,8 +25,9 @@ return [
         'label' => 'الاسم',
         'format' => 'raw',
         'value' => fn($m) => Permissions::can(Permissions::CUST_UPDATE)
-            ? Html::a(Html::encode($m->name), ['update', 'id' => $m->id], ['class' => 'text-burgundy', 'style' => 'font-weight:600'])
-            : Html::encode($m->name),
+            ? Html::a(Html::encode(NameHelper::short($m->name)), ['update', 'id' => $m->id], ['class' => 'text-burgundy', 'style' => 'font-weight:600', 'title' => $m->name])
+            : Html::encode(NameHelper::short($m->name)),
+        'contentOptions' => fn($m) => ['title' => $m->name],
     ],
 
     /* الهاتف */

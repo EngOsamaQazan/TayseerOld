@@ -71,7 +71,7 @@ class FollowUpController extends Controller
                     ],
                     [
                         'actions' => ['update', 'change-status', 'move-task',
-                            'ai-feedback', 'update-judiciary-check'],
+                            'ai-feedback', 'update-judiciary-check', 'quick-update-customer'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -662,37 +662,81 @@ class FollowUpController extends Controller
     public function actionCustamerInfo()
     {
         $id = Yii::$app->request->post('customerId');
-
-        $custumers = \backend\modules\customers\models\Customers::find()->where(['id' => $id])->all();
-
-        $custumer_info = [];
-        foreach ($custumers as $custumer) {
-
-            $custumer_info['name'] = $custumer->name;
-            $custumer_info['id_number'] = $custumer->id_number;
-            $custumer_info['birth_date'] = $custumer->birth_date;
-            $custumer_info['job_number'] = $custumer->job_number;
-            $custumer_info['email'] = $custumer->email;
-            $custumer_info['notes'] = $custumer->notes;
-            $custumer_info['account_number'] = $custumer->account_number;
-            $custumer_info['bank_branch'] = $custumer->bank_branch;
-            $custumer_info['primary_phone_number'] = \backend\helpers\PhoneHelper::toLocal($custumer->primary_phone_number);
-            $custumer_info['facebook_account'] = $custumer->facebook_account;
-            $custumer_info['sex'] = customersInformation::getSex($custumer->sex);
-            $custumer_info['hear_about_us'] = customersInformation::getHearAboutUs($custumer->hear_about_us);
-            $custumer_info['citizen'] = customersInformation::getCitizen($custumer->citizen);
-            $custumer_info['status'] = customersInformation::getStatus($custumer->status);
-            $custumer_info['city'] = customersInformation::getCitys($custumer->city);
-            $custumer_info['bank_name'] = customersInformation::getBank($custumer->bank_name);
-            $custumer_info['job_title'] = customersInformation::getJobs($custumer->job_title);
-            $custumer_info['social_security_number'] = $custumer->social_security_number;
-            $custumer_info['is_social_security'] = $custumer->is_social_security;
-            $custumer_info['do_have_any_property'] = $custumer->do_have_any_property;
-
-            return json_encode($custumer_info);
-
-
+        $customer = \backend\modules\customers\models\Customers::findOne($id);
+        if (!$customer) {
+            return json_encode(['error' => 'not found']);
         }
+
+        return json_encode([
+            'id' => $customer->id,
+            'name' => $customer->name,
+            'id_number' => $customer->id_number,
+            'birth_date' => $customer->birth_date,
+            'job_number' => $customer->job_number,
+            'email' => $customer->email,
+            'notes' => $customer->notes,
+            'account_number' => $customer->account_number,
+            'bank_branch' => $customer->bank_branch,
+            'primary_phone_number' => \backend\helpers\PhoneHelper::toLocal($customer->primary_phone_number),
+            'facebook_account' => $customer->facebook_account,
+            'sex' => $customer->sex,
+            'hear_about_us' => $customer->hear_about_us,
+            'citizen' => $customer->citizen,
+            'status' => $customer->status,
+            'city' => $customer->city,
+            'bank_name' => $customer->bank_name,
+            'job_title' => $customer->job_title,
+            'social_security_number' => $customer->social_security_number,
+            'is_social_security' => $customer->is_social_security,
+            'do_have_any_property' => $customer->do_have_any_property,
+        ]);
+    }
+
+    public function actionQuickUpdateCustomer()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (!Yii::$app->request->isPost) {
+            return ['success' => false, 'message' => 'Invalid request'];
+        }
+
+        $id = Yii::$app->request->post('id');
+        $customer = \backend\modules\customers\models\Customers::findOne($id);
+        if (!$customer) {
+            return ['success' => false, 'message' => 'العميل غير موجود'];
+        }
+
+        $allowed = [
+            'name', 'id_number', 'birth_date', 'job_number', 'email', 'notes',
+            'account_number', 'bank_branch', 'primary_phone_number', 'facebook_account',
+            'sex', 'hear_about_us', 'citizen', 'status', 'city', 'bank_name',
+            'job_title', 'social_security_number', 'is_social_security', 'do_have_any_property',
+        ];
+        $requiredFields = ['name', 'id_number', 'sex', 'birth_date', 'city', 'job_title', 'primary_phone_number'];
+
+        $fields = Yii::$app->request->post('fields', []);
+        $updated = [];
+        foreach ($fields as $field => $value) {
+            if (!in_array($field, $allowed)) continue;
+            if (in_array($field, $requiredFields) && !empty($customer->$field) && (is_null($value) || trim($value) === '')) {
+                continue;
+            }
+            if ($field === 'primary_phone_number' && !empty($value)) {
+                $value = \backend\helpers\PhoneHelper::toE164($value);
+            }
+            $customer->$field = $value;
+            $updated[] = $field;
+        }
+
+        if (empty($updated)) {
+            return ['success' => false, 'message' => 'لا توجد حقول للتحديث'];
+        }
+
+        if ($customer->save(false)) {
+            return ['success' => true, 'message' => 'تم تحديث ' . count($updated) . ' حقل بنجاح', 'updated' => $updated];
+        }
+
+        return ['success' => false, 'message' => 'حدث خطأ أثناء الحفظ'];
     }
 
     // ═══════════════════════════════════════════════════════════

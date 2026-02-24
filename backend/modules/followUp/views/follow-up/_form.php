@@ -136,5 +136,6 @@ $this->registerJsVar('is_loan', $calc->contract_model->is_loan ?? 0, yii\web\Vie
 $this->registerJsVar('change_status_url', Url::to(['/followUp/follow-up/change-status']), yii\web\View::POS_HEAD);
 $this->registerJsVar('send_sms', Url::to(['/followUp/follow-up/send-sms']), yii\web\View::POS_HEAD);
 $this->registerJsVar('customer_info_url', Url::to(['/followUp/follow-up/custamer-info']), yii\web\View::POS_HEAD);
+$this->registerJsVar('quick_update_customer_url', Url::to(['/followUp/follow-up/quick-update-customer']), yii\web\View::POS_HEAD);
 $this->registerJsFile(Yii::$app->request->baseUrl . '/js/follow-up.js', ['depends' => [\yii\web\JqueryAsset::class]]);
 ?>

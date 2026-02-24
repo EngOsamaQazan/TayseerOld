@@ -6,6 +6,7 @@ use yii\widgets\DetailView;
 use backend\modules\jobs\models\Jobs;
 use backend\modules\jobs\models\JobsPhone;
 use backend\modules\jobs\models\JobsRating;
+use backend\helpers\NameHelper;
 
 /* @var $this yii\web\View */
 /* @var $model backend\modules\jobs\models\Jobs */
@@ -580,7 +581,7 @@ $customersCount = $model->getCustomersCount();
                             <?php foreach ($customers as $i => $customer): ?>
                                 <tr>
                                     <td><?= $i + 1 ?></td>
-                                    <td><?= Html::encode($customer->name) ?></td>
+                                    <td title="<?= Html::encode($customer->name) ?>"><?= Html::encode(NameHelper::short($customer->name)) ?></td>
                                     <td><?= Html::encode($customer->id_number) ?: '-' ?></td>
                                     <td dir="ltr" class="text-right"><?= Html::encode(\backend\helpers\PhoneHelper::toLocal($customer->primary_phone_number)) ?: '-' ?></td>
                                     <td>

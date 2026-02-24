@@ -5,6 +5,7 @@
  */
 use yii\helpers\Html;
 use yii\helpers\Url;
+use backend\helpers\NameHelper;
 
 /**
  * @var string|int $contract_id
@@ -181,7 +182,7 @@ $reqStatusStyles = [
             </div>
             <div style="flex:1;min-width:0">
                 <div style="display:flex;align-items:center;gap:6px">
-                    <span style="font-weight:600;color:var(--ocp-text-primary);font-size:var(--ocp-font-size-sm)"><?= Html::encode($party['customer_name']) ?></span>
+                    <span style="font-weight:600;color:var(--ocp-text-primary);font-size:var(--ocp-font-size-sm)" title="<?= Html::encode($party['customer_name']) ?>"><?= Html::encode(NameHelper::short($party['customer_name'])) ?></span>
                     <span class="jud-badge" style="background:<?= $party['customer_type'] === 'client' ? '#E3F2FD' : '#FFF3E0' ?>;color:<?= $party['customer_type'] === 'client' ? '#1565C0' : '#E65100' ?>"><?= $party['customer_type_label'] ?></span>
                 </div>
                 <div style="font-size:var(--ocp-font-size-xs);color:var(--ocp-text-muted);margin-top:2px">
@@ -233,7 +234,7 @@ $reqStatusStyles = [
                         <i class="fa <?= $customerGroup['customer_type'] === 'client' ? 'fa-user' : 'fa-user-o' ?>" style="color:<?= $customerGroup['customer_type'] === 'client' ? '#1565C0' : '#E65100' ?>;font-size:15px"></i>
                     </div>
                     <div>
-                        <div style="font-weight:700;font-size:13px;color:#1E293B"><?= Html::encode($customerGroup['customer_name'] ?: 'غير محدد') ?></div>
+                        <div style="font-weight:700;font-size:13px;color:#1E293B" title="<?= Html::encode($customerGroup['customer_name'] ?: '') ?>"><?= Html::encode(NameHelper::short($customerGroup['customer_name'] ?: 'غير محدد')) ?></div>
                         <div style="font-size:11px;color:#94A3B8">
                             <?= $customerGroup['customer_type'] === 'client' ? 'مدين' : ($customerGroup['customer_type'] === 'guarantor' ? 'كفيل' : 'طرف') ?>
                             · <?= count($customerGroup['requests']) ?> طلبات

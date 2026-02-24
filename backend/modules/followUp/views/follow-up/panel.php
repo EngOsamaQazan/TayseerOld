@@ -6,6 +6,7 @@ use yii\helpers\Json;
 use yii\bootstrap\Modal;
 use johnitvn\ajaxcrud\CrudAsset;
 use common\helper\Permissions;
+use backend\helpers\NameHelper;
 
 CrudAsset::register($this);
 
@@ -64,6 +65,7 @@ $this->registerJsVar('is_loan', $contractCalculations->contract_model->is_loan ?
 $this->registerJsVar('change_status_url', Url::to(['/followUp/follow-up/change-status']), \yii\web\View::POS_HEAD);
 $this->registerJsVar('send_sms', Url::to(['/followUp/follow-up/send-sms']), \yii\web\View::POS_HEAD);
 $this->registerJsVar('customer_info_url', Url::to(['/followUp/follow-up/custamer-info']), \yii\web\View::POS_HEAD);
+$this->registerJsVar('quick_update_customer_url', Url::to(['/followUp/follow-up/quick-update-customer']), \yii\web\View::POS_HEAD);
 $this->registerJsFile(Yii::$app->request->baseUrl . '/js/follow-up.js', ['depends' => [\yii\web\JqueryAsset::class]]);
 
 $dpd = $riskData['dpd'] ?? 0;
@@ -72,7 +74,7 @@ $riskLevel = $riskData['level'] ?? 'low';
 $showWarningStrip = in_array($riskLevel, ['high', 'critical']) || in_array($contract->status, ['judiciary', 'legal_department']);
 $statusBadge = \backend\modules\followUp\helper\RiskEngine::statusBadgeClass($contract->status);
 $statusLabel = \backend\modules\followUp\helper\RiskEngine::statusLabel($contract->status);
-$customerName = $customer ? $customer->name : 'غير محدد';
+$customerName = $customer ? NameHelper::short($customer->name) : 'غير محدد';
 $lastPayment = $riskData['last_payment'] ?? ['date' => '-', 'amount' => 0];
 
 $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'مرتفع', 'critical' => 'حرج'];
@@ -118,7 +120,7 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                     <?php if ($pi > 0): ?><span style="color:#CBD5E1;font-size:10px">|</span><?php endif; ?>
                     <span style="display:inline-flex;align-items:center;gap:3px">
                         <i class="fa <?= $isClient ? 'fa-user' : 'fa-shield' ?>" style="font-size:9px;color:<?= $isClient ? '#BE185D' : '#2563EB' ?>"></i>
-                        <a href="javascript:void(0)" class="custmer-popup ocp-status-bar__customer-name" data-target="#customerInfoModal" data-toggle="modal" customer-id="<?= $partyCust->id ?>" title="<?= Html::encode($partyCust->name) ?> (<?= $isClient ? 'مشتري' : 'كفيل' ?>)" style="cursor:pointer;font-size:12px"><?= Html::encode($partyCust->name) ?></a>
+                        <a href="javascript:void(0)" class="custmer-popup ocp-status-bar__customer-name" data-target="#customerInfoModal" data-toggle="modal" customer-id="<?= $partyCust->id ?>" title="<?= Html::encode($partyCust->name) ?> (<?= $isClient ? 'مشتري' : 'كفيل' ?>)" style="cursor:pointer;font-size:12px"><?= Html::encode(NameHelper::short($partyCust->name)) ?></a>
                     </span>
                 <?php
                     endforeach;

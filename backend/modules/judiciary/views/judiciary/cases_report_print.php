@@ -3,6 +3,7 @@
  * كشف المثابره — صفحة طباعة
  * تُفتح في تبويب جديد وتعرض جميع السجلات حسب الفلتر الحالي
  */
+use backend\helpers\NameHelper;
 $totalRows = count($rows);
 ?>
 <!DOCTYPE html>
@@ -215,7 +216,7 @@ foreach ($rows as $r) {
             <td><?= htmlspecialchars($row['case_year'] ?? '') ?></td>
             <td><?= htmlspecialchars($row['court_name'] ?? '') ?></td>
             <td><?= htmlspecialchars($row['contract_id'] ?? '') ?></td>
-            <td><?= htmlspecialchars($row['customer_name'] ?? '') ?></td>
+            <td title="<?= htmlspecialchars($row['customer_name'] ?? '') ?>"><?= htmlspecialchars(NameHelper::short($row['customer_name'] ?? '')) ?></td>
             <td><?= htmlspecialchars($row['last_action_name'] ?? '') ?></td>
             <td><?= htmlspecialchars($row['last_action_date'] ?? '') ?></td>
             <td class="p-<?= htmlspecialchars($row['persistence_color']) ?>">
@@ -223,7 +224,7 @@ foreach ($rows as $r) {
             </td>
             <td><?= htmlspecialchars($row['last_followup_date'] ?? '') ?></td>
             <td><?= htmlspecialchars($row['last_job_check_date'] ?? '') ?></td>
-            <td><?= htmlspecialchars($row['lawyer_name'] ?? '') ?></td>
+            <td title="<?= htmlspecialchars($row['lawyer_name'] ?? '') ?>"><?= htmlspecialchars(NameHelper::short($row['lawyer_name'] ?? '')) ?></td>
             <td><?= htmlspecialchars($row['job_title'] ?? '') ?></td>
             <td><?= htmlspecialchars($row['job_type'] ?? '') ?></td>
         </tr>

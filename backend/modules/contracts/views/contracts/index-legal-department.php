@@ -14,6 +14,7 @@ use backend\widgets\ExportButtons;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use backend\modules\followUp\helper\ContractCalculations;
 use backend\modules\judiciary\models\Judiciary;
+use backend\helpers\NameHelper;
 
 /* Assets */
 $this->registerCssFile('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css', ['position' => \yii\web\View::POS_HEAD]);
@@ -241,7 +242,7 @@ $jobTypesMap = ArrayHelper::map(
                         $partiesHtml = [];
                         $firstCustomer = $allParties[0] ?? null;
                         foreach ($allParties as $p) {
-                            $line = Html::encode($p->name);
+                            $line = Html::encode(NameHelper::short($p->name));
                             if ($p->id_number) $line .= ' <small style="color:#64748b">(' . Html::encode($p->id_number) . ')</small>';
                             $partiesHtml[] = $line;
                         }

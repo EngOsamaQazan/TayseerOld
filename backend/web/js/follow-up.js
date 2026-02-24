@@ -42,40 +42,177 @@ $(document).on('change', '.cant_contact', function () {
     alert(val1);
 });
 /////
-$(document).on('click', '.custmer-popup', function () {
-    let customerId = $(this).attr('customer-id');
-    var a = document.getElementById('cus-link');
-    a.setAttribute("href", "../../customers/customers/update?id=" + customerId);
-    $.post(customer_info_url, { customerId: customerId }, function (msg) {
-        let info = JSON.parse(msg);
-        function setField(cls, val) {
-            var el = $(cls);
-            if (el.is('input,textarea,select')) el.val(val || '—');
-            else el.text(val || '—');
+var CiEdit = (function() {
+    var originalData = {};
+    var dirtyFields = {};
+    var requiredFields = ['name', 'id_number', 'sex', 'birth_date', 'city', 'job_title', 'primary_phone_number'];
+
+    function setVal(cls, val) {
+        var el = $('.' + cls);
+        if (el.is('select')) {
+            el.val(val != null ? String(val) : '');
+        } else {
+            el.val(val || '');
         }
-        setField('.cu-name', info['name']);
-        $('#customerInfoTitle').html('<i class="fa fa-user-circle"></i> ' + (info['name'] || 'بيانات العميل'));
-        setField('.cu-id-number', info['id_number']);
-        setField('.cu-birth-date', info['birth_date']);
-        setField('.cu-job-number', info['job_number']);
-        setField('.cu-email', info['email']);
-        setField('.cu-account-number', info['account_number']);
-        setField('.cu-bank-branch', info['bank_branch']);
-        setField('.cu-primary-phone-number', info['primary_phone_number']);
-        setField('.cu-sex', info['sex']);
-        setField('.cu-facebook-account', info['facebook_account']);
-        setField('.cu-hear-about-us', info['hear_about_us']);
-        setField('.cu-status', info['status']);
-        setField('.cu-city', info['city']);
-        setField('.cu-bank-name', info['bank_name']);
-        setField('.cu-job-title', info['job_title']);
-        setField('.cu-notes', info['notes']);
-        if (info['social_security_number'] != undefined) {
-            setField('.cu-social-security-number', info['social_security_number']);
-            setField('.cu-is-social-security', info['is_social_security'] == '0' ? 'لا' : 'نعم');
-            setField('.cu-do-have-any-property', info['do_have_any_property'] == '0' ? 'لا' : 'نعم');
+    }
+
+    function loadCustomer(customerId) {
+        dirtyFields = {};
+        $('#ciSaveBar').removeClass('visible');
+        $('#ci-customer-id').val(customerId);
+
+        $('#customerInfoModal .ci-input').each(function() {
+            $(this).prop('disabled', true).closest('.ci-field').removeClass('ci-editing');
+        });
+
+        var a = document.getElementById('cus-link');
+        a.setAttribute('href', '../../customers/customers/update?id=' + customerId);
+
+        $.post(customer_info_url, { customerId: customerId }, function(msg) {
+            var info = JSON.parse(msg);
+            originalData = $.extend({}, info);
+
+            $('#customerInfoTitle').html('<i class="fa fa-user-circle"></i> ' + (info.name || 'بيانات العميل'));
+            setVal('cu-name', info.name);
+            setVal('cu-id-number', info.id_number);
+            setVal('cu-birth-date', info.birth_date);
+            setVal('cu-job-number', info.job_number);
+            setVal('cu-email', info.email);
+            setVal('cu-account-number', info.account_number);
+            setVal('cu-bank-branch', info.bank_branch);
+            setVal('cu-sex', info.sex);
+            setVal('cu-city', info.city);
+            setVal('cu-bank-name', info.bank_name);
+            setVal('cu-job-title', info.job_title);
+            setVal('cu-notes', info.notes);
+            setVal('cu-social-security-number', info.social_security_number);
+            setVal('cu-is-social-security', info.is_social_security);
+            setVal('cu-do-have-any-property', info.do_have_any_property);
+        });
+    }
+
+    function closeField(fieldEl) {
+        var $el = $(fieldEl);
+        if ($el.prop('disabled')) return;
+        markDirty(fieldEl);
+        $el.prop('disabled', true);
+        $el.closest('.ci-field').removeClass('ci-editing');
+    }
+
+    function closeAllFields() {
+        $('#customerInfoModal .ci-input:not(:disabled)').each(function() {
+            closeField(this);
+        });
+    }
+
+    function toggleField(fieldEl) {
+        var $el = $(fieldEl);
+        if (!$el.prop('disabled')) {
+            closeField(fieldEl);
+        } else {
+            closeAllFields();
+            $el.prop('disabled', false).focus();
+            $el.closest('.ci-field').addClass('ci-editing');
         }
-    })
+    }
+
+    function markDirty(fieldEl) {
+        var $el = $(fieldEl);
+        var fieldName = $el.data('field');
+        if (!fieldName) return;
+        var orig = originalData[fieldName];
+        var current = $el.val();
+
+        if (requiredFields.indexOf(fieldName) !== -1 && orig && String(orig).trim() !== '' && (!current || String(current).trim() === '')) {
+            $el.closest('.ci-field').css('animation', 'ciShake .4s');
+            setTimeout(function() { $el.closest('.ci-field').css('animation', ''); }, 400);
+            if ($el.is('select')) {
+                $el.val(orig != null ? String(orig) : '');
+            } else {
+                $el.val(orig || '');
+            }
+            delete dirtyFields[fieldName];
+            return;
+        }
+
+        if (String(current || '') !== String(orig || '')) {
+            dirtyFields[fieldName] = current;
+        } else {
+            delete dirtyFields[fieldName];
+        }
+        if (Object.keys(dirtyFields).length > 0) {
+            $('#ciSaveBar').addClass('visible');
+        } else {
+            $('#ciSaveBar').removeClass('visible');
+        }
+    }
+
+    function cancelAll() {
+        dirtyFields = {};
+        $('#ciSaveBar').removeClass('visible');
+        $('#customerInfoModal .ci-input').each(function() {
+            var $el = $(this);
+            $el.prop('disabled', true);
+            $el.closest('.ci-field').removeClass('ci-editing');
+            var fieldName = $el.data('field');
+            if (fieldName && originalData[fieldName] !== undefined) {
+                if ($el.is('select')) {
+                    $el.val(originalData[fieldName] != null ? String(originalData[fieldName]) : '');
+                } else {
+                    $el.val(originalData[fieldName] || '');
+                }
+            }
+        });
+    }
+
+    function save() {
+        if (Object.keys(dirtyFields).length === 0) return;
+        closeAllFields();
+        var customerId = $('#ci-customer-id').val();
+        var $btn = $('.btn-ci-save');
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جارٍ الحفظ...');
+
+        var quickUpdateUrl = (typeof quick_update_customer_url !== 'undefined')
+            ? quick_update_customer_url
+            : customer_info_url.replace('custamer-info', 'quick-update-customer');
+
+        $.post(quickUpdateUrl, { id: customerId, fields: dirtyFields }, function(res) {
+            $btn.prop('disabled', false).html('<i class="fa fa-check"></i> حفظ التعديلات');
+            if (res.success) {
+                $.extend(originalData, dirtyFields);
+                dirtyFields = {};
+                $('#ciSaveBar').removeClass('visible');
+                if (originalData.name) {
+                    $('#customerInfoTitle').html('<i class="fa fa-user-circle"></i> ' + originalData.name);
+                }
+                var $bar = $('#ciSaveBar');
+                $bar.css({ background: '#F0FDF4', borderColor: '#BBF7D0' });
+                $bar.find('.ci-save-text').text('✓ ' + res.message);
+                $bar.addClass('visible');
+                setTimeout(function() { $bar.removeClass('visible'); }, 2500);
+            } else {
+                alert(res.message || 'حدث خطأ أثناء الحفظ');
+            }
+        }, 'json').fail(function() {
+            $btn.prop('disabled', false).html('<i class="fa fa-check"></i> حفظ التعديلات');
+            alert('حدث خطأ في الاتصال');
+        });
+    }
+
+    return { loadCustomer: loadCustomer, toggleField: toggleField, markDirty: markDirty, cancelAll: cancelAll, save: save };
+})();
+
+$(document).on('click', '.custmer-popup', function() {
+    CiEdit.loadCustomer($(this).attr('customer-id'));
+});
+
+$(document).on('dblclick', '#customerInfoModal .ci-field', function(e) {
+    var input = $(this).find('.ci-input');
+    if (input.length) CiEdit.toggleField(input[0]);
+});
+
+$(document).on('change', '#customerInfoModal .ci-input', function() {
+    CiEdit.markDirty(this);
 });
 /////
 function copyText(element) {

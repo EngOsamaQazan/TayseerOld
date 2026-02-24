@@ -5,6 +5,7 @@
 
 use yii\helpers\Html;
 use yii\helpers\Url;
+use backend\helpers\NameHelper;
 
 $this->title = 'قسم الديوان';
 
@@ -97,7 +98,7 @@ $periodLabels = [
                 <?php foreach ($employeeStats as $i => $emp): ?>
                 <tr>
                     <td><?= $i + 1 ?></td>
-                    <td style="font-weight:600;"><?= Html::encode($emp['employee_name']) ?></td>
+                    <td style="font-weight:600;"><?= Html::encode(NameHelper::short($emp['employee_name'])) ?></td>
                     <td><span class="dw-badge dw-badge--recv"><?= $emp['received'] ?></span></td>
                     <td><span class="dw-badge dw-badge--dlvr"><?= $emp['delivered'] ?></span></td>
                     <td><strong><?= $emp['received'] + $emp['delivered'] ?></strong></td>
@@ -139,8 +140,8 @@ $periodLabels = [
                                 <?= $t->transaction_type ?>
                             </span>
                         </td>
-                        <td><?= Html::encode($t->fromEmployee ? ($t->fromEmployee->name ?: $t->fromEmployee->username) : '—') ?></td>
-                        <td><?= Html::encode($t->toEmployee ? ($t->toEmployee->name ?: $t->toEmployee->username) : '—') ?></td>
+                        <td><?= Html::encode($t->fromEmployee ? ($t->fromEmployee->name ? NameHelper::short($t->fromEmployee->name) : $t->fromEmployee->username) : '—') ?></td>
+                        <td><?= Html::encode($t->toEmployee ? ($t->toEmployee->name ? NameHelper::short($t->toEmployee->name) : $t->toEmployee->username) : '—') ?></td>
                         <td><span class="badge" style="background:var(--fin-primary,#800020)"><?= count($t->details) ?></span></td>
                         <td style="font-size:11px"><?= Yii::$app->formatter->asDatetime($t->transaction_date, 'php:Y/m/d h:i A') ?></td>
                         <td><code style="font-size:10px"><?= Html::encode($t->receipt_number) ?></code></td>

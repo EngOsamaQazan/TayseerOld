@@ -8,6 +8,7 @@ use yii\helpers\Url;
 use kartik\grid\GridView;
 use backend\helpers\FlatpickrWidget;
 use yii\bootstrap\Modal;
+use backend\helpers\NameHelper;
 
 $this->title = 'لوحة الحضور والانصراف';
 
@@ -227,7 +228,7 @@ $statusMap = [
                     'value' => function ($model) {
                         $user = $model->user;
                         if ($user) {
-                            $name = $user->name ?: $user->username;
+                            $name = $user->name ? NameHelper::short($user->name) : $user->username;
                             return '<strong>' . Html::encode($name) . '</strong>';
                         }
                         return '<span class="text-muted">—</span>';

@@ -7,6 +7,7 @@ use common\helper\LoanContract;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use backend\modules\followUp\helper\ContractCalculations;
 use common\helper\Permissions;
+use backend\helpers\NameHelper;
 return [
     [
         'class' => '\kartik\grid\DataColumn',
@@ -30,7 +31,7 @@ return [
             'style' => 'max-width:150px; min-height:100px; overflow: auto; word-wrap: break-word;'
         ],
         'value' => function($model) {
-    return join(', ', yii\helpers\ArrayHelper::map($model->customers, 'id', 'name'));
+    return join(', ', array_map(fn($c) => NameHelper::short($c->name), $model->customers));
 },
     ],
     [
