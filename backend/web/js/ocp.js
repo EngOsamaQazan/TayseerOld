@@ -46,14 +46,22 @@
         // TABS
         // ═══════════════════════════════════════
         switchTab: function (tabName) {
-            // Toggle tab buttons
             document.querySelectorAll('.ocp-tab').forEach(function (t) {
                 t.classList.toggle('active', t.dataset.tab === tabName);
             });
-            // Toggle content
             document.querySelectorAll('.ocp-tab-content').forEach(function (c) {
                 c.classList.toggle('ocp-hidden', c.id !== 'tab-' + tabName);
             });
+            try { sessionStorage.setItem('ocp_active_tab', tabName); } catch(e) {}
+        },
+
+        getActiveTab: function () {
+            try { return sessionStorage.getItem('ocp_active_tab') || 'timeline'; } catch(e) { return 'timeline'; }
+        },
+
+        restoreTab: function () {
+            var tab = this.getActiveTab();
+            if (tab && tab !== 'timeline') this.switchTab(tab);
         },
 
         // ═══════════════════════════════════════

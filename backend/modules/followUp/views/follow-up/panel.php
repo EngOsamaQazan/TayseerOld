@@ -497,17 +497,73 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
 
     <?php
     $this->registerJs(<<<'JS'
+    OCP.restoreTab();
+
+    var _ocpRefreshPending = false;
+    var _ocpRefreshTimer = null;
+
+    window.ocpRefreshTabs = function() {
+        if (_ocpRefreshTimer) clearTimeout(_ocpRefreshTimer);
+        _ocpRefreshTimer = setTimeout(function() {
+            _ocpRefreshTimer = null;
+            if (_ocpRefreshPending) return;
+            _ocpRefreshPending = true;
+            var activeTab = OCP.getActiveTab();
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', location.href);
+            xhr.onload = function() {
+                _ocpRefreshPending = false;
+                if (xhr.status !== 200) return;
+                var doc = new DOMParser().parseFromString(xhr.responseText, 'text/html');
+
+                var tabs = ['timeline','kanban','financial','phones','payments','settlements','judiciary-actions'];
+                for (var i = 0; i < tabs.length; i++) {
+                    var id = 'tab-' + tabs[i];
+                    var newEl = doc.getElementById(id);
+                    var curEl = document.getElementById(id);
+                    if (newEl && curEl) curEl.innerHTML = newEl.innerHTML;
+                }
+
+                var newBtns = doc.querySelectorAll('.ocp-tabs .ocp-tab');
+                var curBtns = document.querySelectorAll('.ocp-tabs .ocp-tab');
+                for (var j = 0; j < newBtns.length && j < curBtns.length; j++) {
+                    var nc = newBtns[j].querySelector('.ocp-tab__count');
+                    var cc = curBtns[j].querySelector('.ocp-tab__count');
+                    if (nc && cc) cc.textContent = nc.textContent;
+                }
+
+                var nm = doc.querySelector('.ocp-status-bar__metrics');
+                var cm = document.querySelector('.ocp-status-bar__metrics');
+                if (nm && cm) cm.innerHTML = nm.innerHTML;
+
+                OCP.switchTab(activeTab);
+            };
+            xhr.onerror = function() { _ocpRefreshPending = false; };
+            xhr.send();
+        }, 150);
+    };
+
+    var _ocpModalDirty = false;
+
     (function(){
         var origReload = jQuery.pjax.reload;
         jQuery.pjax.reload = function(options) {
             if (options && options.container && jQuery(options.container).length === 0) {
+                _ocpModalDirty = true;
                 jQuery('#ajaxCrudModal').modal('hide');
-                location.reload();
                 return;
             }
             return origReload.apply(this, arguments);
         };
     })();
+
+    jQuery('#ajaxCrudModal').on('hidden.bs.modal', function() {
+        var hasSuccess = jQuery(this).find('.text-success').length > 0;
+        if (hasSuccess || _ocpModalDirty) {
+            _ocpModalDirty = false;
+            window.ocpRefreshTabs();
+        }
+    });
 JS
     , $this::POS_READY);
     ?>
