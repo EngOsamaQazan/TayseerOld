@@ -177,6 +177,7 @@ $selectOpts = function($items, $cls, $field) {
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> إغلاق</button>
+                <button type="button" class="btn btn-success" id="ciFooterSaveBtn" onclick="CiEdit.save()" style="display:none;border-radius:8px;font-size:12px;font-weight:700;padding:8px 20px"><i class="fa fa-check"></i> حفظ التعديلات</button>
                 <a class="btn btn-primary" id="cus-link" style="background:var(--ocp-primary,#6B1D3D);border-color:var(--ocp-primary,#6B1D3D)" target="_blank"><i class="fa fa-external-link"></i> فتح صفحة العميل</a>
             </div>
         </div>

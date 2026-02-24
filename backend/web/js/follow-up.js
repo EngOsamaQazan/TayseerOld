@@ -59,6 +59,7 @@ var CiEdit = (function() {
     function loadCustomer(customerId) {
         dirtyFields = {};
         $('#ciSaveBar').removeClass('visible');
+        $('#ciFooterSaveBtn').hide();
         $('#ci-customer-id').val(customerId);
 
         $('#customerInfoModal .ci-input').each(function() {
@@ -140,16 +141,15 @@ var CiEdit = (function() {
         } else {
             delete dirtyFields[fieldName];
         }
-        if (Object.keys(dirtyFields).length > 0) {
-            $('#ciSaveBar').addClass('visible');
-        } else {
-            $('#ciSaveBar').removeClass('visible');
-        }
+        var hasDirty = Object.keys(dirtyFields).length > 0;
+        $('#ciSaveBar').toggleClass('visible', hasDirty);
+        $('#ciFooterSaveBtn').toggle(hasDirty);
     }
 
     function cancelAll() {
         dirtyFields = {};
         $('#ciSaveBar').removeClass('visible');
+        $('#ciFooterSaveBtn').hide();
         $('#customerInfoModal .ci-input').each(function() {
             var $el = $(this);
             $el.prop('disabled', true);
@@ -182,6 +182,7 @@ var CiEdit = (function() {
                 $.extend(originalData, dirtyFields);
                 dirtyFields = {};
                 $('#ciSaveBar').removeClass('visible');
+                $('#ciFooterSaveBtn').hide();
                 if (originalData.name) {
                     $('#customerInfoTitle').html('<i class="fa fa-user-circle"></i> ' + originalData.name);
                 }
