@@ -28,50 +28,45 @@ return [
         'contentOptions' => ['style' => 'text-align:center'],
     ],
 
-    /* العميل */
+    /* الأطراف (عميل + وظيفة) */
     [
         'class' => '\kartik\grid\DataColumn',
-        'label' => 'العميل',
-        'format' => 'raw',
-        'value' => function ($m) {
-            $parts = [];
-            foreach ($m->customersAndGuarantor as $customer) {
-                $parts[] = '<span style="font-weight:600;color:#1E293B">' . Html::encode($customer->name) . '</span>';
-            }
-            return implode('<span style="color:#CBD5E1;margin:0 3px">|</span>', $parts) ?: '<span style="color:#CBD5E1">—</span>';
-        },
-        'headerOptions' => ['style' => 'width:22%'],
-        'contentOptions' => ['style' => 'max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'],
-    ],
-
-    /* الوظيفة */
-    [
-        'class' => '\kartik\grid\DataColumn',
-        'label' => 'الوظيفة',
+        'label' => 'الأطراف',
         'format' => 'raw',
         'value' => function ($m) {
             static $jobCache = [];
-            $jobNames = [];
-            foreach ($m->customersAndGuarantor as $customer) {
-                $jid = $customer->job_title;
-                if (!$jid) continue;
-                if (!isset($jobCache[$jid])) {
-                    $job = \backend\modules\jobs\models\Jobs::findOne($jid);
-                    $jobCache[$jid] = $job ? $job->name : null;
+            $customers = $m->customersAndGuarantor;
+            if (empty($customers)) return '<span style="color:#CBD5E1">—</span>';
+
+            $shortName = function ($full) {
+                $words = preg_split('/\s+/', trim($full), -1, PREG_SPLIT_NO_EMPTY);
+                if (count($words) <= 2) return $full;
+                return $words[0] . ' ' . end($words);
+            };
+
+            $rows = [];
+            foreach ($customers as $c) {
+                $full = $c->name;
+                $short = $shortName($full);
+                $jid = $c->job_title;
+                $jobName = '';
+                if ($jid) {
+                    if (!isset($jobCache[$jid])) {
+                        $job = \backend\modules\jobs\models\Jobs::findOne($jid);
+                        $jobCache[$jid] = $job ? $job->name : '';
+                    }
+                    $jobName = $jobCache[$jid];
                 }
-                if ($jobCache[$jid] && !in_array($jobCache[$jid], $jobNames)) {
-                    $jobNames[] = $jobCache[$jid];
+                $nameHtml = '<span style="font-weight:600;color:#1E293B;font-size:11px" title="' . Html::encode($full) . '">' . Html::encode($short) . '</span>';
+                if ($jobName) {
+                    $nameHtml .= ' <span style="display:inline-block;padding:0 5px;border-radius:4px;font-size:9px;font-weight:600;background:#F0FDF4;color:#15803D;vertical-align:middle">' . Html::encode($jobName) . '</span>';
                 }
+                $rows[] = $nameHtml;
             }
-            if (empty($jobNames)) return '<span style="color:#CBD5E1;font-size:11px">—</span>';
-            $out = [];
-            foreach ($jobNames as $jn) {
-                $out[] = '<span style="display:inline-block;padding:1px 6px;border-radius:5px;font-size:10px;font-weight:600;background:#F0FDF4;color:#15803D">' . Html::encode($jn) . '</span>';
-            }
-            return implode(' ', $out);
+            return '<div style="display:flex;flex-direction:column;gap:2px;max-height:60px;overflow-y:auto;scrollbar-width:thin">' . implode('', array_map(fn($r) => '<div style="white-space:nowrap">' . $r . '</div>', $rows)) . '</div>';
         },
-        'headerOptions' => ['style' => 'width:16%'],
-        'contentOptions' => ['style' => 'max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'],
+        'headerOptions' => ['style' => 'width:30%'],
+        'contentOptions' => ['style' => 'max-width:280px;padding:4px 6px'],
     ],
 
     /* المحكمة */
@@ -95,11 +90,14 @@ return [
         'label' => 'المحامي',
         'format' => 'raw',
         'value' => function ($m) {
-            $name = $m->lawyer->name ?? '—';
-            return '<span style="font-size:11px;color:#475569">' . Html::encode($name) . '</span>';
+            $full = $m->lawyer->name ?? '—';
+            if ($full === '—') return '<span style="color:#CBD5E1">—</span>';
+            $words = preg_split('/\s+/', trim($full), -1, PREG_SPLIT_NO_EMPTY);
+            $short = count($words) > 2 ? $words[0] . ' ' . end($words) : $full;
+            return '<span style="font-size:11px;color:#475569" title="' . Html::encode($full) . '">' . Html::encode($short) . '</span>';
         },
-        'headerOptions' => ['style' => 'width:14%'],
-        'contentOptions' => ['style' => 'max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'],
+        'headerOptions' => ['style' => 'width:10%'],
+        'contentOptions' => ['style' => 'white-space:nowrap'],
     ],
 
     /* رقم القضية - السنة */
