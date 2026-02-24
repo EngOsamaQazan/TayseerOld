@@ -400,6 +400,16 @@ class JudiciaryActionsController extends Controller
             return ['success' => true];
         }
 
+        if ($item->action_nature === 'request') {
+            $parentIds = array_filter(array_map('intval', explode(',', $item->parent_request_ids ?: '')));
+            if ($oldParentId) $parentIds = array_values(array_diff($parentIds, [$oldParentId]));
+            if (!in_array($newParentId, $parentIds)) $parentIds[] = $newParentId;
+            $item->parent_request_ids = implode(',', $parentIds) ?: null;
+            $item->save(false, ['parent_request_ids']);
+
+            return ['success' => true];
+        }
+
         return ['success' => false, 'message' => 'طبيعة الإجراء لا تدعم النقل'];
     }
 
@@ -418,7 +428,10 @@ class JudiciaryActionsController extends Controller
             $stats = $request->post('rel_allowed_statuses', []);
             $model->allowed_statuses = is_array($stats) && !empty($stats) ? implode(',', $stats) : null;
 
-            $model->parent_request_ids = null;
+            $parents = $request->post('rel_parent_request_ids', []);
+            if (is_array($parents) && !empty($parents)) {
+                $model->parent_request_ids = implode(',', $parents);
+            }
         }
 
         // parent_request_ids (for documents and doc_statuses)
