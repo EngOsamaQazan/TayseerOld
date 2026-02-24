@@ -13,6 +13,7 @@ use kartik\select2\Select2;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use backend\modules\followUp\helper\ContractCalculations;
 use common\helper\Permissions;
+use backend\helpers\NameHelper;
 use backend\widgets\ExportButtons;
 
 /* Assets */
@@ -230,15 +231,10 @@ $end   = $begin + count($models) - 1;
                 </thead>
                 <tbody>
                     <?php
-                    $shortName = function ($full) {
-                        $words = preg_split('/\s+/', trim($full), -1, PREG_SPLIT_NO_EMPTY);
-                        if (count($words) <= 2) return $full;
-                        return $words[0] . ' ' . end($words);
-                    };
                     ?>
                     <?php foreach ($models as $m):
                         $customerNamesFull = implode('، ', ArrayHelper::map($m->customers, 'id', 'name')) ?: '—';
-                        $customerNamesShort = implode('، ', array_map($shortName, ArrayHelper::map($m->customers, 'id', 'name'))) ?: '—';
+                        $customerNamesShort = implode('، ', array_map([NameHelper::class, 'short'], ArrayHelper::map($m->customers, 'id', 'name'))) ?: '—';
                         $sellerName = $m->seller->name ?? '—';
                         $followName = $allUsers[$m->followed_by] ?? ($m->followedBy->username ?? '—');
 

@@ -12,6 +12,7 @@ use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
 use kartik\select2\Select2;
 use backend\widgets\ExportButtons;
+use backend\helpers\NameHelper;
 
 /* Assets */
 $this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' . time());
@@ -280,15 +281,10 @@ a.fur-id-link:hover{text-decoration:underline}
                 </tr></thead>
                 <tbody>
                 <?php
-                $shortName = function ($full) {
-                    $words = preg_split('/\s+/', trim($full), -1, PREG_SPLIT_NO_EMPTY);
-                    if (count($words) <= 2) return $full;
-                    return $words[0] . ' ' . end($words);
-                };
                 ?>
                 <?php foreach ($models as $m):
                     $customerNamesFull = implode('، ', ArrayHelper::map($m->customers, 'id', 'name')) ?: '—';
-                    $customerNamesShort = implode('، ', array_map($shortName, ArrayHelper::map($m->customers, 'id', 'name'))) ?: '—';
+                    $customerNamesShort = implode('، ', array_map([NameHelper::class, 'short'], ArrayHelper::map($m->customers, 'id', 'name'))) ?: '—';
                     $followName = $allUsers[$m->followed_by] ?? ($m->followedBy->username ?? '—');
                     $st = $statusMap[$m->status] ?? ['label' => $m->status, 'color' => '#999'];
                     $isNF = (int)$m->never_followed === 1;

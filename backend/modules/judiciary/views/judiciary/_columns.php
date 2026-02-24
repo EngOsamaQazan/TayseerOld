@@ -6,6 +6,7 @@ use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use common\helper\Permissions;
+use backend\helpers\NameHelper;
 
 return [
     /* # */
@@ -38,16 +39,10 @@ return [
             $customers = $m->customersAndGuarantor;
             if (empty($customers)) return '<span style="color:#CBD5E1">—</span>';
 
-            $shortName = function ($full) {
-                $words = preg_split('/\s+/', trim($full), -1, PREG_SPLIT_NO_EMPTY);
-                if (count($words) <= 2) return $full;
-                return $words[0] . ' ' . end($words);
-            };
-
             $rows = [];
             foreach ($customers as $c) {
                 $full = $c->name;
-                $short = $shortName($full);
+                $short = NameHelper::short($full);
                 $jid = $c->job_title;
                 $jobName = '';
                 if ($jid) {
@@ -92,8 +87,7 @@ return [
         'value' => function ($m) {
             $full = $m->lawyer->name ?? '—';
             if ($full === '—') return '<span style="color:#CBD5E1">—</span>';
-            $words = preg_split('/\s+/', trim($full), -1, PREG_SPLIT_NO_EMPTY);
-            $short = count($words) > 2 ? $words[0] . ' ' . end($words) : $full;
+            $short = NameHelper::short($full);
             return '<span style="font-size:11px;color:#475569" title="' . Html::encode($full) . '">' . Html::encode($short) . '</span>';
         },
         'headerOptions' => ['style' => 'width:10%'],
