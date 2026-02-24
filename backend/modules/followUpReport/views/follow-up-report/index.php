@@ -279,8 +279,16 @@ a.fur-id-link:hover{text-decoration:underline}
                     <th data-label="" style="text-align:center">إجراءات</th>
                 </tr></thead>
                 <tbody>
+                <?php
+                $shortName = function ($full) {
+                    $words = preg_split('/\s+/', trim($full), -1, PREG_SPLIT_NO_EMPTY);
+                    if (count($words) <= 2) return $full;
+                    return $words[0] . ' ' . end($words);
+                };
+                ?>
                 <?php foreach ($models as $m):
-                    $customerNames = implode('، ', ArrayHelper::map($m->customers, 'id', 'name')) ?: '—';
+                    $customerNamesFull = implode('، ', ArrayHelper::map($m->customers, 'id', 'name')) ?: '—';
+                    $customerNamesShort = implode('، ', array_map($shortName, ArrayHelper::map($m->customers, 'id', 'name'))) ?: '—';
                     $followName = $allUsers[$m->followed_by] ?? ($m->followedBy->username ?? '—');
                     $st = $statusMap[$m->status] ?? ['label' => $m->status, 'color' => '#999'];
                     $isNF = (int)$m->never_followed === 1;
@@ -292,7 +300,7 @@ a.fur-id-link:hover{text-decoration:underline}
                         <a href="<?= $panelUrl ?>" class="fur-id-link"><?= $m->id ?></a>
                         <?php if ($isNF): ?><span class="fur-nf-badge"><i class="fa fa-exclamation-circle"></i> لم يُتابع</span><?php endif ?>
                     </td>
-                    <td data-label="العميل" title="<?= Html::encode($customerNames) ?>"><?= Html::encode($customerNames) ?></td>
+                    <td data-label="العميل" title="<?= Html::encode($customerNamesFull) ?>"><?= Html::encode($customerNamesShort) ?></td>
                     <td data-label="القسط"><?= number_format($m->effective_installment ?? $m->monthly_installment_value ?? 0, 0) ?></td>
                     <td data-label="أقساط مستحقة" style="text-align:center"><span class="fur-due-badge"><?= (int)($m->due_installments ?? 0) ?></span></td>
                     <td data-label="المبلغ المستحق"><span class="<?= $dueAmt > 0 ? 'fur-amount-red' : 'fur-amount-green' ?>"><?= number_format($dueAmt, 0) ?></span></td>

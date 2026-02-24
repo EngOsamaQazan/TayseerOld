@@ -229,8 +229,16 @@ $end   = $begin + count($models) - 1;
                     </tr>
                 </thead>
                 <tbody>
+                    <?php
+                    $shortName = function ($full) {
+                        $words = preg_split('/\s+/', trim($full), -1, PREG_SPLIT_NO_EMPTY);
+                        if (count($words) <= 2) return $full;
+                        return $words[0] . ' ' . end($words);
+                    };
+                    ?>
                     <?php foreach ($models as $m):
-                        $customerNames = implode('، ', ArrayHelper::map($m->customers, 'id', 'name')) ?: '—';
+                        $customerNamesFull = implode('، ', ArrayHelper::map($m->customers, 'id', 'name')) ?: '—';
+                        $customerNamesShort = implode('، ', array_map($shortName, ArrayHelper::map($m->customers, 'id', 'name'))) ?: '—';
                         $sellerName = $m->seller->name ?? '—';
                         $followName = $allUsers[$m->followed_by] ?? ($m->followedBy->username ?? '—');
 
@@ -243,8 +251,8 @@ $end   = $begin + count($models) - 1;
                     ?>
                     <tr data-id="<?= $m->id ?>">
                         <td class="ct-td-id" data-label="#"><?= $m->id ?></td>
-                        <td class="ct-td-customer" data-label="العميل" title="<?= Html::encode($customerNames) ?>">
-                            <?= Html::encode($customerNames) ?>
+                        <td class="ct-td-customer" data-label="العميل" title="<?= Html::encode($customerNamesFull) ?>">
+                            <?= Html::encode($customerNamesShort) ?>
                         </td>
                         <td class="ct-td-seller" data-label="البائع"><?= Html::encode($sellerName) ?></td>
                         <td class="ct-td-date" data-label="تاريخ البيع"><?= $m->Date_of_sale ?></td>
