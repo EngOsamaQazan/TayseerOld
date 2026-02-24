@@ -48,8 +48,9 @@ class PhoneInputWidget extends InputWidget
         $merged = array_replace_recursive($defaults, $this->jsOptions);
 
         $utilsUrl = PhoneInputAsset::register($this->view)->baseUrl . '/js/utils.js';
+        $absUtilsUrl = \yii\helpers\Url::to($utilsUrl, true);
         $jsonOpts = Json::htmlEncode($merged);
-        $jsonOpts = str_replace('"__UTILS_IMPORT__"', "function(){return import('$utilsUrl')}", $jsonOpts);
+        $jsonOpts = str_replace('"__UTILS_IMPORT__"', "function(){return import('$absUtilsUrl')}", $jsonOpts);
 
         $js = <<<JS
 (function(){
