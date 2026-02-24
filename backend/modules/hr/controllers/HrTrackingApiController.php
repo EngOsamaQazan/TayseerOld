@@ -518,10 +518,13 @@ class HrTrackingApiController extends Controller
             $user = \common\models\User::find()
                 ->where(['username' => $login])
                 ->orWhere(['email' => $login])
-                ->andWhere(['blocked_at' => null])
                 ->one();
 
-            if ($user && Yii::$app->security->validatePassword($password, $user->password_hash)) {
+            if ($user && $user->blocked_at) {
+                return $this->render('mobile-login', ['error' => 'هذا الحساب محظور، تواصل مع المدير']);
+            }
+
+            if ($user && \dektrium\user\helpers\Password::validate($password, $user->password_hash)) {
                 Yii::$app->user->login($user, 3600 * 24 * 30);
                 return $this->redirect(['mobile']);
             }
