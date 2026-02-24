@@ -430,3 +430,72 @@
     animation: soSlideDown .3s ease;
 }
 .so-duplicate-warn a { color: #856404; font-weight: 600; text-decoration: underline; }
+
+/* ═══ Address Panel — structured fields + map ═══ */
+.addr-panel { border: 1.5px solid #e2e8f0 !important; border-radius: 10px !important; margin-bottom: 14px; overflow: hidden; }
+.addr-panel-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid #e2e8f0;
+}
+.addr-type-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
+    background: var(--clr-primary, #800020); color: #fff;
+}
+.addr-panel-actions { display: flex; gap: 6px; }
+.addr-panel-actions .btn { border-radius: 6px; }
+.addr-panel .panel-body { padding: 14px 16px; }
+.addr-panel .panel-heading { margin-bottom: 0; }
+
+/* Map section */
+.addr-map-section { border-top: 1px dashed #e2e8f0; padding-top: 14px; margin-top: 10px; }
+.addr-smart-loc label { font-weight: 700; font-size: 13px; color: #334155; }
+.addr-smart-paste {
+    border-radius: 8px; border: 1.5px solid #e2e8f0; font-size: 13px;
+    transition: border-color .2s; resize: vertical;
+}
+.addr-smart-paste:focus { border-color: var(--clr-primary, #800020); box-shadow: 0 0 0 3px rgba(128,0,32,.08); }
+.addr-smart-hint { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+.addr-smart-result {
+    display: none; margin-top: 6px; padding: 8px 12px;
+    border-radius: 6px; font-size: 12px; font-weight: 600;
+}
+.addr-smart-result.show { display: block; }
+
+/* Map search */
+.addr-map-search-wrap { position: relative; }
+.addr-map-search {
+    padding-left: 40px; border-radius: 8px; border: 1.5px solid #e2e8f0;
+    font-size: 13px;
+}
+.addr-map-search:focus { border-color: var(--clr-primary, #800020); box-shadow: 0 0 0 3px rgba(128,0,32,.08); }
+.addr-map-search-btn {
+    position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: #64748b; font-size: 14px; cursor: pointer;
+}
+.addr-map-search-results {
+    display: none; position: absolute; top: 100%; left: 0; right: 0;
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 500; max-height: 260px; overflow-y: auto;
+}
+.addr-map-search-results.show { display: block; }
+.addr-map-search-results .result-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; cursor: pointer; transition: background .15s; border-bottom: 1px solid #f1f5f9;
+}
+.addr-map-search-results .result-item:hover { background: #f8fafc; }
+.addr-map-search-results .result-icon { color: #e11d48; font-size: 16px; flex-shrink: 0; }
+.addr-map-search-results .result-name { font-weight: 600; font-size: 13px; display: block; }
+.addr-map-search-results .result-addr { font-size: 11px; color: #94a3b8; display: block; }
+.addr-map-search-results .map-search-loading { padding: 14px; text-align: center; color: #64748b; font-size: 13px; }
+
+/* Map container */
+.addr-map-container { border: 1.5px solid #e2e8f0; border-radius: 8px; }
+
+/* Geo-filled animation */
+@keyframes addrGeoFill { 0% { background: #dcfce7; } 100% { background: #fff; } }
+.geo-filled { animation: addrGeoFill 2.5s ease; }
+
+/* Toggle map button */
+.addr-toggle-map { font-size: 12px; border-radius: 6px !important; }
