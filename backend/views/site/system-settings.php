@@ -52,7 +52,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                         <span class="sys-nav-sub">Vision API · Maps API · التكاليف</span>
                     </div>
                     <?php
-                    $gcActive = !empty($googleCloud['enabled']) && $googleCloud['enabled'] === '1';
+                    $gcActive = !empty($googleCloud['has_private_key']) && !empty($googleCloud['client_email']);
                     $gmActive = !empty($googleMaps['configured']);
                     ?>
                     <?php if ($gcActive && $gmActive): ?>
@@ -156,12 +156,24 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                         </div>
                         <div class="sys-card-body">
                             <div class="sys-connection-status" id="connection-status">
-                                <?php if (!empty($googleCloud['enabled']) && $googleCloud['enabled'] === '1' && !empty($googleCloud['has_private_key'])): ?>
+                                <?php
+                                $hasCredentials = !empty($googleCloud['has_private_key']) && !empty($googleCloud['client_email']);
+                                $isEnabled = !empty($googleCloud['enabled']) && $googleCloud['enabled'] === '1';
+                                ?>
+                                <?php if ($hasCredentials && $isEnabled): ?>
                                     <div class="sys-status-indicator configured">
                                         <i class="fa fa-check-circle fa-2x"></i>
                                         <div>
                                             <strong>تم التكوين</strong>
                                             <p>بيانات الاعتماد محفوظة — اضغط "اختبار الاتصال" للتحقق</p>
+                                        </div>
+                                    </div>
+                                <?php elseif ($hasCredentials && !$isEnabled): ?>
+                                    <div class="sys-status-indicator configured" style="border-right-color:#f59e0b">
+                                        <i class="fa fa-pause-circle fa-2x" style="color:#f59e0b"></i>
+                                        <div>
+                                            <strong>مكوّن لكن معطّل</strong>
+                                            <p>بيانات الاعتماد محفوظة — فعّل الخدمة أو اضغط "اختبار الاتصال" للتفعيل التلقائي</p>
                                         </div>
                                     </div>
                                 <?php else: ?>
@@ -2773,13 +2785,20 @@ function fillCostPanels(data) {
     }
 }
 
-// Test connection
+// Test connection — sends form values, auto-saves on success
 window.testGoogleConnection = function() {
     var btn = document.getElementById('btn-test-connection');
     var statusDiv = document.getElementById('connection-status');
     if (!btn || !statusDiv) { console.error('Vision test: btn or statusDiv not found'); return; }
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الاختبار...';
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الاختبار والحفظ...';
+
+    var formData = new URLSearchParams();
+    formData.append('gc_project_id', document.getElementById('gc_project_id') ? document.getElementById('gc_project_id').value : '');
+    formData.append('gc_client_email', document.getElementById('gc_client_email') ? document.getElementById('gc_client_email').value : '');
+    formData.append('gc_private_key', document.getElementById('gc_private_key') ? document.getElementById('gc_private_key').value : '');
+    formData.append('gc_monthly_limit', document.getElementById('gc_monthly_limit') ? document.getElementById('gc_monthly_limit').value : '1000');
+    formData.append('gc_cost_per_request', document.getElementById('gc_cost_per_request') ? document.getElementById('gc_cost_per_request').value : '0.0015');
 
     fetch('{$testUrl}', {
         method: 'POST',
@@ -2787,6 +2806,7 @@ window.testGoogleConnection = function() {
             'X-Requested-With': 'XMLHttpRequest',
             'Content-Type': 'application/x-www-form-urlencoded'
         },
+        body: formData.toString(),
         credentials: 'same-origin'
     })
     .then(function(r) {
@@ -2799,7 +2819,11 @@ window.testGoogleConnection = function() {
                 '<div class="sys-status-indicator connected">' +
                 '<i class="fa fa-check-circle fa-2x"></i>' +
                 '<div><strong>متصل بنجاح!</strong>' +
-                '<p>' + (res.message || '') + (res.project_id ? ' — المشروع: ' + res.project_id : '') + '</p></div></div>';
+                '<p>' + (res.message || '') + (res.project_id ? ' — المشروع: ' + res.project_id : '') +
+                (res.saved ? '<br><i class="fa fa-save"></i> تم حفظ الإعدادات تلقائياً' : '') +
+                '</p></div></div>';
+            var toggle = document.querySelector('input[name="gc_enabled"][type="checkbox"]');
+            if (toggle) toggle.checked = true;
         } else {
             statusDiv.innerHTML =
                 '<div class="sys-status-indicator error">' +

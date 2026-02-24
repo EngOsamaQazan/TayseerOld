@@ -318,9 +318,12 @@ class SiteController extends Controller
                     'cost_per_request'=> trim($post['gc_cost_per_request'] ?? '0.0015'),
                 ];
 
-                // Don't overwrite private_key if user left it as masked
                 if ($data['private_key'] === '' || $data['private_key'] === '••••••••••') {
                     $data['private_key'] = SystemSettings::get('google_cloud', 'private_key', '');
+                }
+
+                if (!empty($data['project_id']) && !empty($data['client_email']) && !empty($data['private_key'])) {
+                    $data['enabled'] = '1';
                 }
 
                 $encryptedKeys = ['private_key'];
@@ -504,6 +507,7 @@ class SiteController extends Controller
 
     /**
      * اختبار اتصال Google Cloud (AJAX)
+     * يقبل بيانات الاعتماد من الفورم ويحفظها تلقائياً قبل الاختبار
      */
     public function actionTestGoogleConnection()
     {
@@ -513,13 +517,43 @@ class SiteController extends Controller
             return ['success' => false, 'error' => 'طلب غير صالح'];
         }
 
+        $post = Yii::$app->request->post();
+        $projectId   = trim($post['gc_project_id'] ?? '');
+        $clientEmail = trim($post['gc_client_email'] ?? '');
+        $privateKey  = trim($post['gc_private_key'] ?? '');
+
+        if ($privateKey === '' || $privateKey === '••••••••••') {
+            $privateKey = SystemSettings::get('google_cloud', 'private_key', '');
+        }
+        if ($projectId === '') {
+            $projectId = SystemSettings::get('google_cloud', 'project_id', '');
+        }
+        if ($clientEmail === '') {
+            $clientEmail = SystemSettings::get('google_cloud', 'client_email', '');
+        }
+
         $creds = [
-            'project_id'   => SystemSettings::get('google_cloud', 'project_id', ''),
-            'client_email' => SystemSettings::get('google_cloud', 'client_email', ''),
-            'private_key'  => SystemSettings::get('google_cloud', 'private_key', ''),
+            'project_id'   => $projectId,
+            'client_email' => $clientEmail,
+            'private_key'  => $privateKey,
         ];
 
-        return SystemSettings::testGoogleConnection($creds);
+        $result = SystemSettings::testGoogleConnection($creds);
+
+        if ($result['success']) {
+            $data = [
+                'enabled'         => '1',
+                'project_id'      => $projectId,
+                'client_email'    => $clientEmail,
+                'private_key'     => $privateKey,
+                'monthly_limit'   => trim($post['gc_monthly_limit'] ?? '') ?: SystemSettings::get('google_cloud', 'monthly_limit', '1000'),
+                'cost_per_request' => trim($post['gc_cost_per_request'] ?? '') ?: SystemSettings::get('google_cloud', 'cost_per_request', '0.0015'),
+            ];
+            SystemSettings::setGroup('google_cloud', $data, ['private_key']);
+            $result['saved'] = true;
+        }
+
+        return $result;
     }
 
     /**
