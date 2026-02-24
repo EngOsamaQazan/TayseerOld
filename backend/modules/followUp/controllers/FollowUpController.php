@@ -873,17 +873,27 @@ class FollowUpController extends Controller
                 $type = 'promise';
             }
 
+            $meta = [];
+            if ($fu->feeling && isset($feelingsMap[$fu->feeling])) {
+                $meta[] = 'الانطباع: ' . $feelingsMap[$fu->feeling];
+            }
+            if (isset($goalLabels[$fu->connection_goal])) {
+                $meta[] = 'الهدف: ' . $goalLabels[$fu->connection_goal];
+            }
+            $metaLine = $meta ? implode(' | ', $meta) : '';
+            $content = $fu->notes ?: '';
+            if ($metaLine) {
+                $content .= ($content ? "\n" : '') . $metaLine;
+            }
+
             $events[] = [
                 'id' => 'fu-' . $fu->id,
                 'type' => $type,
                 'datetime' => $fu->date_time ? date('Y/m/d H:i', strtotime($fu->date_time)) : '',
-                'content' => trim(
-                    ($fu->notes ?: '') .
-                    ($fu->feeling ? ' | الانطباع: ' . ($feelingsMap[$fu->feeling] ?? $fu->feeling) : '') .
-                    (isset($goalLabels[$fu->connection_goal]) ? ' | الهدف: ' . $goalLabels[$fu->connection_goal] : '')
-                ),
+                'content' => trim($content),
                 'employee' => $fu->createdBy ? $fu->createdBy->username : '',
                 'promise_date' => $fu->promise_to_pay_at,
+                'reminder' => $fu->reminder ?? null,
                 'amount' => null,
                 'pinned' => false,
                 'attachments' => [],

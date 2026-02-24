@@ -58,6 +58,9 @@ $typeMap = [
                 <div class="ocp-timeline-event__card <?= $isPinned ? 'ocp-timeline-event__pinned' : '' ?>">
                     <div class="ocp-timeline-event__meta">
                         <span class="ocp-timeline-event__time"><?= Html::encode($event['datetime'] ?? '') ?></span>
+                        <?php if (!empty($event['reminder'])): ?>
+                            <span style="font-size:11px;color:#E65100;font-weight:600"><i class="fa fa-bell-o"></i> تأجيل: <?= Html::encode($event['reminder']) ?></span>
+                        <?php endif; ?>
                         <span class="ocp-timeline-event__type"><?= $typeInfo['label'] ?></span>
                         <?php if ($isPinned): ?>
                             <span style="font-size:11px;color:var(--ocp-primary)"><i class="fa fa-thumb-tack"></i> مثبت</span>
@@ -69,7 +72,7 @@ $typeMap = [
                     </div>
                     
                     <div class="ocp-timeline-event__content ocp-timeline-event__content--collapsed" id="event-content-<?= $i ?>">
-                        <?= Html::encode($event['content'] ?? '') ?>
+                        <?= nl2br(Html::encode($event['content'] ?? '')) ?>
                         <?php if (!empty($event['promise_date'])): ?>
                             <br><strong style="color:var(--ocp-event-promise)">موعد الوعد: <?= Html::encode($event['promise_date']) ?></strong>
                         <?php endif; ?>
