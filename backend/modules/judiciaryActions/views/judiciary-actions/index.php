@@ -316,6 +316,18 @@ $this->params['breadcrumbs'] = [];
                 }
             }
         }
+        // Also link documents via their parent_request_ids pointing to requests
+        foreach ($byNature['document'] as $doc) {
+            $parentIds = !empty($doc['parent_request_ids']) ? array_filter(array_map('intval', explode(',', $doc['parent_request_ids']))) : [];
+            foreach ($parentIds as $pid) {
+                if (isset($connections[$pid]) && !isset($connections[$pid]['documents'][$doc['id']])) {
+                    $connections[$pid]['documents'][$doc['id']] = [
+                        'action' => $doc,
+                        'statuses' => [],
+                    ];
+                }
+            }
+        }
         foreach ($byNature['doc_status'] as $ds) {
             $parentIds = !empty($ds['parent_request_ids']) ? array_filter(array_map('intval', explode(',', $ds['parent_request_ids']))) : [];
             foreach ($parentIds as $pid) {
