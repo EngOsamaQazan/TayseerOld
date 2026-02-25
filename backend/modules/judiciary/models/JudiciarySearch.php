@@ -27,6 +27,7 @@ class JudiciarySearch extends Judiciary
     public $company_id;
 
     public $contract_not_in_status;
+    public $party_name;
 
     public function rules()
     {
@@ -34,7 +35,7 @@ class JudiciarySearch extends Judiciary
             [['id', 'court_id', 'type_id', 'lawyer_id', 'created_at', 'updated_at', 'created_by', 'last_update_by', 'is_deleted', 'number_row', 'case_cost'], 'integer'],
             [['lawyer_cost', 'contract_id'], 'number'],
             [['income_date', 'year', 'from_income_date', 'to_income_date'], 'string'],
-            [['from_income_date', 'to_income_date', 'contract_not_in_status', 'company_id', 'judiciary_number'], 'safe']
+            [['from_income_date', 'to_income_date', 'contract_not_in_status', 'company_id', 'judiciary_number', 'party_name'], 'safe']
         ];
     }
 
@@ -109,6 +110,29 @@ class JudiciarySearch extends Judiciary
             $query->andWhere(['<=', 'j.income_date', $params['JudiciarySearch']['to_income_date']]);
         }
 
+        // ─── JOIN مشترك للعميل (party_name / job_title / jobs_type) ───
+        $needsCustomerJoin = !empty($params['JudiciarySearch']['party_name'])
+            || !empty($params['JudiciarySearch']['job_title'])
+            || !empty($params['JudiciarySearch']['jobs_type']);
+
+        if ($needsCustomerJoin) {
+            $query->innerJoin('{{%contracts_customers}} cc', 'cc.contract_id = j.contract_id');
+            $query->innerJoin('{{%customers}} cust', 'cust.id = cc.customer_id');
+            $query->distinct();
+
+            if (!empty($params['JudiciarySearch']['party_name'])) {
+                $query->andWhere(['like', 'cust.name', trim($params['JudiciarySearch']['party_name'])]);
+            }
+            if (!empty($params['JudiciarySearch']['job_title'])) {
+                $query->andWhere(['cust.job_title' => $params['JudiciarySearch']['job_title']]);
+            }
+            if (!empty($params['JudiciarySearch']['jobs_type'])) {
+                $query->innerJoin('{{%jobs}} jb', 'cust.job_title = jb.id');
+                $query->innerJoin('{{%jobs_type}} jt', 'jb.job_type = jt.id');
+                $query->andWhere(['jt.id' => $params['JudiciarySearch']['jobs_type']]);
+            }
+        }
+
         // ─── JOIN فقط عند الحاجة: فلتر حالة العقد ───
         if (!empty($params['JudiciarySearch']['status'])) {
             $query->innerJoin('{{%contracts}} ct', 'ct.id = j.contract_id');
@@ -116,22 +140,6 @@ class JudiciarySearch extends Judiciary
                 $query->andWhere(['not in', 'ct.status', ['canceled', 'finished']]);
             } elseif ($params['JudiciarySearch']['status'] == 'unAvailable') {
                 $query->andWhere(['in', 'ct.status', ['canceled', 'finished']]);
-            }
-        }
-
-        // ─── JOIN فقط عند الحاجة: فلتر الوظيفة ───
-        if (!empty($params['JudiciarySearch']['job_title']) || !empty($params['JudiciarySearch']['jobs_type'])) {
-            $query->innerJoin('{{%contracts_customers}} cc', 'cc.contract_id = j.contract_id');
-            $query->innerJoin('{{%customers}} cust', 'cust.id = cc.customer_id');
-            $query->innerJoin('{{%jobs}} jb', 'cust.job_title = jb.id');
-            $query->innerJoin('{{%jobs_type}} jt', 'jb.job_type = jt.id');
-            $query->distinct();
-
-            if (!empty($params['JudiciarySearch']['job_title'])) {
-                $query->andWhere(['cust.job_title' => $params['JudiciarySearch']['job_title']]);
-            }
-            if (!empty($params['JudiciarySearch']['jobs_type'])) {
-                $query->andWhere(['jt.id' => $params['JudiciarySearch']['jobs_type']]);
             }
         }
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * بحث متقدم - القضايا — تصميم احترافي مدمج
+ * بحث متقدم - القضايا
  */
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
@@ -15,7 +15,7 @@ $cache = Yii::$app->cache;
 $courts  = $cache->getOrSet('lookup_courts', fn() => ArrayHelper::map(Court::find()->asArray()->all(), 'id', 'name'), 3600);
 $types   = $cache->getOrSet('lookup_judiciary_types', fn() => ArrayHelper::map(JudiciaryType::find()->asArray()->all(), 'id', 'name'), 3600);
 $lawyers = $cache->getOrSet('lookup_lawyers', fn() => ArrayHelper::map(Lawyers::find()->asArray()->all(), 'id', 'name'), 3600);
-$hasFilters = $model->judiciary_number || $model->contract_id || $model->court_id || $model->type_id || $model->lawyer_id || $model->year || $model->from_income_date || $model->to_income_date;
+$hasFilters = $model->judiciary_number || $model->contract_id || $model->court_id || $model->type_id || $model->lawyer_id || $model->year || $model->from_income_date || $model->to_income_date || $model->party_name;
 ?>
 
 <style>
@@ -30,15 +30,30 @@ $hasFilters = $model->judiciary_number || $model->contract_id || $model->court_i
 .jud-search.collapsed .jud-search-toggle { transform:rotate(-90deg); }
 .jud-search-body { padding:0 16px 14px; }
 .jud-search.collapsed .jud-search-body { display:none; }
-.jud-search-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; }
-.jud-search-grid .form-group { margin-bottom:0; }
-.jud-search-grid .form-group label { font-size:11px; color:#64748B; font-weight:600; margin-bottom:3px; }
-.jud-search-grid .form-control, .jud-search-grid .select2-container { font-size:12px !important; }
-.jud-search-grid .select2-container .select2-selection--single { height:32px !important; min-height:32px !important; }
-.jud-search-grid .select2-container .select2-selection--single .select2-selection__rendered { line-height:30px !important; font-size:12px !important; padding-right:8px !important; }
-.jud-search-grid .form-control { height:32px; padding:4px 8px; }
-.jud-search-actions { display:flex; gap:8px; align-items:end; }
-.jud-search-actions .btn { height:32px; font-size:12px; padding:0 14px; border-radius:6px; display:flex; align-items:center; gap:4px; }
+
+.jud-filter-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+.jud-filter-row:last-child { margin-bottom:0; }
+.jud-filter-col { flex:1; min-width:120px; max-width:220px; }
+.jud-filter-col-wide { flex:1.5; min-width:160px; max-width:280px; }
+.jud-filter-col .form-group,
+.jud-filter-col-wide .form-group { margin-bottom:0; }
+.jud-filter-col label,
+.jud-filter-col-wide label { font-size:10px; color:#64748B; font-weight:600; margin-bottom:2px; letter-spacing:.3px; }
+.jud-filter-col .form-control,
+.jud-filter-col-wide .form-control { font-size:12px !important; height:32px; padding:4px 8px; border-radius:6px; }
+.jud-filter-col .select2-container,
+.jud-filter-col-wide .select2-container { font-size:12px !important; }
+.jud-filter-col .select2-container .select2-selection--single,
+.jud-filter-col-wide .select2-container .select2-selection--single { height:32px !important; min-height:32px !important; border-radius:6px !important; }
+.jud-filter-col .select2-container .select2-selection--single .select2-selection__rendered,
+.jud-filter-col-wide .select2-container .select2-selection--single .select2-selection__rendered { line-height:30px !important; font-size:12px !important; padding-right:8px !important; }
+
+.jud-filter-sep { width:100%; height:1px; background:#F1F5F9; margin:4px 0 6px; }
+
+.jud-search-actions { display:flex; gap:8px; align-items:flex-end; min-width:130px; }
+.jud-search-actions .btn { height:32px; font-size:12px; padding:0 16px; border-radius:6px; display:flex; align-items:center; gap:5px; font-weight:600; white-space:nowrap; }
+.jud-search-actions .btn-primary { background:#800020; border-color:#800020; }
+.jud-search-actions .btn-primary:hover { background:#650019; border-color:#650019; }
 </style>
 
 <div class="jud-search <?= $hasFilters ? '' : '' ?>">
@@ -51,33 +66,56 @@ $hasFilters = $model->judiciary_number || $model->contract_id || $model->court_i
             'id' => 'judiciary-search',
             'method' => 'get',
             'action' => ['index'],
-            'options' => ['class' => 'jud-search-form'],
         ]) ?>
 
-        <div class="jud-search-grid">
-            <?= $form->field($model, 'judiciary_number')->textInput(['placeholder' => 'مثل 2313'])->label('رقم القضية') ?>
-            <?= $form->field($model, 'contract_id')->textInput(['placeholder' => 'رقم العقد', 'type' => 'number'])->label('رقم العقد') ?>
-            <?= $form->field($model, 'court_id')->widget(Select2::class, [
-                'data' => $courts, 'options' => ['placeholder' => 'الكل'],
-                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
-            ])->label('المحكمة') ?>
-            <?= $form->field($model, 'type_id')->widget(Select2::class, [
-                'data' => $types, 'options' => ['placeholder' => 'الكل'],
-                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
-            ])->label('النوع') ?>
-            <?= $form->field($model, 'lawyer_id')->widget(Select2::class, [
-                'data' => $lawyers, 'options' => ['placeholder' => 'الكل'],
-                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
-            ])->label('المحامي') ?>
-            <?= $form->field($model, 'year')->dropDownList($model->year(), ['prompt' => 'الكل'])->label('السنة') ?>
-            <?= $form->field($model, 'from_income_date')->widget(FlatpickrWidget::class, [
-                'options' => ['placeholder' => 'من', 'style' => 'font-size:12px'],
-                'pluginOptions' => ['dateFormat' => 'Y-m-d'],
-            ])->label('ورود من') ?>
-            <?= $form->field($model, 'to_income_date')->widget(FlatpickrWidget::class, [
-                'options' => ['placeholder' => 'إلى', 'style' => 'font-size:12px'],
-                'pluginOptions' => ['dateFormat' => 'Y-m-d'],
-            ])->label('ورود إلى') ?>
+        <!-- الصف الأول: أرقام + طرف + محكمة -->
+        <div class="jud-filter-row">
+            <div class="jud-filter-col">
+                <?= $form->field($model, 'judiciary_number')->textInput(['placeholder' => '2313'])->label('رقم القضية') ?>
+            </div>
+            <div class="jud-filter-col">
+                <?= $form->field($model, 'contract_id')->textInput(['placeholder' => 'رقم العقد', 'type' => 'number'])->label('رقم العقد') ?>
+            </div>
+            <div class="jud-filter-col-wide">
+                <?= $form->field($model, 'party_name')->textInput(['placeholder' => 'اسم العميل أو الكفيل'])->label('اسم الطرف') ?>
+            </div>
+            <div class="jud-filter-col-wide">
+                <?= $form->field($model, 'court_id')->widget(Select2::class, [
+                    'data' => $courts, 'options' => ['placeholder' => 'الكل'],
+                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
+                ])->label('المحكمة') ?>
+            </div>
+        </div>
+
+        <!-- الصف الثاني: نوع + محامي + سنة + تواريخ + أزرار -->
+        <div class="jud-filter-row">
+            <div class="jud-filter-col">
+                <?= $form->field($model, 'type_id')->widget(Select2::class, [
+                    'data' => $types, 'options' => ['placeholder' => 'الكل'],
+                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
+                ])->label('النوع') ?>
+            </div>
+            <div class="jud-filter-col-wide">
+                <?= $form->field($model, 'lawyer_id')->widget(Select2::class, [
+                    'data' => $lawyers, 'options' => ['placeholder' => 'الكل'],
+                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
+                ])->label('المحامي') ?>
+            </div>
+            <div class="jud-filter-col">
+                <?= $form->field($model, 'year')->dropDownList($model->year(), ['prompt' => 'الكل'])->label('السنة') ?>
+            </div>
+            <div class="jud-filter-col">
+                <?= $form->field($model, 'from_income_date')->widget(FlatpickrWidget::class, [
+                    'options' => ['placeholder' => 'من', 'style' => 'font-size:12px'],
+                    'pluginOptions' => ['dateFormat' => 'Y-m-d'],
+                ])->label('ورود من') ?>
+            </div>
+            <div class="jud-filter-col">
+                <?= $form->field($model, 'to_income_date')->widget(FlatpickrWidget::class, [
+                    'options' => ['placeholder' => 'إلى', 'style' => 'font-size:12px'],
+                    'pluginOptions' => ['dateFormat' => 'Y-m-d'],
+                ])->label('ورود إلى') ?>
+            </div>
             <div class="jud-search-actions">
                 <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class' => 'btn btn-primary']) ?>
                 <?= Html::a('<i class="fa fa-times"></i>', ['index'], ['class' => 'btn btn-default', 'title' => 'مسح الفلاتر']) ?>
