@@ -570,7 +570,8 @@ function fallbackMapSearch(q) {
 }
 function doNominatimFallback(q) {
     $.getJSON('https://nominatim.openstreetmap.org/search', {
-        q: q, format: 'json', limit: 6, addressdetails: 1, 'accept-language': 'ar'
+        q: q, format: 'json', limit: 6, addressdetails: 1, 'accept-language': 'ar',
+        viewbox: '34.8,33.4,39.3,29.1', bounded: 1
     }, function(nd){
         if (!nd || nd.length === 0) { $('#map-search-results').html('<div class="map-search-loading">لا توجد نتائج</div>').addClass('show'); return; }
         var html = '';
@@ -806,7 +807,8 @@ $('.addr-field').on('change', function() {
         if (!parts.length) return;
         var q = parts.join(', ');
         $.getJSON('https://nominatim.openstreetmap.org/search', {
-            q: q, format: 'json', limit: 1, 'accept-language': 'ar'
+            q: q, format: 'json', limit: 1, 'accept-language': 'ar',
+            viewbox: '34.8,33.4,39.3,29.1', bounded: 1
         }, function(results) {
             if (results && results.length > 0) {
                 var r = results[0];

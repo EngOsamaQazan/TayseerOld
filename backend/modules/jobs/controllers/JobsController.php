@@ -515,6 +515,8 @@ class JobsController extends Controller
             'format' => 'json',
             'limit' => 1,
             'accept-language' => 'ar',
+            'viewbox' => '34.8,33.4,39.3,29.1',
+            'bounded' => 1,
         ]);
         $ctx = stream_context_create(['http' => [
             'header' => "User-Agent: TayseerApp/1.0\r\n",
