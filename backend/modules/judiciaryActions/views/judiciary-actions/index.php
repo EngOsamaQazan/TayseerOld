@@ -153,6 +153,9 @@ $this->params['breadcrumbs'] = [];
 .ja-tree-badge{font-size:9px;padding:2px 8px;border-radius:6px;font-weight:600;display:inline-flex;align-items:center;gap:3px}
 .ja-tree-badge-link{text-decoration:none !important;cursor:pointer;transition:all .15s}
 .ja-tree-badge-link:hover{filter:brightness(.9);transform:scale(1.05);text-decoration:none !important}
+.ja-tree-toggle{cursor:pointer;transition:all .15s;user-select:none}
+.ja-tree-toggle:hover{filter:brightness(.85);transform:scale(1.08)}
+.ja-tree-children.collapsed{display:none}
 .ja-tree-delete-btn{color:#EF4444 !important}
 .ja-tree-delete-btn:hover{background:#FEF2F2 !important;color:#DC2626 !important}
 
@@ -470,7 +473,7 @@ $this->params['breadcrumbs'] = [];
                                 <span class="ja-tree-stage"><?= Html::encode($stageLabels[$proc['action_type']] ?? 'عام') ?></span>
                                 <span class="ja-tree-id">#<?= $proc['id'] ?></span>
                                 <?= $renderUsageBadge($proc['id']) ?>
-                                <span class="ja-tree-badge" style="background:#DBEAFE;color:#1D4ED8"><i class="fa fa-file-text-o"></i> <?= $childReqCount ?> طلب</span>
+                                <span class="ja-tree-badge ja-tree-toggle" style="background:#DBEAFE;color:#1D4ED8" onclick="JATree.toggleChildren(this)" title="إظهار/إخفاء الطلبات"><i class="fa fa-file-text-o"></i> <?= $childReqCount ?> طلب <i class="fa fa-chevron-down" style="font-size:8px;margin-right:2px"></i></span>
                             </div>
                         </div>
                         <?= $renderNodeActions($proc['id']) ?>
@@ -495,7 +498,7 @@ $this->params['breadcrumbs'] = [];
                                         <span class="ja-tree-id">#<?= $req['id'] ?></span>
                                         <?= $renderUsageBadge($req['id']) ?>
                                         <?php if ($docCount > 0): ?>
-                                        <span class="ja-tree-badge" style="background:#DBEAFE;color:#1D4ED8"><i class="fa fa-file-o"></i> <?= $docCount ?> كتاب</span>
+                                        <span class="ja-tree-badge ja-tree-toggle" style="background:#DBEAFE;color:#1D4ED8" onclick="JATree.toggleChildren(this)" title="إظهار/إخفاء الكتب"><i class="fa fa-file-o"></i> <?= $docCount ?> كتاب <i class="fa fa-chevron-down" style="font-size:8px;margin-right:2px"></i></span>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -518,7 +521,7 @@ $this->params['breadcrumbs'] = [];
                                                 <span class="ja-tree-id">#<?= $doc['id'] ?></span>
                                                 <?= $renderUsageBadge($doc['id']) ?>
                                                 <?php if ($stCount > 0): ?>
-                                                <span class="ja-tree-badge" style="background:#FED7AA;color:#C2410C"><i class="fa fa-exchange"></i> <?= $stCount ?> حالة</span>
+                                                <span class="ja-tree-badge ja-tree-toggle" style="background:#FED7AA;color:#C2410C" onclick="JATree.toggleChildren(this)" title="إظهار/إخفاء الحالات"><i class="fa fa-exchange"></i> <?= $stCount ?> حالة <i class="fa fa-chevron-down" style="font-size:8px;margin-right:2px"></i></span>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
@@ -573,7 +576,7 @@ $this->params['breadcrumbs'] = [];
                                 <span class="ja-tree-id">#<?= $req['id'] ?></span>
                                 <?= $renderUsageBadge($req['id']) ?>
                                 <?php if ($docCount > 0): ?>
-                                <span class="ja-tree-badge" style="background:#DBEAFE;color:#1D4ED8"><i class="fa fa-file-o"></i> <?= $docCount ?> كتاب</span>
+                                <span class="ja-tree-badge ja-tree-toggle" style="background:#DBEAFE;color:#1D4ED8" onclick="JATree.toggleChildren(this)" title="إظهار/إخفاء الكتب"><i class="fa fa-file-o"></i> <?= $docCount ?> كتاب <i class="fa fa-chevron-down" style="font-size:8px;margin-right:2px"></i></span>
                                 <?php endif; ?>
                                 <?php if ($totalStatuses > 0): ?>
                                 <span class="ja-tree-badge" style="background:#FED7AA;color:#C2410C"><i class="fa fa-exchange"></i> <?= $totalStatuses ?> حالة</span>
@@ -599,7 +602,7 @@ $this->params['breadcrumbs'] = [];
                                         <span class="ja-tree-id">#<?= $doc['id'] ?></span>
                                         <?= $renderUsageBadge($doc['id']) ?>
                                         <?php if ($stCount > 0): ?>
-                                        <span class="ja-tree-badge" style="background:#FED7AA;color:#C2410C"><i class="fa fa-exchange"></i> <?= $stCount ?> حالة</span>
+                                        <span class="ja-tree-badge ja-tree-toggle" style="background:#FED7AA;color:#C2410C" onclick="JATree.toggleChildren(this)" title="إظهار/إخفاء الحالات"><i class="fa fa-exchange"></i> <?= $stCount ?> حالة <i class="fa fa-chevron-down" style="font-size:8px;margin-right:2px"></i></span>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -848,7 +851,23 @@ var JATree = (function(){
         });
     }
 
-    return { showMoveDropdown: showMoveDropdown, doRelink: doRelink, filterMove: filterMove };
+    function toggleChildren(badge) {
+        var node = badge.closest('.ja-tree-node');
+        var container = node.closest('.ja-tree-chain') || node.closest('.ja-tree-branch');
+        if (!container) return;
+        var children = container.querySelector('.ja-tree-children');
+        if (!children) return;
+        var arrow = badge.querySelector('.fa-chevron-down, .fa-chevron-up');
+        if (children.classList.contains('collapsed')) {
+            children.classList.remove('collapsed');
+            if (arrow) { arrow.classList.remove('fa-chevron-up'); arrow.classList.add('fa-chevron-down'); }
+        } else {
+            children.classList.add('collapsed');
+            if (arrow) { arrow.classList.remove('fa-chevron-down'); arrow.classList.add('fa-chevron-up'); }
+        }
+    }
+
+    return { showMoveDropdown: showMoveDropdown, doRelink: doRelink, filterMove: filterMove, toggleChildren: toggleChildren };
 })();
 </script>
 
