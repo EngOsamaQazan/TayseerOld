@@ -1,11 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { TenantsModule } from './modules/tenants/tenants.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
-import { TenantsModule } from './modules/tenants/tenants.module';
+import { LookupsModule } from './modules/lookups/lookups.module';
+import { CategoriesModule } from './modules/categories/categories.module';
 import { CompaniesModule } from './modules/companies/companies.module';
 import { CustomersModule } from './modules/customers/customers.module';
+import { FinancialTransactionsModule } from './modules/financial-transactions/financial-transactions.module';
+import { AuditModule } from './modules/audit/audit.module';
 
 @Module({
   imports: [
@@ -24,11 +28,15 @@ import { CustomersModule } from './modules/customers/customers.module';
         logging: false,
       }),
     }),
+    AuditModule,
     TenantsModule,
     AuthModule,
     UsersModule,
+    LookupsModule,
+    CategoriesModule,
     CompaniesModule,
     CustomersModule,
+    FinancialTransactionsModule,
   ],
 })
 export class AppModule {}
