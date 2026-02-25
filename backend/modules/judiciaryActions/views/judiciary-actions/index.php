@@ -172,9 +172,12 @@ $this->params['breadcrumbs'] = [];
 /* ═══ Quick Re-link ═══ */
 .ja-move-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;color:#16A34A;cursor:pointer;transition:all .15s;border:none;background:transparent;font-size:13px;padding:0}
 .ja-move-btn:hover{background:#F0FDF4;color:#15803D;transform:scale(1.12)}
-.ja-move-dropdown{position:absolute;top:100%;right:0;z-index:200;background:#fff;border:1px solid #E2E8F0;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.12);min-width:220px;max-height:260px;overflow-y:auto;display:none;font-size:12px;direction:rtl}
+.ja-move-dropdown{position:absolute;top:100%;right:0;z-index:200;background:#fff;border:1px solid #E2E8F0;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.12);min-width:260px;max-height:320px;display:none;font-size:12px;direction:rtl}
 .ja-move-dropdown.show{display:block}
 .ja-move-dropdown-title{padding:8px 12px;font-size:11px;font-weight:700;color:#64748B;border-bottom:1px solid #F1F5F9;background:#FAFBFC;border-radius:10px 10px 0 0;display:flex;align-items:center;gap:6px}
+.ja-move-search{width:100%;padding:6px 10px;border:none;border-bottom:1px solid #E2E8F0;font-size:12px;outline:none;font-family:inherit;direction:rtl;background:#FAFBFC}
+.ja-move-search:focus{background:#fff;border-bottom-color:#3B82F6}
+.ja-move-list{max-height:220px;overflow-y:auto}
 .ja-move-item{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;transition:background .15s;border-bottom:1px solid #F8FAFC}
 .ja-move-item:last-child{border-bottom:none}
 .ja-move-item:hover{background:#F0FDF4}
@@ -785,6 +788,8 @@ var JATree = (function(){
 
         var title = nature === 'request' ? 'نقل إلى إجراء إداري' : (nature === 'document' ? 'نقل إلى طلب' : 'نقل إلى كتاب');
         var html = '<div class="ja-move-dropdown-title"><i class="fa fa-random"></i> ' + title + '</div>';
+        html += '<input type="text" class="ja-move-search" placeholder="ابحث..." oninput="JATree.filterMove(this)">';
+        html += '<div class="ja-move-list">';
         for (var i = 0; i < list.length; i++) {
             var item = list[i];
             var isCurrent = item.id === parentId;
@@ -792,15 +797,28 @@ var JATree = (function(){
                 + ' data-target-id="' + item.id + '"'
                 + ' data-item-id="' + itemId + '"'
                 + ' data-old-parent="' + parentId + '"'
+                + ' data-search-name="' + item.name + '"'
                 + (isCurrent ? '' : ' onclick="JATree.doRelink(this)"')
                 + '>'
                 + '<span class="ja-move-name">' + (isCurrent ? '<i class="fa fa-check" style="color:#16A34A;margin-left:4px"></i>' : '') + item.name + '</span>'
                 + '<span class="ja-move-id">#' + item.id + '</span>'
                 + '</div>';
         }
+        html += '</div>';
         dd.innerHTML = html;
         dd.classList.add('show');
         openDD = dd;
+        dd.querySelector('.ja-move-search').focus();
+    }
+
+    function filterMove(input) {
+        var q = input.value.trim().toLowerCase();
+        var items = input.nextElementSibling.querySelectorAll('.ja-move-item');
+        for (var i = 0; i < items.length; i++) {
+            var name = (items[i].dataset.searchName || '').toLowerCase();
+            var id = items[i].querySelector('.ja-move-id') ? items[i].querySelector('.ja-move-id').textContent : '';
+            items[i].style.display = (!q || name.indexOf(q) !== -1 || id.indexOf(q) !== -1) ? '' : 'none';
+        }
     }
 
     function doRelink(el){
@@ -830,7 +848,7 @@ var JATree = (function(){
         });
     }
 
-    return { showMoveDropdown: showMoveDropdown, doRelink: doRelink };
+    return { showMoveDropdown: showMoveDropdown, doRelink: doRelink, filterMove: filterMove };
 })();
 </script>
 

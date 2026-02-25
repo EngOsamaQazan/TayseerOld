@@ -73,7 +73,10 @@ $currentParentRequests = $model->getParentRequestIdList();
 .jaf-def .fl { font-size:11px;font-weight:600;color:#64748B;margin-bottom:4px;display:block; }
 
 /* Multi-select checkboxes */
-.jaf-def .ms-list { max-height:160px;overflow-y:auto;border:1px solid #E2E8F0;border-radius:8px;background:#fff; }
+.jaf-def .ms-wrap { border:1px solid #E2E8F0;border-radius:8px;background:#fff;overflow:hidden; }
+.jaf-def .ms-search { width:100%;padding:7px 10px;border:none;border-bottom:1px solid #E2E8F0;font-size:12px;outline:none;font-family:inherit;direction:rtl;background:#FAFBFC; }
+.jaf-def .ms-search:focus { background:#fff;border-bottom-color:#3B82F6; }
+.jaf-def .ms-list { max-height:160px;overflow-y:auto; }
 .jaf-def .ms-item {
     display:flex;align-items:center;gap:8px;padding:6px 10px;
     border-bottom:1px solid #F1F5F9;font-size:12px;cursor:pointer;transition:background .15s;
@@ -139,32 +142,38 @@ $currentParentRequests = $model->getParentRequestIdList();
     <div style="display:flex;gap:12px;flex-wrap:wrap">
         <div style="flex:1;min-width:200px">
             <label class="fl">الكتب المسموح إصدارها بعد الموافقة</label>
-            <div class="ms-list" id="ms-allowed-docs">
-                <?php foreach ($documents as $did => $dname): ?>
-                <label class="ms-item">
-                    <input type="checkbox" name="rel_allowed_documents[]" value="<?= $did ?>" <?= in_array($did, $currentAllowedDocs) ? 'checked' : '' ?>>
-                    <span><?= Html::encode($dname) ?></span>
-                    <span class="ms-id">#<?= $did ?></span>
-                </label>
-                <?php endforeach; ?>
-                <?php if (empty($documents)): ?>
-                <div style="padding:10px;color:#94A3B8;text-align:center;font-size:11px">لا توجد كتب مسجلة</div>
-                <?php endif; ?>
+            <div class="ms-wrap">
+                <input type="text" class="ms-search" placeholder="ابحث في الكتب..." oninput="JADef.filterList(this)">
+                <div class="ms-list" id="ms-allowed-docs">
+                    <?php foreach ($documents as $did => $dname): ?>
+                    <label class="ms-item" data-search-text="<?= Html::encode($dname) ?> #<?= $did ?>">
+                        <input type="checkbox" name="rel_allowed_documents[]" value="<?= $did ?>" <?= in_array($did, $currentAllowedDocs) ? 'checked' : '' ?>>
+                        <span><?= Html::encode($dname) ?></span>
+                        <span class="ms-id">#<?= $did ?></span>
+                    </label>
+                    <?php endforeach; ?>
+                    <?php if (empty($documents)): ?>
+                    <div style="padding:10px;color:#94A3B8;text-align:center;font-size:11px">لا توجد كتب مسجلة</div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
         <div style="flex:1;min-width:200px">
             <label class="fl">الحالات المسموحة على كتب هذا الطلب</label>
-            <div class="ms-list" id="ms-allowed-statuses">
-                <?php foreach ($statuses as $sid => $sname): ?>
-                <label class="ms-item">
-                    <input type="checkbox" name="rel_allowed_statuses[]" value="<?= $sid ?>" <?= in_array($sid, $currentAllowedStatuses) ? 'checked' : '' ?>>
-                    <span><?= Html::encode($sname) ?></span>
-                    <span class="ms-id">#<?= $sid ?></span>
-                </label>
-                <?php endforeach; ?>
-                <?php if (empty($statuses)): ?>
-                <div style="padding:10px;color:#94A3B8;text-align:center;font-size:11px">لا توجد حالات مسجلة</div>
-                <?php endif; ?>
+            <div class="ms-wrap">
+                <input type="text" class="ms-search" placeholder="ابحث في الحالات..." oninput="JADef.filterList(this)">
+                <div class="ms-list" id="ms-allowed-statuses">
+                    <?php foreach ($statuses as $sid => $sname): ?>
+                    <label class="ms-item" data-search-text="<?= Html::encode($sname) ?> #<?= $sid ?>">
+                        <input type="checkbox" name="rel_allowed_statuses[]" value="<?= $sid ?>" <?= in_array($sid, $currentAllowedStatuses) ? 'checked' : '' ?>>
+                        <span><?= Html::encode($sname) ?></span>
+                        <span class="ms-id">#<?= $sid ?></span>
+                    </label>
+                    <?php endforeach; ?>
+                    <?php if (empty($statuses)): ?>
+                    <div style="padding:10px;color:#94A3B8;text-align:center;font-size:11px">لا توجد حالات مسجلة</div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>
@@ -174,14 +183,17 @@ $currentParentRequests = $model->getParentRequestIdList();
 <div class="sec ctx-rel" id="rel-document">
     <div class="sec-title"><i class="fa fa-link" style="color:#8B5CF6"></i> العلاقات — ما هي الطلبات التي يمكن أن يصدر بعدها هذا الكتاب؟</div>
     <label class="fl">الطلبات الأصلية المرتبطة</label>
-    <div class="ms-list" id="ms-parent-requests-doc">
-        <?php foreach ($requests as $rid => $rname): ?>
-        <label class="ms-item">
-            <input type="checkbox" name="rel_parent_request_ids[]" value="<?= $rid ?>" <?= in_array($rid, $currentParentRequests) ? 'checked' : '' ?>>
-            <span><?= Html::encode($rname) ?></span>
-            <span class="ms-id">#<?= $rid ?></span>
-        </label>
-        <?php endforeach; ?>
+    <div class="ms-wrap">
+        <input type="text" class="ms-search" placeholder="ابحث في الطلبات..." oninput="JADef.filterList(this)">
+        <div class="ms-list" id="ms-parent-requests-doc">
+            <?php foreach ($requests as $rid => $rname): ?>
+            <label class="ms-item" data-search-text="<?= Html::encode($rname) ?> #<?= $rid ?>">
+                <input type="checkbox" name="rel_parent_request_ids[]" value="<?= $rid ?>" <?= in_array($rid, $currentParentRequests) ? 'checked' : '' ?>>
+                <span><?= Html::encode($rname) ?></span>
+                <span class="ms-id">#<?= $rid ?></span>
+            </label>
+            <?php endforeach; ?>
+        </div>
     </div>
 </div>
 
@@ -189,14 +201,17 @@ $currentParentRequests = $model->getParentRequestIdList();
 <div class="sec ctx-rel" id="rel-doc-status">
     <div class="sec-title"><i class="fa fa-link" style="color:#EA580C"></i> العلاقات — ما هي الكتب التي يمكن أن ترتبط بها هذه الحالة؟</div>
     <label class="fl">الكتب المرتبطة</label>
-    <div class="ms-list" id="ms-parent-docs-status">
-        <?php foreach ($documents as $did => $dname): ?>
-        <label class="ms-item">
-            <input type="checkbox" name="rel_parent_request_ids[]" value="<?= $did ?>" <?= in_array($did, $currentParentRequests) ? 'checked' : '' ?>>
-            <span><?= Html::encode($dname) ?></span>
-            <span class="ms-id">#<?= $did ?></span>
-        </label>
-        <?php endforeach; ?>
+    <div class="ms-wrap">
+        <input type="text" class="ms-search" placeholder="ابحث في الكتب..." oninput="JADef.filterList(this)">
+        <div class="ms-list" id="ms-parent-docs-status">
+            <?php foreach ($documents as $did => $dname): ?>
+            <label class="ms-item" data-search-text="<?= Html::encode($dname) ?> #<?= $did ?>">
+                <input type="checkbox" name="rel_parent_request_ids[]" value="<?= $did ?>" <?= in_array($did, $currentParentRequests) ? 'checked' : '' ?>>
+                <span><?= Html::encode($dname) ?></span>
+                <span class="ms-id">#<?= $did ?></span>
+            </label>
+            <?php endforeach; ?>
+        </div>
     </div>
 </div>
 
@@ -274,6 +289,15 @@ var JADef = (function() {
         });
     });
 
-    return { selectNature: selectNature };
+    function filterList(input) {
+        var q = input.value.trim().toLowerCase();
+        var items = input.nextElementSibling.querySelectorAll('.ms-item');
+        for (var i = 0; i < items.length; i++) {
+            var text = (items[i].dataset.searchText || '').toLowerCase();
+            items[i].style.display = (!q || text.indexOf(q) !== -1) ? '' : 'none';
+        }
+    }
+
+    return { selectNature: selectNature, filterList: filterList };
 })();
 </script>
