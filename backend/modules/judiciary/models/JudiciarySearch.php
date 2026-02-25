@@ -121,7 +121,10 @@ class JudiciarySearch extends Judiciary
             $query->distinct();
 
             if (!empty($params['JudiciarySearch']['party_name'])) {
-                $query->andWhere(['like', 'cust.name', trim($params['JudiciarySearch']['party_name'])]);
+                $words = preg_split('/\s+/', trim($params['JudiciarySearch']['party_name']), -1, PREG_SPLIT_NO_EMPTY);
+                foreach ($words as $word) {
+                    $query->andWhere(['like', 'cust.name', $word]);
+                }
             }
             if (!empty($params['JudiciarySearch']['job_title'])) {
                 $query->andWhere(['cust.job_title' => $params['JudiciarySearch']['job_title']]);
