@@ -214,8 +214,8 @@ $modelId = $model->isNewRecord ? 0 : $model->id;
                 <div class="col-md-12">
                     <div class="smart-loc-input">
                         <label style="font-weight:700;font-size:13px;color:#334155"><i class="fa fa-paste"></i> لصق موقع (من جوجل ماب أو أي مصدر)</label>
-                        <textarea id="smart-location-paste" class="form-control" rows="2" placeholder="الصق هنا: إحداثيات (31.95, 35.91) أو رابط جوجل ماب أو عنوان نصي أو Plus Code..."></textarea>
-                        <div class="smart-loc-hint">يقبل: إحداثيات عددية، روابط Google Maps، عناوين نصية، Plus Codes (مثل 85RM+JV عمان)</div>
+                        <textarea id="smart-location-paste" class="form-control" rows="2" placeholder="الصق هنا: إحداثيات (31.95, 35.91) أو رابط جوجل ماب أو Plus Code..."></textarea>
+                        <div class="smart-loc-hint">يقبل: إحداثيات عددية، روابط Google Maps، Plus Codes (مثل 85RM+JV عمان)</div>
                         <div id="smart-loc-parsed" class="smart-loc-parsed"></div>
                     </div>
                 </div>
@@ -632,6 +632,7 @@ function tryInitGooglePlaces() {
             });
             pac.id = 'gmp-place-input';
             pac.style.cssText = 'width:100%;';
+            pac.setAttribute('placeholder', 'ابحث بالاسم: شركة، مستشفى، مطعم، شارع...');
 
             $('#map-search-input').hide();
             $('#btn-map-search').hide();

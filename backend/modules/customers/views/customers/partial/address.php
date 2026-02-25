@@ -74,7 +74,7 @@ DynamicFormWidget::begin([
                             <div class="addr-smart-loc">
                                 <label><i class="fa fa-paste"></i> لصق موقع (من جوجل ماب أو أي مصدر)</label>
                                 <textarea class="form-control addr-smart-paste" rows="2" placeholder="الصق هنا: إحداثيات (31.95, 35.91) أو رابط جوجل ماب أو Plus Code..."></textarea>
-                                <div class="addr-smart-hint">يقبل: إحداثيات عددية، روابط Google Maps، عناوين نصية، Plus Codes</div>
+                                <div class="addr-smart-hint">يقبل: إحداثيات عددية، روابط Google Maps، Plus Codes</div>
                                 <div class="addr-smart-result"></div>
                             </div>
                         </div>
