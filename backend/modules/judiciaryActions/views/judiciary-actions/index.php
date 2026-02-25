@@ -172,6 +172,18 @@ $this->params['breadcrumbs'] = [];
 .ja-tree-orphan{border-style:dashed;opacity:.8}
 .ja-tree-orphan:hover{opacity:1}
 
+/* ═══ Unused Actions Section ═══ */
+.ja-tree-unused{margin-top:28px;padding:16px 20px;background:#F9FAFB;border:2px dashed #D1D5DB;border-radius:12px}
+.ja-tree-unused-header{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;padding-bottom:12px}
+.ja-tree-unused-title{font-size:14px;font-weight:700;color:#9CA3AF;display:flex;align-items:center;gap:8px}
+.ja-tree-unused-title i.fa-chevron-down,.ja-tree-unused-title i.fa-chevron-up{font-size:10px;transition:transform .2s}
+.ja-tree-unused-count{font-size:11px;padding:2px 10px;border-radius:20px;background:#FEE2E2;color:#DC2626;font-weight:700}
+.ja-tree-unused-body{opacity:.6;transition:opacity .2s}
+.ja-tree-unused-body:hover{opacity:.85}
+.ja-tree-unused-body.collapsed{display:none}
+.ja-tree-unused .ja-tree-chain{background:#F3F4F6;border-color:#D1D5DB}
+.ja-tree-unused .ja-tree-node{background:#FAFAFA}
+
 /* ═══ Quick Re-link ═══ */
 .ja-move-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;color:#16A34A;cursor:pointer;transition:all .15s;border:none;background:transparent;font-size:13px;padding:0}
 .ja-move-btn:hover{background:#F0FDF4;color:#15803D;transform:scale(1.12)}
@@ -384,6 +396,72 @@ $this->params['breadcrumbs'] = [];
         });
 
         $stageLabels = JudiciaryActions::getActionTypeList();
+
+        $hasUsageFunc = function($id) use ($usageCounts) {
+            return ((int)($usageCounts[$id] ?? 0)) > 0;
+        };
+        $reqChainUsed = function($reqData) use ($hasUsageFunc) {
+            if ($hasUsageFunc($reqData['action']['id'])) return true;
+            foreach ($reqData['documents'] as $docData) {
+                if ($hasUsageFunc($docData['action']['id'])) return true;
+                foreach ($docData['statuses'] as $st) {
+                    if ($hasUsageFunc($st['id'])) return true;
+                }
+            }
+            return false;
+        };
+
+        $usedProcessChains = $unusedProcessChains = [];
+        foreach ($processChains as $pid => $pd) {
+            $used = $hasUsageFunc($pid);
+            if (!$used) {
+                foreach ($pd['requests'] as $rd) {
+                    if ($reqChainUsed($rd)) { $used = true; break; }
+                }
+            }
+            if ($used) $usedProcessChains[$pid] = $pd;
+            else $unusedProcessChains[$pid] = $pd;
+        }
+
+        $usedTopLevel = $unusedTopLevel = [];
+        foreach ($topLevelConnections as $rid => $rd) {
+            if ($reqChainUsed($rd)) $usedTopLevel[$rid] = $rd;
+            else $unusedTopLevel[$rid] = $rd;
+        }
+
+        $usedOrphanDocs = $unusedOrphanDocs = [];
+        foreach ($orphanDocs as $od) {
+            if ($hasUsageFunc($od['id'])) $usedOrphanDocs[] = $od;
+            else $unusedOrphanDocs[] = $od;
+        }
+
+        $usedOrphanStatuses = $unusedOrphanStatuses = [];
+        foreach ($orphanStatuses as $os) {
+            if ($hasUsageFunc($os['id'])) $usedOrphanStatuses[] = $os;
+            else $unusedOrphanStatuses[] = $os;
+        }
+
+        $usedOrphanProcesses = $unusedOrphanProcesses = [];
+        foreach ($orphanProcesses as $pr) {
+            if ($hasUsageFunc($pr['id'])) $usedOrphanProcesses[] = $pr;
+            else $unusedOrphanProcesses[] = $pr;
+        }
+
+        $unusedActionCount = 0;
+        foreach ($unusedProcessChains as $pc) {
+            $unusedActionCount++;
+            foreach ($pc['requests'] as $rd) {
+                $unusedActionCount++;
+                $unusedActionCount += count($rd['documents']);
+                foreach ($rd['documents'] as $dd) $unusedActionCount += count($dd['statuses']);
+            }
+        }
+        foreach ($unusedTopLevel as $rd) {
+            $unusedActionCount++;
+            $unusedActionCount += count($rd['documents']);
+            foreach ($rd['documents'] as $dd) $unusedActionCount += count($dd['statuses']);
+        }
+        $unusedActionCount += count($unusedOrphanDocs) + count($unusedOrphanStatuses) + count($unusedOrphanProcesses);
         ?>
 
         <?php
@@ -460,7 +538,7 @@ $this->params['breadcrumbs'] = [];
             <div class="ja-tree-body">
 
                 <?php /* ── Process → Request chains ── */ ?>
-                <?php foreach ($processChains as $procId => $procData):
+                <?php foreach ($usedProcessChains as $procId => $procData):
                     $proc = $procData['action'];
                     $childReqCount = count($procData['requests']);
                 ?>
@@ -559,7 +637,7 @@ $this->params['breadcrumbs'] = [];
                 <?php endforeach; ?>
 
                 <?php /* ── Top-level requests (no process parent) ── */ ?>
-                <?php foreach ($topLevelConnections as $reqId => $reqData):
+                <?php foreach ($usedTopLevel as $reqId => $reqData):
                     $req = $reqData['action'];
                     $stageLabel = $stageLabels[$req['action_type']] ?? 'عام';
                     $docCount = count($reqData['documents']);
@@ -636,10 +714,10 @@ $this->params['breadcrumbs'] = [];
                 </div>
                 <?php endforeach; ?>
 
-                <?php if (!empty($orphanDocs)): ?>
+                <?php if (!empty($usedOrphanDocs)): ?>
                 <div class="ja-tree-orphan-section">
                     <h4 class="ja-tree-orphan-title"><i class="fa fa-unlink"></i> كتب غير مرتبطة بطلبات</h4>
-                    <?php foreach ($orphanDocs as $od): ?>
+                    <?php foreach ($usedOrphanDocs as $od): ?>
                     <div class="ja-tree-node ja-tree-orphan" style="margin-bottom:8px">
                         <div class="ja-tree-node-icon" style="background:#F5F3FF;color:#8B5CF6"><i class="fa fa-file-o"></i></div>
                         <div class="ja-tree-node-body">
@@ -655,10 +733,10 @@ $this->params['breadcrumbs'] = [];
                 </div>
                 <?php endif; ?>
 
-                <?php if (!empty($orphanStatuses)): ?>
+                <?php if (!empty($usedOrphanStatuses)): ?>
                 <div class="ja-tree-orphan-section">
                     <h4 class="ja-tree-orphan-title"><i class="fa fa-unlink"></i> حالات غير مرتبطة</h4>
-                    <?php foreach ($orphanStatuses as $os): ?>
+                    <?php foreach ($usedOrphanStatuses as $os): ?>
                     <div class="ja-tree-node ja-tree-orphan" style="margin-bottom:8px">
                         <div class="ja-tree-node-icon" style="background:#FFF7ED;color:#EA580C"><i class="fa fa-exchange"></i></div>
                         <div class="ja-tree-node-body">
@@ -674,10 +752,10 @@ $this->params['breadcrumbs'] = [];
                 </div>
                 <?php endif; ?>
 
-                <?php if (!empty($orphanProcesses)): ?>
+                <?php if (!empty($usedOrphanProcesses)): ?>
                 <div class="ja-tree-orphan-section">
                     <h4 class="ja-tree-orphan-title"><i class="fa fa-cog"></i> إجراءات إدارية (مستقلة)</h4>
-                    <?php foreach ($orphanProcesses as $pr): ?>
+                    <?php foreach ($usedOrphanProcesses as $pr): ?>
                     <div class="ja-tree-node" style="margin-bottom:8px">
                         <div class="ja-tree-node-icon" style="background:#F1F5F9;color:#64748B"><i class="fa fa-cog"></i></div>
                         <div class="ja-tree-node-body">
@@ -693,6 +771,240 @@ $this->params['breadcrumbs'] = [];
                     <?php endforeach; ?>
                 </div>
                 <?php endif; ?>
+
+                <?php /* ═══════════════════════════════════════════════════════
+                         Unused Actions Section - actions never used in cases
+                         ═══════════════════════════════════════════════════════ */ ?>
+                <?php if ($unusedActionCount > 0): ?>
+                <div class="ja-tree-unused">
+                    <div class="ja-tree-unused-header" onclick="JATree.toggleUnused()">
+                        <span class="ja-tree-unused-title">
+                            <i class="fa fa-ban"></i> إجراءات لم تُستخدم أبداً
+                            <i class="fa fa-chevron-down" id="ja-unused-arrow"></i>
+                        </span>
+                        <span class="ja-tree-unused-count"><?= $unusedActionCount ?> إجراء</span>
+                    </div>
+                    <div class="ja-tree-unused-body collapsed" id="ja-unused-body">
+
+                        <?php /* ── Unused process chains ── */ ?>
+                        <?php foreach ($unusedProcessChains as $procId => $procData):
+                            $proc = $procData['action'];
+                            $childReqCount = count($procData['requests']);
+                        ?>
+                        <div class="ja-tree-chain">
+                            <div class="ja-tree-node">
+                                <div class="ja-tree-node-icon" style="background:#F1F5F9;color:#64748B"><i class="fa fa-cog"></i></div>
+                                <div class="ja-tree-node-body">
+                                    <div class="ja-tree-node-name"><?= Html::encode($proc['name']) ?></div>
+                                    <div class="ja-tree-node-meta">
+                                        <span class="ja-tree-stage"><?= Html::encode($stageLabels[$proc['action_type']] ?? 'عام') ?></span>
+                                        <span class="ja-tree-id">#<?= $proc['id'] ?></span>
+                                        <?= $renderUsageBadge($proc['id']) ?>
+                                        <?php if ($childReqCount > 0): ?>
+                                        <span class="ja-tree-badge ja-tree-toggle" style="background:#DBEAFE;color:#1D4ED8" onclick="event.stopPropagation();JATree.toggleChildren(this)" title="إظهار/إخفاء الطلبات"><i class="fa fa-file-text-o"></i> <?= $childReqCount ?> طلب <i class="fa fa-chevron-down" style="font-size:8px;margin-right:2px"></i></span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <?= $renderNodeActions($proc['id']) ?>
+                            </div>
+                            <?php if (!empty($procData['requests'])): ?>
+                            <div class="ja-tree-children ja-tree-children-proc">
+                            <?php foreach ($procData['requests'] as $reqId => $reqData):
+                                $req = $reqData['action'];
+                                $docCount = count($reqData['documents']);
+                            ?>
+                                <div class="ja-tree-branch">
+                                    <div class="ja-tree-connector ja-tree-connector-proc"></div>
+                                    <div class="ja-tree-node">
+                                        <div class="ja-tree-node-icon" style="background:#EFF6FF;color:#3B82F6"><i class="fa fa-file-text-o"></i></div>
+                                        <div class="ja-tree-node-body">
+                                            <div class="ja-tree-node-name"><?= Html::encode($req['name']) ?></div>
+                                            <div class="ja-tree-node-meta">
+                                                <span class="ja-tree-stage"><?= Html::encode($stageLabels[$req['action_type']] ?? 'عام') ?></span>
+                                                <span class="ja-tree-id">#<?= $req['id'] ?></span>
+                                                <?= $renderUsageBadge($req['id']) ?>
+                                                <?php if ($docCount > 0): ?>
+                                                <span class="ja-tree-badge ja-tree-toggle" style="background:#DBEAFE;color:#1D4ED8" onclick="event.stopPropagation();JATree.toggleChildren(this)" title="إظهار/إخفاء الكتب"><i class="fa fa-file-o"></i> <?= $docCount ?> كتاب <i class="fa fa-chevron-down" style="font-size:8px;margin-right:2px"></i></span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <?= $renderNodeActions($req['id'], 'request', $procId) ?>
+                                    </div>
+                                    <?php if (!empty($reqData['documents'])): ?>
+                                    <div class="ja-tree-children">
+                                        <?php foreach ($reqData['documents'] as $did => $docData):
+                                            $doc = $docData['action'];
+                                            $stCount = count($docData['statuses']);
+                                        ?>
+                                        <div class="ja-tree-branch">
+                                            <div class="ja-tree-connector"></div>
+                                            <div class="ja-tree-node">
+                                                <div class="ja-tree-node-icon" style="background:#F5F3FF;color:#8B5CF6"><i class="fa fa-file-o"></i></div>
+                                                <div class="ja-tree-node-body">
+                                                    <div class="ja-tree-node-name"><?= Html::encode($doc['name']) ?></div>
+                                                    <div class="ja-tree-node-meta">
+                                                        <span class="ja-tree-id">#<?= $doc['id'] ?></span>
+                                                        <?= $renderUsageBadge($doc['id']) ?>
+                                                        <?php if ($stCount > 0): ?>
+                                                        <span class="ja-tree-badge ja-tree-toggle" style="background:#FED7AA;color:#C2410C" onclick="event.stopPropagation();JATree.toggleChildren(this)" title="إظهار/إخفاء الحالات"><i class="fa fa-exchange"></i> <?= $stCount ?> حالة <i class="fa fa-chevron-down" style="font-size:8px;margin-right:2px"></i></span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                                <?= $renderNodeActions($doc['id'], 'document', $reqId) ?>
+                                            </div>
+                                            <?php if (!empty($docData['statuses'])): ?>
+                                            <div class="ja-tree-children ja-tree-children-deep">
+                                                <?php foreach ($docData['statuses'] as $st): ?>
+                                                <div class="ja-tree-branch">
+                                                    <div class="ja-tree-connector ja-tree-connector-deep"></div>
+                                                    <div class="ja-tree-node">
+                                                        <div class="ja-tree-node-icon" style="background:#FFF7ED;color:#EA580C"><i class="fa fa-exchange"></i></div>
+                                                        <div class="ja-tree-node-body">
+                                                            <div class="ja-tree-node-name"><?= Html::encode($st['name']) ?></div>
+                                                            <div class="ja-tree-node-meta">
+                                                                <span class="ja-tree-id">#<?= $st['id'] ?></span>
+                                                                <?= $renderUsageBadge($st['id']) ?>
+                                                            </div>
+                                                        </div>
+                                                        <?= $renderNodeActions($st['id'], 'doc_status', $did) ?>
+                                                    </div>
+                                                </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        <?php endforeach; ?>
+
+                        <?php /* ── Unused top-level requests ── */ ?>
+                        <?php foreach ($unusedTopLevel as $reqId => $reqData):
+                            $req = $reqData['action'];
+                            $docCount = count($reqData['documents']);
+                            $totalStatuses = 0;
+                            foreach ($reqData['documents'] as $dd) $totalStatuses += count($dd['statuses']);
+                        ?>
+                        <div class="ja-tree-chain">
+                            <div class="ja-tree-node">
+                                <div class="ja-tree-node-icon" style="background:#EFF6FF;color:#3B82F6"><i class="fa fa-file-text-o"></i></div>
+                                <div class="ja-tree-node-body">
+                                    <div class="ja-tree-node-name"><?= Html::encode($req['name']) ?></div>
+                                    <div class="ja-tree-node-meta">
+                                        <span class="ja-tree-stage"><?= Html::encode($stageLabels[$req['action_type']] ?? 'عام') ?></span>
+                                        <span class="ja-tree-id">#<?= $req['id'] ?></span>
+                                        <?= $renderUsageBadge($req['id']) ?>
+                                        <?php if ($docCount > 0): ?>
+                                        <span class="ja-tree-badge ja-tree-toggle" style="background:#DBEAFE;color:#1D4ED8" onclick="event.stopPropagation();JATree.toggleChildren(this)" title="إظهار/إخفاء الكتب"><i class="fa fa-file-o"></i> <?= $docCount ?> كتاب <i class="fa fa-chevron-down" style="font-size:8px;margin-right:2px"></i></span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <?= $renderNodeActions($req['id'], 'request', 0) ?>
+                            </div>
+                            <?php if (!empty($reqData['documents'])): ?>
+                            <div class="ja-tree-children">
+                                <?php foreach ($reqData['documents'] as $did => $docData):
+                                    $doc = $docData['action'];
+                                    $stCount = count($docData['statuses']);
+                                ?>
+                                <div class="ja-tree-branch">
+                                    <div class="ja-tree-connector"></div>
+                                    <div class="ja-tree-node">
+                                        <div class="ja-tree-node-icon" style="background:#F5F3FF;color:#8B5CF6"><i class="fa fa-file-o"></i></div>
+                                        <div class="ja-tree-node-body">
+                                            <div class="ja-tree-node-name"><?= Html::encode($doc['name']) ?></div>
+                                            <div class="ja-tree-node-meta">
+                                                <span class="ja-tree-id">#<?= $doc['id'] ?></span>
+                                                <?= $renderUsageBadge($doc['id']) ?>
+                                                <?php if ($stCount > 0): ?>
+                                                <span class="ja-tree-badge ja-tree-toggle" style="background:#FED7AA;color:#C2410C" onclick="event.stopPropagation();JATree.toggleChildren(this)" title="إظهار/إخفاء الحالات"><i class="fa fa-exchange"></i> <?= $stCount ?> حالة <i class="fa fa-chevron-down" style="font-size:8px;margin-right:2px"></i></span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <?= $renderNodeActions($doc['id'], 'document', $reqId) ?>
+                                    </div>
+                                    <?php if (!empty($docData['statuses'])): ?>
+                                    <div class="ja-tree-children ja-tree-children-deep">
+                                        <?php foreach ($docData['statuses'] as $st): ?>
+                                        <div class="ja-tree-branch">
+                                            <div class="ja-tree-connector ja-tree-connector-deep"></div>
+                                            <div class="ja-tree-node">
+                                                <div class="ja-tree-node-icon" style="background:#FFF7ED;color:#EA580C"><i class="fa fa-exchange"></i></div>
+                                                <div class="ja-tree-node-body">
+                                                    <div class="ja-tree-node-name"><?= Html::encode($st['name']) ?></div>
+                                                    <div class="ja-tree-node-meta">
+                                                        <span class="ja-tree-id">#<?= $st['id'] ?></span>
+                                                        <?= $renderUsageBadge($st['id']) ?>
+                                                    </div>
+                                                </div>
+                                                <?= $renderNodeActions($st['id'], 'doc_status', $did) ?>
+                                            </div>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        <?php endforeach; ?>
+
+                        <?php /* ── Unused orphan documents ── */ ?>
+                        <?php foreach ($unusedOrphanDocs as $od): ?>
+                        <div class="ja-tree-node ja-tree-orphan" style="margin-bottom:8px">
+                            <div class="ja-tree-node-icon" style="background:#F5F3FF;color:#8B5CF6"><i class="fa fa-file-o"></i></div>
+                            <div class="ja-tree-node-body">
+                                <div class="ja-tree-node-name"><?= Html::encode($od['name']) ?></div>
+                                <div class="ja-tree-node-meta">
+                                    <span class="ja-tree-id">#<?= $od['id'] ?></span>
+                                    <?= $renderUsageBadge($od['id']) ?>
+                                </div>
+                            </div>
+                            <?= $renderNodeActions($od['id'], 'document', 0) ?>
+                        </div>
+                        <?php endforeach; ?>
+
+                        <?php /* ── Unused orphan statuses ── */ ?>
+                        <?php foreach ($unusedOrphanStatuses as $os): ?>
+                        <div class="ja-tree-node ja-tree-orphan" style="margin-bottom:8px">
+                            <div class="ja-tree-node-icon" style="background:#FFF7ED;color:#EA580C"><i class="fa fa-exchange"></i></div>
+                            <div class="ja-tree-node-body">
+                                <div class="ja-tree-node-name"><?= Html::encode($os['name']) ?></div>
+                                <div class="ja-tree-node-meta">
+                                    <span class="ja-tree-id">#<?= $os['id'] ?></span>
+                                    <?= $renderUsageBadge($os['id']) ?>
+                                </div>
+                            </div>
+                            <?= $renderNodeActions($os['id'], 'doc_status', 0) ?>
+                        </div>
+                        <?php endforeach; ?>
+
+                        <?php /* ── Unused orphan processes ── */ ?>
+                        <?php foreach ($unusedOrphanProcesses as $pr): ?>
+                        <div class="ja-tree-node" style="margin-bottom:8px">
+                            <div class="ja-tree-node-icon" style="background:#F1F5F9;color:#64748B"><i class="fa fa-cog"></i></div>
+                            <div class="ja-tree-node-body">
+                                <div class="ja-tree-node-name"><?= Html::encode($pr['name']) ?></div>
+                                <div class="ja-tree-node-meta">
+                                    <span class="ja-tree-stage"><?= Html::encode($stageLabels[$pr['action_type']] ?? 'عام') ?></span>
+                                    <span class="ja-tree-id">#<?= $pr['id'] ?></span>
+                                    <?= $renderUsageBadge($pr['id']) ?>
+                                </div>
+                            </div>
+                            <?= $renderNodeActions($pr['id']) ?>
+                        </div>
+                        <?php endforeach; ?>
+
+                    </div>
+                </div>
+                <?php endif; ?>
+
             </div>
         </div>
     </div>
@@ -867,7 +1179,20 @@ var JATree = (function(){
         }
     }
 
-    return { showMoveDropdown: showMoveDropdown, doRelink: doRelink, filterMove: filterMove, toggleChildren: toggleChildren };
+    function toggleUnused() {
+        var body = document.getElementById('ja-unused-body');
+        var arrow = document.getElementById('ja-unused-arrow');
+        if (!body) return;
+        if (body.classList.contains('collapsed')) {
+            body.classList.remove('collapsed');
+            if (arrow) { arrow.classList.remove('fa-chevron-down'); arrow.classList.add('fa-chevron-up'); }
+        } else {
+            body.classList.add('collapsed');
+            if (arrow) { arrow.classList.remove('fa-chevron-up'); arrow.classList.add('fa-chevron-down'); }
+        }
+    }
+
+    return { showMoveDropdown: showMoveDropdown, doRelink: doRelink, filterMove: filterMove, toggleChildren: toggleChildren, toggleUnused: toggleUnused };
 })();
 </script>
 
