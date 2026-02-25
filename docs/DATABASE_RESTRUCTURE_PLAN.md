@@ -296,17 +296,23 @@ CREATE INDEX idx_audit_tenant ON audit_logs(tenant_id, entity_type, created_at D
 
 **الإجمالي: 39 جدول** (مقابل 154 في القديم = تخفيض 75%)
 
-## ترتيب التنفيذ
+## ترتيب التنفيذ (محدّث)
 
-1. ✅ tenants, users (مبني)
-2. ✅ companies, company_banks (مبني)
-3. ✅ customers, customer_addresses, customer_phones (مبني)
-4. 🔄 lookups, categories (يحتاج إنشاء + ترحيل الموديولات الحالية)
-5. 🔄 financial_transactions (يحتاج دمج Income + Expenses + FinancialTransaction)
-6. 🔄 contracts, contract_parties, contract_items, contract_installments (يحتاج تحديث)
-7. ⬜ judiciary_cases, judiciary_actions, courts, lawyers
-8. ⬜ follow_ups, collections, collection_installments
-9. ⬜ employees, attendance, payroll_runs, leave_requests, field_sessions
-10. ⬜ inventory_items, inventory_movements, suppliers, purchase_orders
-11. ⬜ notifications, sms_messages, jobs, system_settings
-12. ⬜ audit_logs, promissory_notes, customer_documents
+1. ✅ tenants, users (مبني ومختبر)
+2. ✅ companies, company_banks (مبني ومختبر)
+3. ✅ customers, customer_addresses, customer_phones (مبني ومختبر)
+4. ✅ lookups (مبني ومختبر - 66 قيمة افتراضية، يستبدل 15 جدول)
+5. ✅ categories (مبني ومختبر - 12 فئة افتراضية، يستبدل جدولين)
+6. ✅ financial_transactions (مبني ومختبر - موحد: income/expense/transfer/bank_import)
+7. ✅ audit_logs (مبني ومختبر - مركزي، @Global module)
+8. 🔄 contracts (بُني في جلسة سابقة، يحتاج تحديث ليستخدم lookups + financial_transactions الجديد)
+9. ❌ income module (بُني في جلسة سابقة، يجب حذفه - مدمج في financial_transactions)
+10. ⬜ follow_ups
+11. ⬜ judiciary_cases, judiciary_actions, courts, lawyers
+12. ⬜ collections, collection_installments
+13. ⬜ employees, attendance, payroll_runs, leave_requests, field_sessions
+14. ⬜ inventory_items, inventory_movements, suppliers, purchase_orders
+15. ⬜ notifications, sms_messages
+16. ⬜ jobs, system_settings
+17. ⬜ promissory_notes, customer_documents
+18. ⬜ Next.js Frontend
