@@ -154,7 +154,6 @@ class ExportHelper
 
         $excel->disconnectWorksheets();
         unset($excel);
-        ini_set('memory_limit', $prevLimit);
 
         return Yii::$app->response->sendFile($tmpFile, $fullFilename, [
             'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
