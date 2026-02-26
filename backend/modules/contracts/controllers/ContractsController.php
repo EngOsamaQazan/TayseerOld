@@ -263,12 +263,12 @@ class ContractsController extends Controller
         $query = $dataProvider->query;
         $query->with = [];
 
-        $query->leftJoin('{{%employee}} _sl', '_sl.id = os_contracts.seller_id');
+        $query->leftJoin('{{%user}} _sl', '_sl.id = os_contracts.seller_id');
         $query->leftJoin('{{%user}} _fu', '_fu.id = os_contracts.followed_by');
         $query->select([
             'os_contracts.id', 'os_contracts.total_value', 'os_contracts.Date_of_sale',
             'os_contracts.status', 'os_contracts.seller_id', 'os_contracts.followed_by',
-            'seller_name' => '_sl.name', 'follower_name' => '_fu.username',
+            'seller_name' => '_sl.username', 'follower_name' => '_fu.username',
         ]);
         $dataProvider->pagination = false;
         $rows = $query->asArray()->all();

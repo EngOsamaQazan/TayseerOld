@@ -267,7 +267,7 @@ class ExpensesController extends Controller
         $query = $dataProvider->query;
         $query->with = [];
 
-        $query->leftJoin('{{%expenses_categories}} _ec', '_ec.id = os_expenses.category_id');
+        $query->leftJoin('{{%expense_categories}} _ec', '_ec.id = os_expenses.category_id');
         $query->leftJoin('{{%user}} _u', '_u.id = os_expenses.created_by');
         $query->select([
             'os_expenses.id', 'os_expenses.expenses_date', 'os_expenses.description',

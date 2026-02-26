@@ -515,7 +515,8 @@ class CustomersController extends Controller
         $contractsByCust = [];
         if (!empty($custIds)) {
             $judCustIds = array_flip((new \yii\db\Query())
-                ->select('DISTINCT cc.customer_id')
+                ->select('cc.customer_id')
+                ->distinct()
                 ->from('{{%contracts_customers}} cc')
                 ->innerJoin('{{%judiciary}} j', 'j.contract_id = cc.contract_id AND (j.is_deleted = 0 OR j.is_deleted IS NULL)')
                 ->where(['cc.customer_id' => $custIds])
