@@ -252,31 +252,55 @@ class ExpensesController extends Controller
      */
     public function actionExportExcel()
     {
-        $searchModel  = new ExpensesSearch();
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
-        $dataProvider->query->with(['category', 'createdBy']);
-
-        return $this->exportData($dataProvider, [
-            'title'    => 'المصاريف',
-            'filename' => 'expenses',
-            'headers'  => ['#', 'التاريخ', 'الوصف', 'التصنيف', 'المبلغ', 'رقم العقد', 'رقم المستند', 'بواسطة', 'ملاحظات'],
-            'keys'     => ['id', 'expenses_date', 'description', 'category.name', 'amount', 'contract_id', 'document_number', 'createdBy.username', 'notes'],
-            'widths'   => [8, 14, 28, 16, 14, 12, 14, 14, 25],
-        ]);
+        return $this->exportExpensesLightweight('excel');
     }
 
     public function actionExportPdf()
     {
-        $searchModel  = new ExpensesSearch();
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
-        $dataProvider->query->with(['category', 'createdBy']);
+        return $this->exportExpensesLightweight('pdf');
+    }
 
-        return $this->exportData($dataProvider, [
+    private function exportExpensesLightweight($format)
+    {
+        $searchModel = new ExpensesSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        $query = $dataProvider->query;
+        $query->with = [];
+
+        $query->leftJoin('{{%expenses_categories}} _ec', '_ec.id = os_expenses.category_id');
+        $query->leftJoin('{{%user}} _u', '_u.id = os_expenses.created_by');
+        $query->select([
+            'os_expenses.id', 'os_expenses.expenses_date', 'os_expenses.description',
+            'os_expenses.amount', 'os_expenses.contract_id', 'os_expenses.document_number',
+            'os_expenses.notes',
+            'cat_name' => '_ec.name', 'user_name' => '_u.username',
+        ]);
+
+        $dataProvider->pagination = false;
+        $rows = $query->asArray()->all();
+
+        $exportRows = [];
+        foreach ($rows as $r) {
+            $exportRows[] = [
+                'id'       => $r['id'],
+                'date'     => $r['expenses_date'] ?: '—',
+                'desc'     => $r['description'] ?: '—',
+                'category' => $r['cat_name'] ?: '—',
+                'amount'   => $r['amount'] ?: 0,
+                'contract' => $r['contract_id'] ?: '—',
+                'doc_num'  => $r['document_number'] ?: '—',
+                'user'     => $r['user_name'] ?: '—',
+                'notes'    => $r['notes'] ?: '—',
+            ];
+        }
+
+        return $this->exportArrayData($exportRows, [
             'title'    => 'المصاريف',
             'filename' => 'expenses',
             'headers'  => ['#', 'التاريخ', 'الوصف', 'التصنيف', 'المبلغ', 'رقم العقد', 'رقم المستند', 'بواسطة', 'ملاحظات'],
-            'keys'     => ['id', 'expenses_date', 'description', 'category.name', 'amount', 'contract_id', 'document_number', 'createdBy.username', 'notes'],
-        ], 'pdf');
+            'keys'     => ['id', 'date', 'desc', 'category', 'amount', 'contract', 'doc_num', 'user', 'notes'],
+            'widths'   => [8, 14, 28, 16, 14, 12, 14, 14, 25],
+        ], $format);
     }
 
     protected function findModel($id)

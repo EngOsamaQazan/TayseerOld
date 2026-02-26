@@ -644,67 +644,61 @@ class JudiciaryController extends Controller
 
     public function actionExportActionsExcel()
     {
-        $searchModel = new \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActionsSearch();
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
-
-        return $this->exportData($dataProvider, [
-            'title'    => 'إجراءات العملاء القضائية',
-            'filename' => 'judiciary_actions',
-            'headers'  => ['القضية', 'المحكوم عليه', 'الإجراء', 'ملاحظات', 'المنشئ', 'المحامي', 'المحكمة', 'العقد', 'تاريخ الإجراء'],
-            'keys'     => [
-                function ($m) {
-                    $jud = $m->judiciary;
-                    return $jud ? ($jud->judiciary_number . '/' . $jud->year) : '#' . $m->judiciary_id;
-                },
-                'customers.name',
-                'judiciaryActions.name',
-                'note',
-                'createdBy.username',
-                function ($m) {
-                    return \common\helper\FindJudicary::findLawyerJudicary($m->judiciary_id);
-                },
-                function ($m) {
-                    return \common\helper\FindJudicary::findCourtJudicary($m->judiciary_id);
-                },
-                function ($m) {
-                    return \common\helper\FindJudicary::findJudiciaryContract($m->judiciary_id) ?: '—';
-                },
-                'action_date',
-            ],
-            'widths' => [14, 22, 16, 24, 14, 18, 18, 10, 14],
-        ], 'excel');
+        return $this->exportActionsLightweight('excel');
     }
 
     public function actionExportActionsPdf()
     {
-        $searchModel = new \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActionsSearch();
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        return $this->exportActionsLightweight('pdf');
+    }
 
-        return $this->exportData($dataProvider, [
+    private function exportActionsLightweight($format)
+    {
+        $rows = (new \yii\db\Query())
+            ->select([
+                'jca.id', 'jca.judiciary_id', 'jca.note', 'jca.action_date',
+                'j.judiciary_number', 'j.year', 'j.contract_id',
+                'cust_name' => 'c.name',
+                'action_name' => 'ja.name',
+                'user_name' => 'u.username',
+                'lawyer_name' => 'lw.name',
+                'court_name' => 'ct.name',
+            ])
+            ->from('{{%judiciary_customers_actions}} jca')
+            ->leftJoin('{{%judiciary}} j', 'j.id = jca.judiciary_id')
+            ->leftJoin('{{%customers}} c', 'c.id = jca.customers_id')
+            ->leftJoin('{{%judiciary_actions}} ja', 'ja.id = jca.judiciary_actions_id')
+            ->leftJoin('{{%user}} u', 'u.id = jca.created_by')
+            ->leftJoin('{{%lawyers}} lw', 'lw.id = j.lawyer_id')
+            ->leftJoin('{{%court}} ct', 'ct.id = j.court_id')
+            ->andWhere(['or', ['jca.is_deleted' => 0], ['jca.is_deleted' => null]])
+            ->orderBy(['jca.id' => SORT_DESC])
+            ->all();
+
+        $exportRows = [];
+        foreach ($rows as $r) {
+            $num  = $r['judiciary_number'] ?: '';
+            $year = $r['year'] ?: '';
+            $exportRows[] = [
+                'case'    => $num ? "{$num}/{$year}" : '#' . $r['judiciary_id'],
+                'customer' => $r['cust_name'] ?: '—',
+                'action'  => $r['action_name'] ?: '—',
+                'note'    => $r['note'] ?: '—',
+                'creator' => $r['user_name'] ?: '—',
+                'lawyer'  => $r['lawyer_name'] ?: '—',
+                'court'   => $r['court_name'] ?: '—',
+                'contract' => $r['contract_id'] ?: '—',
+                'date'    => $r['action_date'] ?: '—',
+            ];
+        }
+
+        return $this->exportArrayData($exportRows, [
             'title'    => 'إجراءات العملاء القضائية',
             'filename' => 'judiciary_actions',
             'headers'  => ['القضية', 'المحكوم عليه', 'الإجراء', 'ملاحظات', 'المنشئ', 'المحامي', 'المحكمة', 'العقد', 'تاريخ الإجراء'],
-            'keys'     => [
-                function ($m) {
-                    $jud = $m->judiciary;
-                    return $jud ? ($jud->judiciary_number . '/' . $jud->year) : '#' . $m->judiciary_id;
-                },
-                'customers.name',
-                'judiciaryActions.name',
-                'note',
-                'createdBy.username',
-                function ($m) {
-                    return \common\helper\FindJudicary::findLawyerJudicary($m->judiciary_id);
-                },
-                function ($m) {
-                    return \common\helper\FindJudicary::findCourtJudicary($m->judiciary_id);
-                },
-                function ($m) {
-                    return \common\helper\FindJudicary::findJudiciaryContract($m->judiciary_id) ?: '—';
-                },
-                'action_date',
-            ],
-        ], 'pdf');
+            'keys'     => ['case', 'customer', 'action', 'note', 'creator', 'lawyer', 'court', 'contract', 'date'],
+            'widths'   => [14, 22, 16, 24, 14, 18, 18, 10, 14],
+        ], $format);
     }
 
     /* ═══════════════════════════════════════════════════════════

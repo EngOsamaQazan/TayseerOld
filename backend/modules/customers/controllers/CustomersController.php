@@ -486,76 +486,69 @@ class CustomersController extends Controller
 
     public function actionExportExcel()
     {
-        if (!Permissions::can(Permissions::CUST_EXPORT)) {
-            throw new \yii\web\ForbiddenHttpException('غير مصرح');
-        }
-        $searchModel = new CustomersSearch();
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
-
-        return $this->exportData($dataProvider, [
-            'title' => 'العملاء',
-            'headers' => ['#', 'الاسم', 'الهاتف', 'الرقم الوطني', 'مشتكى عليه', 'العقود', 'الوظيفة'],
-            'keys' => [
-                '#',
-                'name',
-                'primary_phone_number',
-                'id_number',
-                function ($m) {
-                    $exists = \backend\modules\judiciary\models\Judiciary::find()
-                        ->innerJoin('os_contracts_customers cc', 'os_judiciary.contract_id = cc.contract_id')
-                        ->where(['cc.customer_id' => $m->id])
-                        ->exists();
-                    return $exists ? 'نعم' : 'لا';
-                },
-                function ($m) {
-                    $contracts = \backend\modules\customers\models\ContractsCustomers::find()
-                        ->select('contract_id')
-                        ->where(['customer_id' => $m->id])
-                        ->column();
-                    return implode(', ', $contracts);
-                },
-                'jobs.name',
-            ],
-            'widths' => [6, 25, 18, 18, 12, 20, 20],
-            'filename' => 'العملاء',
-        ]);
+        return $this->exportCustomersLightweight('excel');
     }
 
     public function actionExportPdf()
     {
+        return $this->exportCustomersLightweight('pdf');
+    }
+
+    private function exportCustomersLightweight($format)
+    {
         if (!Permissions::can(Permissions::CUST_EXPORT)) {
             throw new \yii\web\ForbiddenHttpException('غير مصرح');
         }
+
         $searchModel = new CustomersSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        $query = $dataProvider->query;
+        $query->with = [];
 
-        return $this->exportData($dataProvider, [
-            'title' => 'العملاء',
-            'headers' => ['#', 'الاسم', 'الهاتف', 'الرقم الوطني', 'مشتكى عليه', 'العقود', 'الوظيفة'],
-            'keys' => [
-                '#',
-                'name',
-                'primary_phone_number',
-                'id_number',
-                function ($m) {
-                    $exists = \backend\modules\judiciary\models\Judiciary::find()
-                        ->innerJoin('os_contracts_customers cc', 'os_judiciary.contract_id = cc.contract_id')
-                        ->where(['cc.customer_id' => $m->id])
-                        ->exists();
-                    return $exists ? 'نعم' : 'لا';
-                },
-                function ($m) {
-                    $contracts = \backend\modules\customers\models\ContractsCustomers::find()
-                        ->select('contract_id')
-                        ->where(['customer_id' => $m->id])
-                        ->column();
-                    return implode(', ', $contracts);
-                },
-                'jobs.name',
-            ],
-            'widths' => [6, 25, 18, 18, 12, 20, 20],
+        $query->leftJoin('{{%jobs}} _jb', '_jb.id = os_customers.job_title');
+        $query->select(['os_customers.id', 'os_customers.name', 'os_customers.primary_phone_number', 'os_customers.id_number', 'job_name' => '_jb.name']);
+
+        $rows = $query->asArray()->all();
+
+        $custIds = array_column($rows, 'id');
+        $judCustIds = [];
+        $contractsByCust = [];
+        if (!empty($custIds)) {
+            $judCustIds = array_flip((new \yii\db\Query())
+                ->select('DISTINCT cc.customer_id')
+                ->from('{{%contracts_customers}} cc')
+                ->innerJoin('{{%judiciary}} j', 'j.contract_id = cc.contract_id AND (j.is_deleted = 0 OR j.is_deleted IS NULL)')
+                ->where(['cc.customer_id' => $custIds])
+                ->column());
+
+            $ccRows = (new \yii\db\Query())
+                ->select(['customer_id', "GROUP_CONCAT(contract_id SEPARATOR ', ') as contracts"])
+                ->from('{{%contracts_customers}}')
+                ->where(['customer_id' => $custIds])
+                ->groupBy('customer_id')
+                ->all();
+            $contractsByCust = \yii\helpers\ArrayHelper::map($ccRows, 'customer_id', 'contracts');
+        }
+
+        $exportRows = [];
+        foreach ($rows as $r) {
+            $exportRows[] = [
+                'name'     => $r['name'] ?: '—',
+                'phone'    => $r['primary_phone_number'] ?: '—',
+                'id_num'   => $r['id_number'] ?: '—',
+                'sued'     => isset($judCustIds[$r['id']]) ? 'نعم' : 'لا',
+                'contracts' => $contractsByCust[$r['id']] ?? '—',
+                'job'      => $r['job_name'] ?: '—',
+            ];
+        }
+
+        return $this->exportArrayData($exportRows, [
+            'title'    => 'العملاء',
             'filename' => 'العملاء',
-        ], 'pdf');
+            'headers'  => ['#', 'الاسم', 'الهاتف', 'الرقم الوطني', 'مشتكى عليه', 'العقود', 'الوظيفة'],
+            'keys'     => ['#', 'name', 'phone', 'id_num', 'sued', 'contracts', 'job'],
+            'widths'   => [6, 25, 18, 18, 12, 20, 20],
+        ], $format);
     }
 
     /**

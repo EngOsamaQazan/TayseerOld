@@ -277,29 +277,52 @@ class IncomeController extends Controller
 
     public function actionExportExcel($customer_id)
     {
-        $query = Income::find()->andFilterWhere(['customer_id' => $customer_id]);
-        $dataProvider = new ActiveDataProvider(['query' => $query]);
-
-        return $this->exportData($dataProvider, [
-            'title' => 'الأقساط',
-            'filename' => 'income',
-            'headers' => ['#', 'اسم الصنف', 'اسم العميل', 'التاريخ', 'رقم الشيك', 'ملاحظات', 'الإجمالي'],
-            'keys' => ['#', 'item.name', 'customer.name', 'date', 'cheque_number', 'notes', 'total'],
-            'widths' => [8, 22, 22, 14, 16, 25, 14],
-        ]);
+        return $this->exportIncomeLightweight($customer_id, 'excel');
     }
 
     public function actionExportPdf($customer_id)
     {
-        $query = Income::find()->andFilterWhere(['customer_id' => $customer_id]);
-        $dataProvider = new ActiveDataProvider(['query' => $query]);
+        return $this->exportIncomeLightweight($customer_id, 'pdf');
+    }
 
-        return $this->exportData($dataProvider, [
-            'title' => 'الأقساط',
+    private function exportIncomeLightweight($customer_id, $format)
+    {
+        $query = (new \yii\db\Query())
+            ->select([
+                'i.id', 'i.date', 'i.cheque_number', 'i.notes', 'i.total',
+                'item_name' => 'it.name',
+                'customer_name' => 'c.name',
+            ])
+            ->from('{{%income}} i')
+            ->leftJoin('{{%items}} it', 'it.id = i.item_id')
+            ->leftJoin('{{%customers}} c', 'c.id = i.customer_id')
+            ->andWhere(['or', ['i.is_deleted' => 0], ['i.is_deleted' => null]]);
+
+        if (!empty($customer_id)) {
+            $query->andWhere(['i.customer_id' => $customer_id]);
+        }
+
+        $rows = $query->all();
+
+        $exportRows = [];
+        foreach ($rows as $r) {
+            $exportRows[] = [
+                'item'     => $r['item_name'] ?: '—',
+                'customer' => $r['customer_name'] ?: '—',
+                'date'     => $r['date'] ?: '—',
+                'cheque'   => $r['cheque_number'] ?: '—',
+                'notes'    => $r['notes'] ?: '—',
+                'total'    => $r['total'] ?: 0,
+            ];
+        }
+
+        return $this->exportArrayData($exportRows, [
+            'title'    => 'الأقساط',
             'filename' => 'income',
-            'headers' => ['#', 'اسم الصنف', 'اسم العميل', 'التاريخ', 'رقم الشيك', 'ملاحظات', 'الإجمالي'],
-            'keys' => ['#', 'item.name', 'customer.name', 'date', 'cheque_number', 'notes', 'total'],
-        ], 'pdf');
+            'headers'  => ['#', 'اسم الصنف', 'اسم العميل', 'التاريخ', 'رقم الشيك', 'ملاحظات', 'الإجمالي'],
+            'keys'     => ['#', 'item', 'customer', 'date', 'cheque', 'notes', 'total'],
+            'widths'   => [8, 22, 22, 14, 16, 25, 14],
+        ], $format);
     }
 
     /**

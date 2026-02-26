@@ -395,60 +395,15 @@ ORDER BY c.id DESC";
      */
     public function actionExportExcel()
     {
-        $this->createFollowUpReportView();
-        $searchModel = new FollowUpReportSearch();
-        $params = Yii::$app->request->queryParams;
-        if (!isset($params['FollowUpReportSearch']['is_can_not_contact'])) {
-            $params['FollowUpReportSearch']['is_can_not_contact'] = '0';
-        }
-        $dataProvider = $searchModel->search($params);
-
-        $statusMap = [
-            'pending' => 'قيد الانتظار', 'active' => 'نشط', 'reconciliation' => 'تسوية',
-            'judiciary' => 'قضائي', 'legal_department' => 'دائرة قانونية', 'settlement' => 'مصالحة',
-        ];
-
-        return $this->exportData($dataProvider, [
-            'title' => 'تقرير المتابعة',
-            'filename' => 'follow_up_report',
-            'headers' => ['#', 'العميل', 'القسط', 'أقساط مستحقة', 'المبلغ المستحق', 'آخر متابعة', 'التذكير', 'وعد بالدفع', 'الحالة', 'المتابع'],
-            'keys' => [
-                'id',
-                function ($model) {
-                    $names = \yii\helpers\ArrayHelper::map($model->customers, 'id', 'name');
-                    return implode('، ', $names) ?: '—';
-                },
-                function ($model) {
-                    return $model->effective_installment ?? $model->monthly_installment_value ?? 0;
-                },
-                'due_installments',
-                'due_amount',
-                function ($model) {
-                    if ((int)($model->never_followed ?? 0) === 1) return 'لم يُتابع أبداً';
-                    return $model->last_follow_up ? date('Y-m-d', strtotime($model->last_follow_up)) : '—';
-                },
-                function ($model) {
-                    return $model->reminder ?: '—';
-                },
-                function ($model) {
-                    return $model->promise_to_pay_at ?: '—';
-                },
-                function ($model) use ($statusMap) {
-                    return $statusMap[$model->status] ?? $model->status;
-                },
-                function ($model) {
-                    return $model->followedBy ? $model->followedBy->username : '—';
-                },
-            ],
-            'widths' => [10, 22, 14, 14, 16, 16, 14, 14, 14, 16],
-            'orientation' => 'L',
-        ], 'excel');
+        return $this->exportFollowUpLightweight('excel');
     }
 
-    /**
-     * Export follow-up report to PDF.
-     */
     public function actionExportPdf()
+    {
+        return $this->exportFollowUpLightweight('pdf');
+    }
+
+    private function exportFollowUpLightweight($format)
     {
         $this->createFollowUpReportView();
         $searchModel = new FollowUpReportSearch();
@@ -457,46 +412,65 @@ ORDER BY c.id DESC";
             $params['FollowUpReportSearch']['is_can_not_contact'] = '0';
         }
         $dataProvider = $searchModel->search($params);
+        $query = $dataProvider->query;
+        $query->with = [];
+
+        $query->leftJoin('{{%user}} _fu', '_fu.id = os_follow_up_report.followed_by');
+        $query->select([
+            'os_follow_up_report.id', 'os_follow_up_report.status',
+            'os_follow_up_report.effective_installment', 'os_follow_up_report.monthly_installment_value',
+            'os_follow_up_report.due_installments', 'os_follow_up_report.due_amount',
+            'os_follow_up_report.last_follow_up', 'os_follow_up_report.never_followed',
+            'os_follow_up_report.reminder', 'os_follow_up_report.promise_to_pay_at',
+            'follower_name' => '_fu.username',
+        ]);
+
+        $dataProvider->pagination = false;
+        $rows = $query->asArray()->all();
+
+        $contractIds = array_column($rows, 'id');
+        $customersByContract = [];
+        if (!empty($contractIds)) {
+            $custData = (new \yii\db\Query())
+                ->select(["cc.contract_id", "GROUP_CONCAT(c.name SEPARATOR '، ') as names"])
+                ->from('{{%contracts_customers}} cc')
+                ->innerJoin('{{%customers}} c', 'c.id = cc.customer_id')
+                ->where(['cc.contract_id' => $contractIds])
+                ->andWhere(['cc.customer_type' => 'client'])
+                ->groupBy('cc.contract_id')
+                ->all();
+            $customersByContract = \yii\helpers\ArrayHelper::map($custData, 'contract_id', 'names');
+        }
 
         $statusMap = [
             'pending' => 'قيد الانتظار', 'active' => 'نشط', 'reconciliation' => 'تسوية',
             'judiciary' => 'قضائي', 'legal_department' => 'دائرة قانونية', 'settlement' => 'مصالحة',
         ];
 
-        return $this->exportData($dataProvider, [
-            'title' => 'تقرير المتابعة',
-            'filename' => 'follow_up_report',
-            'headers' => ['#', 'العميل', 'القسط', 'أقساط مستحقة', 'المبلغ المستحق', 'آخر متابعة', 'التذكير', 'وعد بالدفع', 'الحالة', 'المتابع'],
-            'keys' => [
-                'id',
-                function ($model) {
-                    $names = \yii\helpers\ArrayHelper::map($model->customers, 'id', 'name');
-                    return implode('، ', $names) ?: '—';
-                },
-                function ($model) {
-                    return $model->effective_installment ?? $model->monthly_installment_value ?? 0;
-                },
-                'due_installments',
-                'due_amount',
-                function ($model) {
-                    if ((int)($model->never_followed ?? 0) === 1) return 'لم يُتابع أبداً';
-                    return $model->last_follow_up ? date('Y-m-d', strtotime($model->last_follow_up)) : '—';
-                },
-                function ($model) {
-                    return $model->reminder ?: '—';
-                },
-                function ($model) {
-                    return $model->promise_to_pay_at ?: '—';
-                },
-                function ($model) use ($statusMap) {
-                    return $statusMap[$model->status] ?? $model->status;
-                },
-                function ($model) {
-                    return $model->followedBy ? $model->followedBy->username : '—';
-                },
-            ],
+        $exportRows = [];
+        foreach ($rows as $r) {
+            $exportRows[] = [
+                'id'        => $r['id'],
+                'customer'  => $customersByContract[$r['id']] ?? '—',
+                'installment' => $r['effective_installment'] ?? $r['monthly_installment_value'] ?? 0,
+                'due_count' => $r['due_installments'] ?? 0,
+                'due_amount' => $r['due_amount'] ?? 0,
+                'last_fu'   => ((int)($r['never_followed'] ?? 0) === 1) ? 'لم يُتابع أبداً' : ($r['last_follow_up'] ? date('Y-m-d', strtotime($r['last_follow_up'])) : '—'),
+                'reminder'  => $r['reminder'] ?: '—',
+                'promise'   => $r['promise_to_pay_at'] ?: '—',
+                'status'    => $statusMap[$r['status']] ?? $r['status'],
+                'follower'  => $r['follower_name'] ?: '—',
+            ];
+        }
+
+        return $this->exportArrayData($exportRows, [
+            'title'       => 'تقرير المتابعة',
+            'filename'    => 'follow_up_report',
+            'headers'     => ['#', 'العميل', 'القسط', 'أقساط مستحقة', 'المبلغ المستحق', 'آخر متابعة', 'التذكير', 'وعد بالدفع', 'الحالة', 'المتابع'],
+            'keys'        => ['id', 'customer', 'installment', 'due_count', 'due_amount', 'last_fu', 'reminder', 'promise', 'status', 'follower'],
+            'widths'      => [10, 22, 14, 14, 16, 16, 14, 14, 14, 16],
             'orientation' => 'L',
-        ], 'pdf');
+        ], $format);
     }
 
     /**

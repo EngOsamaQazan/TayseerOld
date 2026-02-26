@@ -260,12 +260,44 @@ class ContractsController extends Controller
     {
         $searchModel = new ContractsSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
-        $dataProvider->query->with(['customers', 'seller', 'followedBy']);
-        $dataProvider->pagination = false;
-        $models = $dataProvider->getModels();
+        $query = $dataProvider->query;
+        $query->with = [];
 
-        $contractIds = ArrayHelper::getColumn($models, 'id');
+        $query->leftJoin('{{%employee}} _sl', '_sl.id = os_contracts.seller_id');
+        $query->leftJoin('{{%user}} _fu', '_fu.id = os_contracts.followed_by');
+        $query->select([
+            'os_contracts.id', 'os_contracts.total_value', 'os_contracts.Date_of_sale',
+            'os_contracts.status', 'os_contracts.seller_id', 'os_contracts.followed_by',
+            'seller_name' => '_sl.name', 'follower_name' => '_fu.username',
+        ]);
+        $dataProvider->pagination = false;
+        $rows = $query->asArray()->all();
+
+        $contractIds = array_column($rows, 'id');
         $pre = $this->preloadContractExportData($contractIds);
+
+        $customersByContract = [];
+        $deservedByContract = [];
+        if (!empty($contractIds)) {
+            $custData = (new \yii\db\Query())
+                ->select(["cc.contract_id", "GROUP_CONCAT(c.name SEPARATOR '، ') as names"])
+                ->from('{{%contracts_customers}} cc')
+                ->innerJoin('{{%customers}} c', 'c.id = cc.customer_id')
+                ->where(['cc.contract_id' => $contractIds])
+                ->andWhere(['cc.customer_type' => 'client'])
+                ->groupBy('cc.contract_id')
+                ->all();
+            $customersByContract = ArrayHelper::map($custData, 'contract_id', 'names');
+
+            $deservedData = (new \yii\db\Query())
+                ->select(['contract_id', 'COALESCE(SUM(amount),0) as total'])
+                ->from('{{%contract_installment}}')
+                ->where(['contract_id' => $contractIds])
+                ->andWhere(['<=', 'due_date', date('Y-m-d')])
+                ->groupBy('contract_id')
+                ->all();
+            $deservedByContract = ArrayHelper::map($deservedData, 'contract_id', 'total');
+        }
 
         $statusLabels = [
             'active' => 'نشط', 'pending' => 'معلّق', 'judiciary' => 'قضاء',
@@ -273,47 +305,42 @@ class ContractsController extends Controller
             'canceled' => 'ملغي', 'refused' => 'مرفوض',
         ];
 
-        return $this->exportArrayData($models, [
-            'title' => 'العقود',
+        $exportRows = [];
+        foreach ($rows as $r) {
+            $id = $r['id'];
+            $judRows = $pre['judByContract'][$id] ?? [];
+            $total = (float)$r['total_value'];
+            if ($r['status'] === 'judiciary' && !empty($judRows)) {
+                $total += (float)$judRows[0]['case_cost'] + (float)$judRows[0]['lawyer_cost'];
+            }
+            $caseCosts = (float)($pre['expByContract'][$id] ?? 0);
+            $paid = (float)($pre['paidByContract'][$id] ?? 0);
+            $totalForRemain = (float)$r['total_value'];
+            if (!empty($judRows)) {
+                $lawyerSum = 0;
+                foreach ($judRows as $j) $lawyerSum += (float)$j['lawyer_cost'];
+                $totalForRemain += $caseCosts + $lawyerSum;
+            }
+
+            $exportRows[] = [
+                'id'        => $id,
+                'seller'    => $r['seller_name'] ?: '—',
+                'customer'  => $customersByContract[$id] ?? '—',
+                'deserved'  => (float)($deservedByContract[$id] ?? 0),
+                'date'      => $r['Date_of_sale'] ?: '—',
+                'total'     => $total,
+                'status'    => $statusLabels[$r['status']] ?? $r['status'],
+                'remaining' => $totalForRemain - $paid,
+                'follower'  => $r['follower_name'] ?: '—',
+            ];
+        }
+
+        return $this->exportArrayData($exportRows, [
+            'title'    => 'العقود',
             'filename' => 'contracts',
-            'headers' => ['#', 'البائع', 'العميل', 'المستحق', 'التاريخ', 'الإجمالي', 'الحالة', 'المتبقي', 'المتابع'],
-            'keys' => [
-                'id',
-                function ($m) { return $m->seller->name ?? '—'; },
-                function ($m) {
-                    return implode('، ', ArrayHelper::map($m->customers, 'id', 'name')) ?: '—';
-                },
-                function ($m) {
-                    $calc = new \backend\modules\followUp\helper\ContractCalculations($m->id);
-                    return $calc->deservedAmount();
-                },
-                'Date_of_sale',
-                function ($m) use ($pre) {
-                    $judRows = $pre['judByContract'][$m->id] ?? [];
-                    $total = (float)$m->total_value;
-                    if ($m->status === 'judiciary' && !empty($judRows)) {
-                        $total += (float)$judRows[0]['case_cost'] + (float)$judRows[0]['lawyer_cost'];
-                    }
-                    return $total;
-                },
-                function ($m) use ($statusLabels) {
-                    return $statusLabels[$m->status] ?? $m->status;
-                },
-                function ($m) use ($pre) {
-                    $judRows = $pre['judByContract'][$m->id] ?? [];
-                    $caseCosts = (float)($pre['expByContract'][$m->id] ?? 0);
-                    $paid = (float)($pre['paidByContract'][$m->id] ?? 0);
-                    $totalForRemain = (float)$m->total_value;
-                    if (!empty($judRows)) {
-                        $lawyerSum = 0;
-                        foreach ($judRows as $j) $lawyerSum += (float)$j['lawyer_cost'];
-                        $totalForRemain += $caseCosts + $lawyerSum;
-                    }
-                    return $totalForRemain - $paid;
-                },
-                function ($m) { return $m->followedBy->username ?? '—'; },
-            ],
-            'widths' => [8, 16, 22, 14, 14, 14, 12, 14, 14],
+            'headers'  => ['#', 'البائع', 'العميل', 'المستحق', 'التاريخ', 'الإجمالي', 'الحالة', 'المتبقي', 'المتابع'],
+            'keys'     => ['id', 'seller', 'customer', 'deserved', 'date', 'total', 'status', 'remaining', 'follower'],
+            'widths'   => [8, 16, 22, 14, 14, 14, 12, 14, 14],
         ], $format);
     }
 
