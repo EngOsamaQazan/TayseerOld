@@ -29,6 +29,8 @@ class ExportHelper
      */
     public static function toExcel(array $config)
     {
+        $prevLimit = ini_get('memory_limit');
+        ini_set('memory_limit', '512M');
         $title      = $config['title'];
         $subtitle   = $config['subtitle'] ?? null;
         $headers    = $config['headers'];
@@ -102,7 +104,7 @@ class ExportHelper
                 $key = $keys[$c];
                 if ($key === '#') {
                     $value = $idx + 1;
-                } elseif (is_callable($key)) {
+                } elseif ($key instanceof \Closure || (is_array($key) && is_callable($key))) {
                     $value = $key($row, $idx);
                 } elseif (is_object($row)) {
                     $value = self::resolveAttribute($row, $key);
@@ -152,6 +154,7 @@ class ExportHelper
 
         $excel->disconnectWorksheets();
         unset($excel);
+        ini_set('memory_limit', $prevLimit);
 
         return Yii::$app->response->sendFile($tmpFile, $fullFilename, [
             'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -203,7 +206,7 @@ class ExportHelper
             foreach ($keys as $key) {
                 if ($key === '#') {
                     $val = $idx + 1;
-                } elseif (is_callable($key)) {
+                } elseif ($key instanceof \Closure || (is_array($key) && is_callable($key))) {
                     $val = $key($row, $idx);
                 } elseif (is_object($row)) {
                     $val = self::resolveAttribute($row, $key);

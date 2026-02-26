@@ -688,7 +688,7 @@ class JudiciaryController extends Controller
                 'lawyer'  => $r['lawyer_name'] ?: '—',
                 'court'   => $r['court_name'] ?: '—',
                 'contract' => $r['contract_id'] ?: '—',
-                'act_date' => $r['action_date'] ?: '—',
+                'date'    => $r['action_date'] ?: '—',
             ];
         }
 
@@ -696,7 +696,7 @@ class JudiciaryController extends Controller
             'title'    => 'إجراءات العملاء القضائية',
             'filename' => 'judiciary_actions',
             'headers'  => ['القضية', 'المحكوم عليه', 'الإجراء', 'ملاحظات', 'المنشئ', 'المحامي', 'المحكمة', 'العقد', 'تاريخ الإجراء'],
-            'keys'     => ['case', 'customer', 'action', 'note', 'creator', 'lawyer', 'court', 'contract', 'act_date'],
+            'keys'     => ['case', 'customer', 'action', 'note', 'creator', 'lawyer', 'court', 'contract', 'date'],
             'widths'   => [14, 22, 16, 24, 14, 18, 18, 10, 14],
         ], $format);
     }

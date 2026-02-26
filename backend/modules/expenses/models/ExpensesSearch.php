@@ -104,7 +104,7 @@ class ExpensesSearch extends Expenses
         $query->andFilterWhere(['category_id' => $this->category_id]);
         $query->andFilterWhere(['contract_id' => $this->contract_id]);
         $query->andFilterWhere(['document_number' => $this->document_number]);
-        $query->andFilterWhere(['like', 'description', $this->description])->andwhere(['is_deleted' => 0]);
+        $query->andFilterWhere(['like', 'description', $this->description])->andwhere(['os_expenses.is_deleted' => 0]);
 
         return $dataProvider;
     }

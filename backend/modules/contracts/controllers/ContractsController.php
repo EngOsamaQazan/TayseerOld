@@ -291,7 +291,7 @@ class ContractsController extends Controller
 
             $deservedData = (new \yii\db\Query())
                 ->select(['contract_id', 'COALESCE(SUM(amount),0) as total'])
-                ->from('{{%contract_installment}}')
+                ->from('{{%income}}')
                 ->where(['contract_id' => $contractIds])
                 ->andWhere(['<=', 'due_date', date('Y-m-d')])
                 ->groupBy('contract_id')
