@@ -293,7 +293,7 @@ class ContractsController extends Controller
                 ->select(['contract_id', 'COALESCE(SUM(amount),0) as total'])
                 ->from('{{%income}}')
                 ->where(['contract_id' => $contractIds])
-                ->andWhere(['<=', 'due_date', date('Y-m-d')])
+                ->andWhere(['<=', 'date', date('Y-m-d')])
                 ->groupBy('contract_id')
                 ->all();
             $deservedByContract = ArrayHelper::map($deservedData, 'contract_id', 'total');
