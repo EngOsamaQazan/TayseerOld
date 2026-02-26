@@ -567,69 +567,75 @@ class JudiciaryController extends Controller
 
     public function actionExportCasesExcel()
     {
-        $searchModel = new JudiciarySearch();
-        $search = $searchModel->search(Yii::$app->request->queryParams);
-
-        return $this->exportData($search['dataProvider'], [
-            'title'    => 'القضايا',
-            'filename' => 'judiciary_cases',
-            'headers'  => ['#', 'العقد', 'العميل', 'المحكمة', 'النوع', 'المحامي', 'رقم القضية', 'أتعاب المحامي', 'رسوم القضية'],
-            'keys'     => [
-                '#',
-                'contract_id',
-                function ($m) {
-                    $names = [];
-                    foreach ($m->customersAndGuarantor as $customer) {
-                        $names[] = $customer->name;
-                    }
-                    return implode('، ', $names) ?: '—';
-                },
-                'court.name',
-                'type.name',
-                'lawyer.name',
-                function ($m) {
-                    $num = $m->judiciary_number ?: '—';
-                    $year = $m->year ?: '';
-                    return $year ? "{$num}-{$year}" : $num;
-                },
-                'lawyer_cost',
-                'case_cost',
-            ],
-            'widths' => [6, 10, 28, 18, 14, 18, 16, 16, 14],
-        ], 'excel');
+        return $this->exportCasesLightweight('excel');
     }
 
     public function actionExportCasesPdf()
     {
+        return $this->exportCasesLightweight('pdf');
+    }
+
+    /**
+     * Memory-efficient export: uses raw SQL JOINs + asArray() instead of loading full AR models.
+     */
+    private function exportCasesLightweight($format)
+    {
         $searchModel = new JudiciarySearch();
         $search = $searchModel->search(Yii::$app->request->queryParams);
 
-        return $this->exportData($search['dataProvider'], [
+        $query = $search['dataProvider']->query;
+        $query->with = [];
+
+        $query->leftJoin('{{%court}} _ct', '_ct.id = j.court_id')
+              ->leftJoin('{{%judiciary_type}} _jt', '_jt.id = j.type_id')
+              ->leftJoin('{{%lawyers}} _lw', '_lw.id = j.lawyer_id');
+
+        $query->select([
+            'j.id', 'j.contract_id', 'j.judiciary_number', 'j.year',
+            'j.lawyer_cost', 'j.case_cost',
+            'court_name'  => '_ct.name',
+            'type_name'   => '_jt.name',
+            'lawyer_name' => '_lw.name',
+        ]);
+
+        $rows = $query->asArray()->all();
+
+        $contractIds = array_unique(array_filter(array_column($rows, 'contract_id')));
+        $nameByContract = [];
+        if (!empty($contractIds)) {
+            $custData = (new \yii\db\Query())
+                ->select(['cc.contract_id', "GROUP_CONCAT(c.name SEPARATOR '، ') as names"])
+                ->from('{{%contracts_customers}} cc')
+                ->innerJoin('{{%customers}} c', 'c.id = cc.customer_id')
+                ->where(['cc.contract_id' => $contractIds])
+                ->groupBy('cc.contract_id')
+                ->all();
+            $nameByContract = \yii\helpers\ArrayHelper::map($custData, 'contract_id', 'names');
+        }
+
+        $exportRows = [];
+        foreach ($rows as $r) {
+            $num  = $r['judiciary_number'] ?: '—';
+            $year = $r['year'] ?: '';
+            $exportRows[] = [
+                'contract_id' => $r['contract_id'] ?: '—',
+                'customer'    => $nameByContract[$r['contract_id']] ?? '—',
+                'court'       => $r['court_name'] ?: '—',
+                'type'        => $r['type_name'] ?: '—',
+                'lawyer'      => $r['lawyer_name'] ?: '—',
+                'case_number' => $year ? "{$num}-{$year}" : $num,
+                'lawyer_cost' => $r['lawyer_cost'] ?: 0,
+                'case_cost'   => $r['case_cost'] ?: 0,
+            ];
+        }
+
+        return $this->exportArrayData($exportRows, [
             'title'    => 'القضايا',
             'filename' => 'judiciary_cases',
             'headers'  => ['#', 'العقد', 'العميل', 'المحكمة', 'النوع', 'المحامي', 'رقم القضية', 'أتعاب المحامي', 'رسوم القضية'],
-            'keys'     => [
-                '#',
-                'contract_id',
-                function ($m) {
-                    $names = [];
-                    foreach ($m->customersAndGuarantor as $customer) {
-                        $names[] = $customer->name;
-                    }
-                    return implode('، ', $names) ?: '—';
-                },
-                'court.name',
-                'type.name',
-                'lawyer.name',
-                function ($m) {
-                    $num = $m->judiciary_number ?: '—';
-                    $year = $m->year ?: '';
-                    return $year ? "{$num}-{$year}" : $num;
-                },
-                'lawyer_cost',
-                'case_cost',
-            ],
-        ], 'pdf');
+            'keys'     => ['#', 'contract_id', 'customer', 'court', 'type', 'lawyer', 'case_number', 'lawyer_cost', 'case_cost'],
+            'widths'   => [6, 10, 28, 18, 14, 18, 16, 16, 14],
+        ], $format);
     }
 
     /* ═══════════════════════════════════════════════════════════
