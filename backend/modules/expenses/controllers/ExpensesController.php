@@ -13,12 +13,14 @@ use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
+use backend\helpers\ExportTrait;
 
 /**
  * ExpensesController implements the CRUD actions for Expenses model.
  */
 class ExpensesController extends Controller
 {
+    use ExportTrait;
     /**
      * @inheritdoc
      */
@@ -29,9 +31,9 @@ class ExpensesController extends Controller
                 'class' => AccessControl::className(),
                 'rules' => [
                     ['actions' => ['login', 'error'], 'allow' => true],
-                    /* ═══ عرض ═══ */
+                    /* ═══ عرض + تصدير ═══ */
                     [
-                        'actions' => ['index', 'view'],
+                        'actions' => ['index', 'view', 'export-excel', 'export-pdf'],
                         'allow'   => true,
                         'roles'   => [Permissions::EXP_VIEW],
                     ],
@@ -248,6 +250,35 @@ class ExpensesController extends Controller
      * @return Expenses the loaded model
      * @throws NotFoundHttpException if the model cannot be found
      */
+    public function actionExportExcel()
+    {
+        $searchModel  = new ExpensesSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        $dataProvider->query->with(['category', 'createdBy']);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'المصاريف',
+            'filename' => 'expenses',
+            'headers'  => ['#', 'التاريخ', 'الوصف', 'التصنيف', 'المبلغ', 'رقم العقد', 'رقم المستند', 'بواسطة', 'ملاحظات'],
+            'keys'     => ['id', 'expenses_date', 'description', 'category.name', 'amount', 'contract_id', 'document_number', 'createdBy.username', 'notes'],
+            'widths'   => [8, 14, 28, 16, 14, 12, 14, 14, 25],
+        ]);
+    }
+
+    public function actionExportPdf()
+    {
+        $searchModel  = new ExpensesSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        $dataProvider->query->with(['category', 'createdBy']);
+
+        return $this->exportData($dataProvider, [
+            'title'    => 'المصاريف',
+            'filename' => 'expenses',
+            'headers'  => ['#', 'التاريخ', 'الوصف', 'التصنيف', 'المبلغ', 'رقم العقد', 'رقم المستند', 'بواسطة', 'ملاحظات'],
+            'keys'     => ['id', 'expenses_date', 'description', 'category.name', 'amount', 'contract_id', 'document_number', 'createdBy.username', 'notes'],
+        ], 'pdf');
+    }
+
     protected function findModel($id)
     {
         if (($model = Expenses::findOne($id)) !== null) {

@@ -14,6 +14,7 @@ use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use common\helper\Permissions;
+use backend\widgets\ExportButtons;
 
 $this->title = 'الإدارة المالية';
 $this->params['breadcrumbs'][] = $this->title;
@@ -133,6 +134,16 @@ $hasDateFilter = !empty($searchModel->date_from);
         <div class="fin-act-group">
             <?= Html::a('<i class="fa fa-plus"></i> <span>مصروف جديد</span>', ['create'], [
                 'class' => 'fin-btn fin-btn--add', 'title' => 'إضافة مصروف جديد',
+            ]) ?>
+        </div>
+        <?php endif ?>
+        <?php if ($hasDateFilter): ?>
+        <div class="fin-act-group">
+            <?= ExportButtons::widget([
+                'excelRoute' => ['export-excel'],
+                'pdfRoute'   => ['export-pdf'],
+                'excelBtnClass' => 'fin-btn fin-btn--export',
+                'pdfBtnClass'   => 'fin-btn fin-btn--export-pdf',
             ]) ?>
         </div>
         <?php endif ?>

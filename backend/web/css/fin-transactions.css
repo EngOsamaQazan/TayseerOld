@@ -123,6 +123,8 @@
 .fin-btn--import   { background: var(--clr-primary-400, #800020); color: #fff !important; }
 .fin-btn--transfer { background: var(--fin-gold); color: #fff !important; }
 .fin-btn--expense  { background: #9a3412; color: #fff !important; }
+.fin-btn--export     { background: #16A34A; color: #fff !important; }
+.fin-btn--export-pdf { background: #DC2626; color: #fff !important; }
 .fin-btn--undo     { background: #7c3aed; color: #fff !important; border: none; cursor: pointer; }
 .fin-btn--undo:hover { background: #6d28d9; }
 .fin-btn--transfer b,
