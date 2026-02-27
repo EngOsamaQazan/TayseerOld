@@ -125,6 +125,77 @@ body:has(.ct-page) .content-header {
   font-size: 14px;
 }
 
+/* ---- 3b. STATUS CARDS ---- */
+.ct-status-cards {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.ct-status-cards::-webkit-scrollbar { display: none; }
+.ct-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card-bg);
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+  padding: 12px 16px;
+  min-width: 120px;
+  flex: 1 1 0;
+  text-decoration: none !important;
+  transition: all .2s ease;
+  cursor: pointer;
+}
+.ct-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0,0,0,.1);
+  border-color: var(--card-color);
+}
+.ct-stat-card.ct-stat-active {
+  border-color: var(--card-color);
+  box-shadow: 0 2px 10px rgba(0,0,0,.08);
+  background: #fff;
+}
+.ct-stat-card.ct-stat-active .ct-stat-icon {
+  background: var(--card-color);
+  color: #fff;
+}
+.ct-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--card-color);
+  background: rgba(0,0,0,.04);
+  flex-shrink: 0;
+  transition: all .2s ease;
+}
+.ct-stat-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ct-stat-num {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--card-color);
+  font-feature-settings: "tnum";
+}
+.ct-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--clr-text-muted, #6c757d);
+  white-space: nowrap;
+}
+
 /* ---- 4. FILTER PANEL ---- */
 .ct-filter-wrap {
   position: relative;
@@ -760,6 +831,25 @@ body:has(.ct-page) .content-header {
   }
   .ct-title-area h1 {
     font-size: 19px;
+  }
+
+  /* --- Status cards compact --- */
+  .ct-status-cards {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .ct-stat-card {
+    min-width: 100px;
+    padding: 10px 12px;
+    flex: 0 0 auto;
+  }
+  .ct-stat-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+  .ct-stat-num {
+    font-size: 16px;
   }
 
   /* --- Filter drawer --- */

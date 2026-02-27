@@ -118,10 +118,6 @@ class ContractsSearch extends Contracts
         }
         if (!empty($params['ContractsSearch']['status'])) {
             $query->andFilterWhere(['os_contracts.status' => $params['ContractsSearch']['status']]);
-        } else {
-            $query->andFilterWhere(['<>', 'os_contracts.status', 'finished']);
-            $query->andFilterWhere(['<>', 'os_contracts.status', 'canceled']);
-
         }
         if ((!empty($this->from_date))) {
             $query->andFilterWhere(['>=', 'Date_of_sale', $this->from_date]);
@@ -166,14 +162,10 @@ class ContractsSearch extends Contracts
             ]);
         }
         $dataProvider->sort->attributes['seller_name'] = [
-            // The tables are the ones our relation are configured to
-            // in my case they are prefixed with "tbl_"
             'asc' => ['s.name' => SORT_ASC],
             'desc' => ['s.name' => SORT_DESC],
         ];
         $dataProvider->sort->attributes['customer_name'] = [
-            // The tables are the ones our relation are configured to
-            // in my case they are prefixed with "tbl_"
             'asc' => ['c.name' => SORT_ASC],
             'desc' => ['c.name' => SORT_DESC],
         ];
@@ -181,8 +173,6 @@ class ContractsSearch extends Contracts
         $this->load($params);
 
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
             return $dataProvider;
         }
         $query->andFilterWhere([
@@ -205,10 +195,6 @@ class ContractsSearch extends Contracts
         }
         if (!empty($params['ContractsSearch']['status'])) {
             $query->andFilterWhere(['os_contracts.status' => $params['ContractsSearch']['status']]);
-        } else {
-            $query->andFilterWhere(['<>', 'os_contracts.status', 'finished']);
-            $query->andFilterWhere(['<>', 'os_contracts.status', 'canceled']);
-
         }
         if ((!empty($this->from_date))) {
             $query->andFilterWhere(['>=', 'Date_of_sale', $this->from_date]);

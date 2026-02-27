@@ -50,6 +50,21 @@ $statusLabels = [
     'canceled' => 'ملغي', 'refused' => 'مرفوض',
 ];
 
+$sc = $statusCounts ?? [];
+$activeFilter = Yii::$app->request->get('ContractsSearch', [])['status'] ?? '';
+
+$cards = [
+    ['key' => '',           'label' => 'الكل',      'icon' => 'fa-th-list',       'color' => '#64748b', 'bg' => '#f1f5f9'],
+    ['key' => 'active',     'label' => 'نشط',       'icon' => 'fa-check-circle',  'color' => '#1a7a35', 'bg' => '#e6f9ed'],
+    ['key' => 'pending',    'label' => 'معلّق',      'icon' => 'fa-clock-o',       'color' => '#856404', 'bg' => '#fef3cd'],
+    ['key' => 'judiciary',  'label' => 'قضاء',      'icon' => 'fa-gavel',         'color' => '#c62828', 'bg' => '#fce4e4'],
+    ['key' => 'legal_department', 'label' => 'قانوني', 'icon' => 'fa-balance-scale', 'color' => '#0c5460', 'bg' => '#d1ecf1'],
+    ['key' => 'settlement', 'label' => 'تسوية',     'icon' => 'fa-handshake-o',   'color' => '#5a2d82', 'bg' => '#ede5f6'],
+    ['key' => 'finished',   'label' => 'منتهي',     'icon' => 'fa-flag-checkered','color' => '#495057', 'bg' => '#e9ecef'],
+    ['key' => 'canceled',   'label' => 'ملغي',      'icon' => 'fa-ban',           'color' => '#6c757d', 'bg' => '#e9ecef'],
+];
+$totalAll = array_sum($sc);
+
 /* Sort helper */
 $sortOrders = $sort->getAttributeOrders();
 $sortLink = function ($attribute, $label) use ($sort, $sortOrders) {
@@ -104,6 +119,27 @@ $end   = $begin + count($models) - 1;
                 <i class="fa fa-sliders" style="font-size:18px"></i>
             </button>
         </div>
+    </div>
+
+    <!-- ===== STATUS CARDS ===== -->
+    <div class="ct-status-cards">
+        <?php foreach ($cards as $c):
+            $cnt = $c['key'] === '' ? $totalAll : (int)($sc[$c['key']] ?? 0);
+            $isActive = $activeFilter === $c['key'];
+            $url = $c['key'] === ''
+                ? Url::to(['index'])
+                : Url::to(['index', 'ContractsSearch[status]' => $c['key']]);
+        ?>
+        <a href="<?= $url ?>"
+           class="ct-stat-card<?= $isActive ? ' ct-stat-active' : '' ?>"
+           style="--card-color:<?= $c['color'] ?>;--card-bg:<?= $c['bg'] ?>">
+            <div class="ct-stat-icon"><i class="fa <?= $c['icon'] ?>"></i></div>
+            <div class="ct-stat-info">
+                <span class="ct-stat-num"><?= number_format($cnt) ?></span>
+                <span class="ct-stat-label"><?= $c['label'] ?></span>
+            </div>
+        </a>
+        <?php endforeach ?>
     </div>
 
     <!-- ===== FILTER SECTION ===== -->

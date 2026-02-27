@@ -126,11 +126,18 @@ class ContractsController extends Controller
             )->queryAll();
         }
 
+        $db = Yii::$app->db ?? $db;
+        $statusCounts = ArrayHelper::map(
+            $db->createCommand("SELECT status, COUNT(*) AS cnt FROM os_contracts WHERE is_deleted=0 OR is_deleted IS NULL GROUP BY status")->queryAll(),
+            'status', 'cnt'
+        );
+
         return $this->render('index', [
             'searchModel'  => $searchModel,
             'dataProvider' => $dataProvider,
             'dataCount'    => $dataCount,
             'preloaded'    => $preloaded,
+            'statusCounts' => $statusCounts,
         ]);
     }
 
