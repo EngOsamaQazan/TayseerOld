@@ -946,7 +946,7 @@ class JudiciaryController extends Controller
             }
 
             if ($model->save()) {
-                \backend\modules\contracts\models\Contracts::updateAll(['company_id' => $model->company_id, 'status' => 'judiciary'], ['id' => $contract_id]);
+                \backend\modules\contracts\models\Contracts::updateAll(['company_id' => $model->company_id], ['id' => $contract_id]);
 
                 $contractCustamersMosels = \backend\modules\customers\models\ContractsCustomers::find()->where(['contract_id' => $model->contract_id])->all();
                 foreach ($contractCustamersMosels as $contractCustamersMosel) {
@@ -1048,12 +1048,6 @@ class JudiciaryController extends Controller
         $judicarysCustamer = JudiciaryCustomersActions::find()->where(['judiciary_id' => $id])->all();
         $conection = Yii::$app->getDb();
         $conection->createCommand('UPDATE `os_judiciary_customers_actions` SET `is_deleted`=1 WHERE `judiciary_id`=' . $id)->execute();
-        if ($contract_id != null) {
-            $judicarys = Judiciary::find()->where(['contract_id' => $contract_id])->all();
-            if (empty($judicarys)) {
-                Contracts::updateAll(['status' => 'active'], ['id' => $contract_id]);
-            }
-        }
 
 
         if ($request->isAjax) {
@@ -1242,9 +1236,8 @@ class JudiciaryController extends Controller
 
                 $createdIds[] = $model->id;
 
-                // تحديث حالة العقد
                 Contracts::updateAll(
-                    ['company_id' => $companyId ?: $contract->company_id, 'status' => 'judiciary'],
+                    ['company_id' => $companyId ?: $contract->company_id],
                     ['id' => $contractId]
                 );
 

@@ -45,9 +45,9 @@ $expByContract = ArrayHelper::map($pre['expenses'] ?? [], 'contract_id', 'total'
 $paidByContract = ArrayHelper::map($pre['paid'] ?? [], 'contract_id', 'total');
 
 $statusLabels = [
-    'active' => 'نشط', 'pending' => 'معلّق', 'judiciary' => 'قضاء',
+    'active' => 'نشط', 'judiciary' => 'قضاء',
     'legal_department' => 'قانوني', 'settlement' => 'تسوية', 'finished' => 'منتهي',
-    'canceled' => 'ملغي', 'refused' => 'مرفوض',
+    'canceled' => 'ملغي',
 ];
 
 $sc = $statusCounts ?? [];
@@ -56,7 +56,6 @@ $activeFilter = Yii::$app->request->get('ContractsSearch', [])['status'] ?? '';
 $cards = [
     ['key' => '',           'label' => 'الكل',      'icon' => 'fa-th-list',       'color' => '#64748b', 'bg' => '#f1f5f9'],
     ['key' => 'active',     'label' => 'نشط',       'icon' => 'fa-check-circle',  'color' => '#1a7a35', 'bg' => '#e6f9ed'],
-    ['key' => 'pending',    'label' => 'معلّق',      'icon' => 'fa-clock-o',       'color' => '#856404', 'bg' => '#fef3cd'],
     ['key' => 'judiciary',  'label' => 'قضاء',      'icon' => 'fa-gavel',         'color' => '#c62828', 'bg' => '#fce4e4'],
     ['key' => 'legal_department', 'label' => 'قانوني', 'icon' => 'fa-balance-scale', 'color' => '#0c5460', 'bg' => '#d1ecf1'],
     ['key' => 'settlement', 'label' => 'تسوية',     'icon' => 'fa-handshake-o',   'color' => '#5a2d82', 'bg' => '#ede5f6'],
@@ -261,6 +260,9 @@ $end   = $begin + count($models) - 1;
                             <span class="ct-badge ct-st-<?= $m->status ?>">
                                 <?= $statusLabels[$m->status] ?? $m->status ?>
                             </span>
+                            <?php if ($m->status === 'judiciary' && $remaining <= 0): ?>
+                                <span class="ct-badge ct-st-paid" title="مسدد بالكامل">مسدد</span>
+                            <?php endif ?>
                         </td>
                         <td class="ct-td-money ct-td-remain" data-label="المتبقي">
                             <?= number_format($remaining, 0) ?>
@@ -301,6 +303,9 @@ $end   = $begin + count($models) - 1;
                                     <a href="<?= Url::to(['/loanScheduling/loan-scheduling/create', 'contract_id' => $m->id]) ?>" role="menuitem">
                                         <i class="fa fa-calendar text-info"></i> جدولة
                                     </a>
+                                    <a href="<?= Url::to(['view', 'id' => $m->id]) . '#contractAdjustmentsPanel' ?>" role="menuitem">
+                                        <i class="fa fa-tags text-warning"></i> الخصومات
+                                    </a>
                                     <?php if ($m->status === 'judiciary'): ?>
                                         <a href="<?= Url::to(['/collection/collection/create', 'contract_id' => $m->id]) ?>" role="menuitem">
                                             <i class="fa fa-gavel text-danger"></i> تحصيل
@@ -309,11 +314,11 @@ $end   = $begin + count($models) - 1;
                                     <?php if ($isManager): ?>
                                         <div class="ct-act-divider"></div>
                                         <?php if (Permissions::can(Permissions::CONT_UPDATE)): ?>
-                                        <a href="#" class="yeas-finish" data-url="<?= Url::to(['finish', 'id' => $m->id]) ?>" role="menuitem">
-                                            <i class="fa fa-check-circle text-success"></i> إنهاء العقد
-                                        </a>
                                         <a href="#" class="yeas-cancel" data-url="<?= Url::to(['cancel', 'id' => $m->id]) ?>" role="menuitem">
                                             <i class="fa fa-ban text-danger"></i> إلغاء العقد
+                                        </a>
+                                        <a href="<?= Url::to(['refresh-status', 'id' => $m->id]) ?>" role="menuitem">
+                                            <i class="fa fa-refresh text-info"></i> تحديث الحالة
                                         </a>
                                         <?php endif ?>
                                     <?php endif ?>
@@ -345,25 +350,6 @@ $end   = $begin + count($models) - 1;
 </div><!-- /.ct-page -->
 
 <!-- ===== MODALS ===== -->
-<?php Modal::begin([
-    'id' => 'finishContractModal',
-    'header' => '<h4 class="modal-title"><i class="fa fa-check-circle text-success"></i> تأكيد إنهاء العقد</h4>',
-    'size' => Modal::SIZE_SMALL,
-]) ?>
-<div class="ct-modal-body">
-    <p class="lead">هل أنت متأكد من إنهاء هذا العقد؟</p>
-    <p class="text-muted">سيتم تغيير حالة العقد إلى "منتهي"</p>
-    <div class="ct-modal-actions">
-        <a id="finishContractBtn" href="#" class="ct-btn ct-btn-primary" style="background:#28a745;border-color:#28a745">
-            <i class="fa fa-check"></i> نعم، إنهاء
-        </a>
-        <button type="button" class="ct-btn ct-btn-outline" data-dismiss="modal">
-            <i class="fa fa-times"></i> إلغاء
-        </button>
-    </div>
-</div>
-<?php Modal::end() ?>
-
 <?php Modal::begin([
     'id' => 'cancelContractModal',
     'header' => '<h4 class="modal-title"><i class="fa fa-ban text-danger"></i> تأكيد إلغاء العقد</h4>',

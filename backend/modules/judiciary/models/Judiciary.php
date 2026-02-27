@@ -240,4 +240,20 @@ class Judiciary extends \yii\db\ActiveRecord
     {
         return $this->hasOne(JudiciaryInformAddress::class, ['id' => 'judiciary_inform_address_id']);
     }
+
+    public function afterSave($insert, $changedAttributes)
+    {
+        parent::afterSave($insert, $changedAttributes);
+        if ($this->contract_id) {
+            Contracts::refreshContractStatus((int)$this->contract_id);
+        }
+    }
+
+    public function afterDelete()
+    {
+        parent::afterDelete();
+        if ($this->contract_id) {
+            Contracts::refreshContractStatus((int)$this->contract_id);
+        }
+    }
 }

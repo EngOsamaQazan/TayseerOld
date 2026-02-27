@@ -46,16 +46,13 @@ $contractModel = $contractCalculations->contract_model;
                 <div class="form-group">
                     <label>الحالة الجديدة</label>
                     <select class="form-control status-content">
-                        <option value="pending">معلّق</option>
-                        <option value="active">نشط</option>
-                        <option value="reconciliation">مصالحة</option>
-                        <option value="judiciary">قضاء</option>
-                        <option value="canceled">ملغي</option>
-                        <option value="refused">مرفوض</option>
-                        <option value="legal_department">دائرة قانونية</option>
-                        <option value="finished">منتهي</option>
-                        <option value="settlement">تسوية</option>
+                        <option value="canceled">إلغاء العقد</option>
+                        <option value="legal_department_toggle">تحويل / إلغاء تحويل للدائرة القانونية</option>
                     </select>
+                    <p class="help-block" style="margin-top:8px;color:#888">
+                        <i class="fa fa-info-circle"></i>
+                        الحالات الأخرى (قضائي، منتهي، تسوية) تُحسب تلقائياً بناءً على الإجراءات الفعلية
+                    </p>
                 </div>
             </div>
             <div class="modal-footer">

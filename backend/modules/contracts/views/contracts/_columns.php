@@ -14,14 +14,14 @@ use backend\modules\followUp\helper\ContractCalculations;
 
 /* ألوان الحالات */
 $statusColors = [
-    'active' => 'success', 'pending' => 'warning', 'judiciary' => 'danger',
+    'active' => 'success', 'judiciary' => 'danger',
     'legal_department' => 'info', 'settlement' => 'primary', 'finished' => 'default',
-    'canceled' => 'default', 'refused' => 'danger',
+    'canceled' => 'default',
 ];
 $statusLabels = [
-    'active' => 'نشط', 'pending' => 'معلّق', 'judiciary' => 'قضاء',
+    'active' => 'نشط', 'judiciary' => 'قضاء',
     'legal_department' => 'قانوني', 'settlement' => 'تسوية', 'finished' => 'منتهي',
-    'canceled' => 'ملغي', 'refused' => 'مرفوض',
+    'canceled' => 'ملغي',
 ];
 
 $isManager = Yii::$app->user->can(Permissions::MANAGER);

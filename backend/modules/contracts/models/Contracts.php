@@ -15,6 +15,8 @@ use backend\modules\companies\models\Companies;
 use backend\modules\customers\models\Customers;
 use backend\modules\judiciary\models\Judiciary;
 use backend\modules\inventoryItems\models\ContractInventoryItem;
+use backend\modules\loanScheduling\models\LoanScheduling;
+use backend\modules\followUp\helper\ContractCalculations;
 use yii\db;
 
 /**
@@ -55,6 +57,7 @@ use yii\db;
  * @property string $follow_up_lock_at
  * @property int|null $followed_by
  * @property int|null $job_Type
+ * @property int $is_legal_department
  */
 class Contracts extends \yii\db\ActiveRecord
 {
@@ -75,10 +78,13 @@ class Contracts extends \yii\db\ActiveRecord
     const FINISH_STATUS = 'finished';
     const CANCEL_STATUS = 'canceled';
     const STATUS_ACTIVE = 'active';
-    const STATUS_PENDING = 'pending';
     const STATUS_LEGAL_DEPARTMENT = 'legal_department';
     const STATUS_JUDICIARY = 'judiciary';
     const STATUS_SETTLEMENT = 'settlement';
+
+    /** @deprecated kept for backward compatibility only */
+    const STATUS_PENDING = 'pending';
+    /** @deprecated kept for backward compatibility only */
     const STATUS_REFUSED = 'refused';
     const DEFAUULT_TOTAL_VALUE = 640;
     const MONTHLY_INSTALLMENT_VALE = 20;
@@ -110,7 +116,7 @@ class Contracts extends \yii\db\ActiveRecord
     {
         return [
             [['seller_id', 'is_deleted', 'created_by', 'updated_by', 'follow_up_lock_by', 'loss_commitment', 'followed_by', 'company_id', 'number_row'], 'integer'],
-            [['is_can_not_contact'], 'boolean'],
+            [['is_can_not_contact', 'is_legal_department'], 'boolean'],
             [['job_Type'], 'integer'],
             [['Date_of_sale', 'first_installment_date', 'monthly_installment_value', 'updated_at', 'customers_ids', 'customer_id', 'guarantors_ids', 'image_manager_id', 'selected_image', 'contract_images', 'company_id', 'created_at', 'follow_up_lock_at', 'inventory_items'], 'safe'],
             [['type', 'status', 'seller_id', 'Date_of_sale', 'first_installment_date', 'monthly_installment_value', 'total_value', 'first_installment_value', 'created_by', 'commitment_discount'], 'required'],
@@ -387,6 +393,7 @@ class Contracts extends \yii\db\ActiveRecord
         return Contracts::find()->where(['first_installment_date' => date('Y-m-d')])->sum('first_installment_value');
     }
 
+    /** @deprecated Status is now computed automatically. Use refreshStatus() instead. */
     public function finish()
     {
         $this->status = self::FINISH_STATUS;
@@ -409,6 +416,7 @@ class Contracts extends \yii\db\ActiveRecord
         }
     }
 
+    /** @deprecated Status is now computed automatically. Use toggleLegalDepartment() instead. */
     public function legalDepartment()
     {
         $this->status = self::STATUS_LEGAL_DEPARTMENT;
@@ -420,6 +428,93 @@ class Contracts extends \yii\db\ActiveRecord
         }
     }
 
+    /* ═══════════════════════════════════════════════════
+     *  Automatic Status Computation
+     * ═══════════════════════════════════════════════════ */
+
+    /**
+     * حساب الحالة الفعلية للعقد بناءً على البيانات الحقيقية
+     */
+    public function computeStatus(): string
+    {
+        if ($this->status === self::CANCEL_STATUS) {
+            return self::CANCEL_STATUS;
+        }
+
+        $hasJudiciary = Judiciary::find()
+            ->where(['contract_id' => $this->id, 'is_deleted' => 0])
+            ->exists();
+
+        if ($hasJudiciary) {
+            return self::STATUS_JUDICIARY;
+        }
+
+        $hasSettlement = LoanScheduling::find()
+            ->where(['contract_id' => $this->id])
+            ->exists();
+
+        if ($hasSettlement) {
+            return self::STATUS_SETTLEMENT;
+        }
+
+        if ($this->is_legal_department) {
+            return self::STATUS_LEGAL_DEPARTMENT;
+        }
+
+        $calc = new ContractCalculations($this->id);
+        if ($calc->remainingAmount() <= 0) {
+            return self::FINISH_STATUS;
+        }
+
+        return self::STATUS_ACTIVE;
+    }
+
+    /**
+     * إعادة حساب وتحديث حالة العقد
+     */
+    public function refreshStatus(): string
+    {
+        $newStatus = $this->computeStatus();
+        if ($this->status !== $newStatus) {
+            self::updateAll(['status' => $newStatus], ['id' => $this->id]);
+            $this->status = $newStatus;
+        }
+        return $newStatus;
+    }
+
+    /**
+     * Static helper — يُستدعى من afterSave/afterDelete في الموديلات المرتبطة
+     */
+    public static function refreshContractStatus(int $contractId): void
+    {
+        $contract = self::findOne($contractId);
+        if ($contract) {
+            $contract->refreshStatus();
+        }
+    }
+
+    /**
+     * هل العقد مسدّد بالكامل مع وجود قضية (قضائي - مسدد)
+     */
+    public function isJudiciaryPaid(): bool
+    {
+        if ($this->status !== self::STATUS_JUDICIARY) {
+            return false;
+        }
+        $calc = new ContractCalculations($this->id);
+        return $calc->remainingAmount() <= 0;
+    }
+
+    /**
+     * تفعيل / إلغاء تحويل العقد للدائرة القانونية
+     */
+    public function toggleLegalDepartment(bool $enable = true): string
+    {
+        $this->is_legal_department = $enable ? 1 : 0;
+        $this->save(false);
+        return $this->refreshStatus();
+    }
+
     public function getFollowedBy()
     {
         return $this->hasOne(User::class, ['id' => 'followed_by']);
@@ -428,6 +523,12 @@ class Contracts extends \yii\db\ActiveRecord
     public function getJudiciary()
     {
         return $this->hasMany(Judiciary::class, ['contract_id' => 'id']);
+    }
+
+    public function getAdjustments()
+    {
+        return $this->hasMany(ContractAdjustment::class, ['contract_id' => 'id'])
+            ->andWhere(['is_deleted' => 0]);
     }
     public function getCustomersName($id)
     {

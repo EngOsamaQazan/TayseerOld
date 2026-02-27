@@ -130,4 +130,20 @@ class Expenses extends \yii\db\ActiveRecord
         $query->attachBehavior('softDelete', SoftDeleteQueryBehavior::className());
         return $query->notDeleted();
     }
+
+    public function afterSave($insert, $changedAttributes)
+    {
+        parent::afterSave($insert, $changedAttributes);
+        if ($this->contract_id) {
+            \backend\modules\contracts\models\Contracts::refreshContractStatus((int)$this->contract_id);
+        }
+    }
+
+    public function afterDelete()
+    {
+        parent::afterDelete();
+        if ($this->contract_id) {
+            \backend\modules\contracts\models\Contracts::refreshContractStatus((int)$this->contract_id);
+        }
+    }
 }

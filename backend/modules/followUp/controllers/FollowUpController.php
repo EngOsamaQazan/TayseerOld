@@ -655,8 +655,17 @@ class FollowUpController extends Controller
     {
         $id = Yii::$app->request->post('id');
         $statusContent = Yii::$app->request->post('statusContent');
-        Contracts::updateAll(['status' => $statusContent], ['id' => $id]);
 
+        if ($statusContent === Contracts::CANCEL_STATUS) {
+            Contracts::updateAll(['status' => $statusContent], ['id' => $id]);
+        } elseif ($statusContent === 'legal_department_toggle') {
+            $contract = Contracts::findOne($id);
+            if ($contract) {
+                $contract->toggleLegalDepartment(!$contract->is_legal_department);
+            }
+        } else {
+            Contracts::refreshContractStatus((int)$id);
+        }
     }
 
     public function actionCustamerInfo()

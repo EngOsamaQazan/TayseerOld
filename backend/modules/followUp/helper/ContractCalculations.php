@@ -8,6 +8,7 @@ use common\helper\LoanContract;
 use backend\modules\expenses\models\Expenses;
 use backend\modules\judiciary\models\Judiciary;
 use backend\modules\contracts\models\Contracts;
+use backend\modules\contracts\models\ContractAdjustment;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use backend\modules\loanScheduling\models\LoanScheduling;
 
@@ -94,11 +95,21 @@ class ContractCalculations
     }
 
     /**
-     * المبلغ الإجمالي = أصلي + كل Outcome + أتعاب محاماة
+     * مجموع التسويات / الخصومات المسجّلة على العقد
+     */
+    public function totalAdjustments(): float
+    {
+        return (float)(ContractAdjustment::find()
+            ->where(['contract_id' => $this->contract_id, 'is_deleted' => 0])
+            ->sum('amount') ?? 0);
+    }
+
+    /**
+     * المبلغ الإجمالي = أصلي + كل Outcome + أتعاب محاماة − الخصومات
      */
     public function totalDebt(): float
     {
-        return $this->getContractTotal() + $this->allExpenses() + $this->allLawyerCosts();
+        return $this->getContractTotal() + $this->allExpenses() + $this->allLawyerCosts() - $this->totalAdjustments();
     }
 
     /**

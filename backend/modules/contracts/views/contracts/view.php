@@ -30,12 +30,14 @@ $customerNames = implode('، ', ArrayHelper::map($model->customers, 'id', 'name'
             [
                 'attribute' => 'status', 'label' => 'الحالة', 'format' => 'raw',
                 'value' => function () use ($model) {
-                    $colors = ['active' => 'success', 'pending' => 'warning', 'judiciary' => 'danger', 'legal_department' => 'info', 'finished' => 'default', 'canceled' => 'default'];
-                    $labels = ['active' => 'نشط', 'pending' => 'معلّق', 'judiciary' => 'قضاء', 'legal_department' => 'قانوني', 'finished' => 'منتهي', 'canceled' => 'ملغي', 'settlement' => 'تسوية', 'refused' => 'مرفوض'];
+                    $colors = ['active' => 'success', 'judiciary' => 'danger', 'legal_department' => 'info', 'settlement' => 'primary', 'finished' => 'default', 'canceled' => 'default'];
+                    $labels = ['active' => 'نشط', 'judiciary' => 'قضاء', 'legal_department' => 'قانوني', 'finished' => 'منتهي', 'canceled' => 'ملغي', 'settlement' => 'تسوية'];
                     return '<span class="label label-' . ($colors[$model->status] ?? 'default') . '">' . ($labels[$model->status] ?? $model->status) . '</span>';
                 },
             ],
             ['attribute' => 'notes', 'label' => 'ملاحظات', 'format' => 'ntext'],
         ],
     ]) ?>
+
+    <?= $this->render('_adjustments', ['contract_id' => $model->id]) ?>
 </div>

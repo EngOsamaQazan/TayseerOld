@@ -707,18 +707,22 @@ class ContractsController extends Controller
      *  إجراءات العقد — Status Actions
      * ══════════════════════════════════════════════════════════════ */
 
+    /** @deprecated Status is now computed automatically */
     public function actionFinish()
     {
         $id = Yii::$app->request->post('contract_id');
-        $this->findModel($id)->finish();
-        Yii::$app->session->addFlash('success', 'تم إنهاء العقد بنجاح');
+        $model = $this->findModel($id);
+        $model->refreshStatus();
+        Yii::$app->session->addFlash('success', 'تم تحديث حالة العقد');
         return $this->redirect(['index']);
     }
 
+    /** @deprecated Status is now computed automatically */
     public function actionFinishContract($contract_id)
     {
-        $this->findModel($contract_id)->finish();
-        Yii::$app->session->addFlash('success', 'تم إنهاء العقد بنجاح');
+        $model = $this->findModel($contract_id);
+        $model->refreshStatus();
+        Yii::$app->session->addFlash('success', 'تم تحديث حالة العقد');
         return $this->redirect(['index']);
     }
 
@@ -740,14 +744,20 @@ class ContractsController extends Controller
     public function actionReturnToContinue($id)
     {
         if ($id > 0) {
-            Contracts::updateAll(['status' => 'active'], ['id' => $id]);
+            $model = $this->findModel($id);
+            if ($model->status === Contracts::CANCEL_STATUS) {
+                Contracts::updateAll(['status' => Contracts::STATUS_ACTIVE], ['id' => $id]);
+            }
+            $model->refresh();
+            $model->refreshStatus();
         }
         return $this->redirect(['/follow-up-report/index']);
     }
 
     public function actionToLegalDepartment($id)
     {
-        $this->findModel($id)->legalDepartment();
+        $model = $this->findModel($id);
+        $model->toggleLegalDepartment(true);
         Yii::$app->session->addFlash('success', 'تم تحويل العقد إلى الدائرة القانونية');
         Yii::$app->notifications->sendByRule(
             ['Manager'], '/follow-up?contract_id=' . $id,
@@ -757,6 +767,66 @@ class ContractsController extends Controller
             Yii::$app->user->id
         );
         return $this->redirect(['index']);
+    }
+
+    public function actionRemoveFromLegalDepartment($id)
+    {
+        $model = $this->findModel($id);
+        $model->toggleLegalDepartment(false);
+        Yii::$app->session->addFlash('success', 'تم إزالة العقد من الدائرة القانونية');
+        return $this->redirect(['index']);
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+     *  التسويات والخصومات — Contract Adjustments
+     * ══════════════════════════════════════════════════════════════ */
+
+    public function actionAddAdjustment()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $model = new \backend\modules\contracts\models\ContractAdjustment();
+        $model->contract_id = Yii::$app->request->post('contract_id');
+        $model->type = Yii::$app->request->post('type', 'discount');
+        $model->amount = Yii::$app->request->post('amount');
+        $model->reason = Yii::$app->request->post('reason', '');
+        $model->approved_by = Yii::$app->user->id;
+
+        if ($model->save()) {
+            return ['success' => true, 'message' => 'تم إضافة الخصم بنجاح'];
+        }
+        return ['success' => false, 'errors' => $model->getFirstErrors()];
+    }
+
+    public function actionDeleteAdjustment($id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $model = \backend\modules\contracts\models\ContractAdjustment::findOne($id);
+        if ($model) {
+            $model->is_deleted = 1;
+            $model->save(false);
+            Contracts::refreshContractStatus($model->contract_id);
+            return ['success' => true];
+        }
+        return ['success' => false, 'message' => 'لم يتم العثور على الخصم'];
+    }
+
+    public function actionAdjustments($contract_id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $adjustments = \backend\modules\contracts\models\ContractAdjustment::find()
+            ->where(['contract_id' => $contract_id, 'is_deleted' => 0])
+            ->orderBy(['id' => SORT_DESC])
+            ->asArray()
+            ->all();
+        return $adjustments;
+    }
+
+    public function actionRefreshStatus($id)
+    {
+        $model = $this->findModel($id);
+        $newStatus = $model->refreshStatus();
+        Yii::$app->session->addFlash('success', 'تم تحديث حالة العقد');
+        return $this->redirect(Yii::$app->request->referrer ?: ['index']);
     }
 
     public function actionConvertToManager($id)
