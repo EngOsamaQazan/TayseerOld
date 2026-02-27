@@ -22,8 +22,10 @@ $jobType = $cache->getOrSet($p['key_job_type'], fn() => $db->createCommand($p['j
 $statusList = [
     '' => '-- جميع الحالات --',
     'active' => 'نشط',
+    'judiciary_active' => 'قضاء فعّال',
+    'judiciary_paid' => 'قضاء مسدد',
+    'judiciary' => 'قضاء (الكل)',
     'legal_department' => 'قانوني',
-    'judiciary' => 'قضاء',
     'settlement' => 'تسوية',
     'finished' => 'منتهي',
     'canceled' => 'ملغي',

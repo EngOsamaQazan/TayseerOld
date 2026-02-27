@@ -132,6 +132,22 @@ class ContractsController extends Controller
             'status', 'cnt'
         );
 
+        $judPaidCount = (int)$db->createCommand("
+            SELECT COUNT(*) FROM os_contracts c
+            WHERE c.status = 'judiciary' AND (c.is_deleted=0 OR c.is_deleted IS NULL)
+            AND (
+                c.total_value
+                + COALESCE((SELECT SUM(e.amount) FROM os_expenses e WHERE e.contract_id = c.id AND (e.is_deleted=0 OR e.is_deleted IS NULL)), 0)
+                + COALESCE((SELECT SUM(j.lawyer_cost) FROM os_judiciary j WHERE j.contract_id = c.id AND (j.is_deleted=0 OR j.is_deleted IS NULL)), 0)
+                - COALESCE((SELECT SUM(ca.amount) FROM os_contract_adjustments ca WHERE ca.contract_id = c.id AND ca.is_deleted=0), 0)
+                - COALESCE((SELECT SUM(i.amount) FROM os_income i WHERE i.contract_id = c.id), 0)
+            ) <= 0.01
+        ")->queryScalar();
+
+        $judTotalCount = (int)($statusCounts['judiciary'] ?? 0);
+        $statusCounts['judiciary_active'] = $judTotalCount - $judPaidCount;
+        $statusCounts['judiciary_paid'] = $judPaidCount;
+
         return $this->render('index', [
             'searchModel'  => $searchModel,
             'dataProvider' => $dataProvider,

@@ -536,7 +536,7 @@ body:has(.ct-page) .content-header {
 .ct-st-settlement { background: #ede5f6; color: #5a2d82; }
 .ct-st-finished  { background: #e9ecef; color: #495057; }
 .ct-st-canceled  { background: #e9ecef; color: #6c757d; text-decoration: line-through; }
-.ct-st-paid      { background: #d4edda; color: #155724; font-size: 10px; margin-right: 4px; }
+.ct-st-judiciary-paid { background: #e8f5e9; color: #2e7d32; }
 
 /* ---- 9. FOLLOW-UP SELECT ---- */
 .ct-follow-select {

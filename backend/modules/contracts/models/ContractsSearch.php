@@ -117,7 +117,16 @@ class ContractsSearch extends Contracts
             $query->andFilterWhere(['followed_by' => $params['ContractsSearch']['followed_by']]);
         }
         if (!empty($params['ContractsSearch']['status'])) {
-            $query->andFilterWhere(['os_contracts.status' => $params['ContractsSearch']['status']]);
+            $statusVal = $params['ContractsSearch']['status'];
+            if ($statusVal === 'judiciary_active') {
+                $query->andWhere(['os_contracts.status' => 'judiciary']);
+                $this->applyJudiciaryBalanceFilter($query, 'positive');
+            } elseif ($statusVal === 'judiciary_paid') {
+                $query->andWhere(['os_contracts.status' => 'judiciary']);
+                $this->applyJudiciaryBalanceFilter($query, 'zero');
+            } else {
+                $query->andFilterWhere(['os_contracts.status' => $statusVal]);
+            }
         } else {
             $query->andWhere(['<>', 'os_contracts.status', 'canceled']);
         }
@@ -133,6 +142,27 @@ class ContractsSearch extends Contracts
         }
         $query->orderBy(['id' => SORT_DESC]);
         return $dataProvider;
+    }
+
+    /**
+     * تصفية القضائي: positive = عليه رصيد, zero = مسدد بالكامل
+     */
+    private function applyJudiciaryBalanceFilter($query, string $mode): void
+    {
+        $db = \Yii::$app->db;
+        $remainingSql = "(
+            os_contracts.total_value
+            + COALESCE((SELECT SUM(e.amount) FROM {{%expenses}} e WHERE e.contract_id = os_contracts.id AND (e.is_deleted=0 OR e.is_deleted IS NULL)), 0)
+            + COALESCE((SELECT SUM(j2.lawyer_cost) FROM {{%judiciary}} j2 WHERE j2.contract_id = os_contracts.id AND (j2.is_deleted=0 OR j2.is_deleted IS NULL)), 0)
+            - COALESCE((SELECT SUM(ca.amount) FROM {{%contract_adjustments}} ca WHERE ca.contract_id = os_contracts.id AND ca.is_deleted=0), 0)
+            - COALESCE((SELECT SUM(i.amount) FROM {{%income}} i WHERE i.contract_id = os_contracts.id), 0)
+        )";
+
+        if ($mode === 'zero') {
+            $query->andWhere("{$remainingSql} <= 0.01");
+        } else {
+            $query->andWhere("{$remainingSql} > 0.01");
+        }
     }
 
     public function searchcounter($params)
@@ -196,7 +226,16 @@ class ContractsSearch extends Contracts
             $query->andFilterWhere(['followed_by' => $params['ContractsSearch']['followed_by']]);
         }
         if (!empty($params['ContractsSearch']['status'])) {
-            $query->andFilterWhere(['os_contracts.status' => $params['ContractsSearch']['status']]);
+            $statusVal = $params['ContractsSearch']['status'];
+            if ($statusVal === 'judiciary_active') {
+                $query->andWhere(['os_contracts.status' => 'judiciary']);
+                $this->applyJudiciaryBalanceFilter($query, 'positive');
+            } elseif ($statusVal === 'judiciary_paid') {
+                $query->andWhere(['os_contracts.status' => 'judiciary']);
+                $this->applyJudiciaryBalanceFilter($query, 'zero');
+            } else {
+                $query->andFilterWhere(['os_contracts.status' => $statusVal]);
+            }
         } else {
             $query->andWhere(['<>', 'os_contracts.status', 'canceled']);
         }

@@ -45,22 +45,23 @@ $expByContract = ArrayHelper::map($pre['expenses'] ?? [], 'contract_id', 'total'
 $paidByContract = ArrayHelper::map($pre['paid'] ?? [], 'contract_id', 'total');
 
 $statusLabels = [
-    'active' => 'نشط', 'judiciary' => 'قضاء',
-    'legal_department' => 'قانوني', 'settlement' => 'تسوية', 'finished' => 'منتهي',
-    'canceled' => 'ملغي',
+    'active' => 'نشط', 'judiciary' => 'قضاء', 'judiciary_active' => 'قضاء فعّال',
+    'judiciary_paid' => 'قضاء مسدد', 'legal_department' => 'قانوني',
+    'settlement' => 'تسوية', 'finished' => 'منتهي', 'canceled' => 'ملغي',
 ];
 
 $sc = $statusCounts ?? [];
 $activeFilter = Yii::$app->request->get('ContractsSearch', [])['status'] ?? '';
 
 $cards = [
-    ['key' => '',           'label' => 'الكل',      'icon' => 'fa-th-list',       'color' => '#64748b', 'bg' => '#f1f5f9'],
-    ['key' => 'active',     'label' => 'نشط',       'icon' => 'fa-check-circle',  'color' => '#1a7a35', 'bg' => '#e6f9ed'],
-    ['key' => 'judiciary',  'label' => 'قضاء',      'icon' => 'fa-gavel',         'color' => '#c62828', 'bg' => '#fce4e4'],
-    ['key' => 'legal_department', 'label' => 'قانوني', 'icon' => 'fa-balance-scale', 'color' => '#0c5460', 'bg' => '#d1ecf1'],
-    ['key' => 'settlement', 'label' => 'تسوية',     'icon' => 'fa-handshake-o',   'color' => '#5a2d82', 'bg' => '#ede5f6'],
-    ['key' => 'finished',   'label' => 'منتهي',     'icon' => 'fa-flag-checkered','color' => '#495057', 'bg' => '#e9ecef'],
-    ['key' => 'canceled',   'label' => 'ملغي',      'icon' => 'fa-ban',           'color' => '#6c757d', 'bg' => '#e9ecef'],
+    ['key' => '',                  'label' => 'الكل',        'icon' => 'fa-th-list',       'color' => '#64748b', 'bg' => '#f1f5f9'],
+    ['key' => 'active',            'label' => 'نشط',         'icon' => 'fa-check-circle',  'color' => '#1a7a35', 'bg' => '#e6f9ed'],
+    ['key' => 'judiciary_active',  'label' => 'قضاء فعّال',   'icon' => 'fa-gavel',         'color' => '#c62828', 'bg' => '#fce4e4'],
+    ['key' => 'judiciary_paid',    'label' => 'قضاء مسدد',   'icon' => 'fa-gavel',         'color' => '#2e7d32', 'bg' => '#e8f5e9'],
+    ['key' => 'legal_department',  'label' => 'قانوني',      'icon' => 'fa-balance-scale', 'color' => '#0c5460', 'bg' => '#d1ecf1'],
+    ['key' => 'settlement',        'label' => 'تسوية',       'icon' => 'fa-handshake-o',   'color' => '#5a2d82', 'bg' => '#ede5f6'],
+    ['key' => 'finished',          'label' => 'منتهي',       'icon' => 'fa-flag-checkered','color' => '#495057', 'bg' => '#e9ecef'],
+    ['key' => 'canceled',          'label' => 'ملغي',        'icon' => 'fa-ban',           'color' => '#6c757d', 'bg' => '#e9ecef'],
 ];
 $totalAll = array_sum($sc);
 
@@ -257,11 +258,14 @@ $end   = $begin + count($models) - 1;
                             <?= number_format($total, 0) ?>
                         </td>
                         <td class="ct-td-status" data-label="الحالة">
-                            <span class="ct-badge ct-st-<?= $m->status ?>">
-                                <?= $statusLabels[$m->status] ?? $m->status ?>
-                            </span>
                             <?php if ($m->status === 'judiciary' && $remaining <= 0): ?>
-                                <span class="ct-badge ct-st-paid" title="مسدد بالكامل">مسدد</span>
+                                <span class="ct-badge ct-st-judiciary-paid">قضاء مسدد</span>
+                            <?php elseif ($m->status === 'judiciary'): ?>
+                                <span class="ct-badge ct-st-judiciary">قضاء فعّال</span>
+                            <?php else: ?>
+                                <span class="ct-badge ct-st-<?= $m->status ?>">
+                                    <?= $statusLabels[$m->status] ?? $m->status ?>
+                                </span>
                             <?php endif ?>
                         </td>
                         <td class="ct-td-money ct-td-remain" data-label="المتبقي">
