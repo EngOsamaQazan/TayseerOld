@@ -118,6 +118,8 @@ class ContractsSearch extends Contracts
         }
         if (!empty($params['ContractsSearch']['status'])) {
             $query->andFilterWhere(['os_contracts.status' => $params['ContractsSearch']['status']]);
+        } else {
+            $query->andWhere(['<>', 'os_contracts.status', 'canceled']);
         }
         if ((!empty($this->from_date))) {
             $query->andFilterWhere(['>=', 'Date_of_sale', $this->from_date]);
@@ -195,6 +197,8 @@ class ContractsSearch extends Contracts
         }
         if (!empty($params['ContractsSearch']['status'])) {
             $query->andFilterWhere(['os_contracts.status' => $params['ContractsSearch']['status']]);
+        } else {
+            $query->andWhere(['<>', 'os_contracts.status', 'canceled']);
         }
         if ((!empty($this->from_date))) {
             $query->andFilterWhere(['>=', 'Date_of_sale', $this->from_date]);
