@@ -128,27 +128,30 @@ body:has(.ct-page) .content-header {
 /* ---- 3b. STATUS CARDS ---- */
 .ct-status-cards {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 20px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128,0,32,.25) transparent;
 }
-.ct-status-cards::-webkit-scrollbar { display: none; }
+.ct-status-cards::-webkit-scrollbar { height: 4px; }
+.ct-status-cards::-webkit-scrollbar-track { background: transparent; }
+.ct-status-cards::-webkit-scrollbar-thumb { background: rgba(128,0,32,.2); border-radius: 4px; }
 .ct-stat-card {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: var(--card-bg);
   border: 1.5px solid transparent;
   border-radius: 10px;
-  padding: 12px 16px;
-  min-width: 120px;
-  flex: 1 1 0;
+  padding: 10px 14px;
+  flex: 0 0 auto;
   text-decoration: none !important;
   transition: all .2s ease;
   cursor: pointer;
+  white-space: nowrap;
 }
 .ct-stat-card:hover {
   transform: translateY(-2px);
@@ -165,13 +168,13 @@ body:has(.ct-page) .content-header {
   color: #fff;
 }
 .ct-stat-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 15px;
   color: var(--card-color);
   background: rgba(0,0,0,.04);
   flex-shrink: 0;
@@ -179,18 +182,19 @@ body:has(.ct-page) .content-header {
 }
 .ct-stat-info {
   display: flex;
-  flex-direction: column;
+  align-items: baseline;
+  gap: 5px;
   min-width: 0;
 }
 .ct-stat-num {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1;
   color: var(--card-color);
   font-feature-settings: "tnum";
 }
 .ct-stat-label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--clr-text-muted, #6c757d);
   white-space: nowrap;
@@ -835,21 +839,24 @@ body:has(.ct-page) .content-header {
 
   /* --- Status cards compact --- */
   .ct-status-cards {
-    gap: 8px;
-    margin-bottom: 14px;
+    gap: 6px;
+    margin-bottom: 12px;
   }
   .ct-stat-card {
-    min-width: 100px;
-    padding: 10px 12px;
-    flex: 0 0 auto;
+    padding: 8px 10px;
+    gap: 6px;
   }
   .ct-stat-icon {
-    width: 34px;
-    height: 34px;
-    font-size: 14px;
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+    border-radius: 7px;
   }
   .ct-stat-num {
-    font-size: 16px;
+    font-size: 15px;
+  }
+  .ct-stat-label {
+    font-size: 11px;
   }
 
   /* --- Filter drawer --- */
