@@ -149,20 +149,45 @@ class ContractsSearch extends Contracts
      */
     private function applyJudiciaryBalanceFilter($query, string $mode): void
     {
-        $db = \Yii::$app->db;
-        $remainingSql = "(
-            os_contracts.total_value
-            + COALESCE((SELECT SUM(e.amount) FROM {{%expenses}} e WHERE e.contract_id = os_contracts.id AND (e.is_deleted=0 OR e.is_deleted IS NULL)), 0)
-            + COALESCE((SELECT SUM(j2.lawyer_cost) FROM {{%judiciary}} j2 WHERE j2.contract_id = os_contracts.id AND (j2.is_deleted=0 OR j2.is_deleted IS NULL)), 0)
-            - COALESCE((SELECT SUM(ca.amount) FROM {{%contract_adjustments}} ca WHERE ca.contract_id = os_contracts.id AND ca.is_deleted=0), 0)
-            - COALESCE((SELECT SUM(i.amount) FROM {{%income}} i WHERE i.contract_id = os_contracts.id), 0)
-        )";
+        $paidIds = $this->getJudiciaryPaidIds();
 
         if ($mode === 'zero') {
-            $query->andWhere("{$remainingSql} <= 0.01");
+            if (!empty($paidIds)) {
+                $query->andWhere(['IN', 'os_contracts.id', $paidIds]);
+            } else {
+                $query->andWhere('1=0');
+            }
         } else {
-            $query->andWhere("{$remainingSql} > 0.01");
+            if (!empty($paidIds)) {
+                $query->andWhere(['NOT IN', 'os_contracts.id', $paidIds]);
+            }
         }
+    }
+
+    private $_judiciaryPaidIds;
+
+    private function getJudiciaryPaidIds(): array
+    {
+        if ($this->_judiciaryPaidIds !== null) {
+            return $this->_judiciaryPaidIds;
+        }
+
+        $db = \Yii::$app->db;
+        $rows = $db->createCommand("
+            SELECT c.id,
+                   c.total_value
+                   + COALESCE((SELECT SUM(e.amount) FROM os_expenses e WHERE e.contract_id = c.id AND (e.is_deleted=0 OR e.is_deleted IS NULL)), 0)
+                   + COALESCE((SELECT SUM(j.lawyer_cost) FROM os_judiciary j WHERE j.contract_id = c.id AND (j.is_deleted=0 OR j.is_deleted IS NULL)), 0)
+                   - COALESCE((SELECT SUM(ca.amount) FROM os_contract_adjustments ca WHERE ca.contract_id = c.id AND ca.is_deleted=0), 0)
+                   - COALESCE((SELECT SUM(i.amount) FROM os_income i WHERE i.contract_id = c.id), 0)
+                   AS remaining
+            FROM os_contracts c
+            WHERE c.status = 'judiciary' AND (c.is_deleted = 0 OR c.is_deleted IS NULL)
+            HAVING remaining <= 0.01
+        ")->queryAll();
+
+        $this->_judiciaryPaidIds = array_column($rows, 'id');
+        return $this->_judiciaryPaidIds;
     }
 
     public function searchcounter($params)
