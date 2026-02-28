@@ -614,11 +614,13 @@ document.getElementById('nf-edit-cust').addEventListener('click',function(){
 });
 
 /* ══════ نوع العقد ══════ */
-document.getElementById('nf-type').addEventListener('change',function(){
-    var s=this.value==='solidarity';
+function nfSyncType(){
+    var s=document.getElementById('nf-type').value==='solidarity';
     document.getElementById('nf-sol-cust').style.display=s?'':'none';
-    document.getElementById('nf-normal-cust').style.display=s?'none':''
-});
+    document.getElementById('nf-normal-cust').style.display=s?'none':'';
+}
+document.getElementById('nf-type').addEventListener('change',nfSyncType);
+nfSyncType();
 
 /* ══════ حساب الأقساط + تحديث الملخص ══════ */
 document.querySelectorAll('.nf-calc').forEach(function(el){el.addEventListener('input',calc);el.addEventListener('change',calc)});
