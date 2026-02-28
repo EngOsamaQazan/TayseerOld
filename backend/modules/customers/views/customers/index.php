@@ -15,9 +15,9 @@ CrudAsset::register($this);
 $this->title = 'العملاء';
 $this->params['breadcrumbs'][] = $this->title;
 
-/* Fix: allow dropdown menus to overflow outside the grid panel */
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' . time());
+
 $this->registerCss('
-    /* Override ALL parent containers that clip the dropdown */
     .customers-index .panel,
     .customers-index .panel-body,
     .customers-index .kv-grid-container,
@@ -27,9 +27,6 @@ $this->registerCss('
     .customers-index .table-bordered {
         overflow: visible !important;
     }
-
-    /* RTL fix: force dropdown to open towards the RIGHT (center of page)
-       since the action column is on the LEFT edge in RTL */
     .customers-index .dropdown-menu {
         left: 0 !important;
         right: auto !important;
@@ -37,7 +34,6 @@ $this->registerCss('
         border-radius: 6px;
         z-index: 9999;
     }
-
     .customers-index .btn-group .dropdown-toggle {
         background: #fdf0f3;
         border: 1px solid #f0c0cc;

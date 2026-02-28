@@ -59,6 +59,81 @@ $activeTab = Yii::$app->request->get('tab', 'cases');
 .lh-loader i { font-size:28px; animation:lh-spin 1s linear infinite; }
 @keyframes lh-spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
 
+/* ═══ Timeline Side Panel ═══ */
+.ctl-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:10000;opacity:0;transition:opacity .25s;pointer-events:none}
+.ctl-overlay.open{opacity:1;pointer-events:auto}
+.ctl-panel{position:fixed;top:0;left:0;width:520px;max-width:92vw;height:100vh;background:#fff;z-index:10001;
+  transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;box-shadow:-4px 0 30px rgba(0,0,0,.15);direction:rtl}
+.ctl-panel.open{transform:translateX(0)}
+.ctl-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;
+  border-bottom:2px solid #800020;background:linear-gradient(135deg,#fdf0f3,#fff)}
+.ctl-hdr h3{margin:0;font-size:16px;font-weight:700;color:#800020;display:flex;align-items:center;gap:8px}
+.ctl-hdr h3 i{font-size:18px}
+.ctl-close{background:none;border:none;font-size:22px;color:#64748B;cursor:pointer;padding:4px 8px;border-radius:6px;transition:all .15s}
+.ctl-close:hover{background:#F1F5F9;color:#1E293B}
+.ctl-case-info{padding:12px 20px;background:#FAFBFC;border-bottom:1px solid #E2E8F0;display:flex;flex-wrap:wrap;gap:12px}
+.ctl-info-item{display:flex;align-items:center;gap:4px;font-size:11px;color:#64748B}
+.ctl-info-item b{color:#1E293B;font-weight:600}
+.ctl-toolbar{padding:10px 20px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ctl-add-btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:6px 14px;border-radius:6px;
+  background:#800020;color:#fff;border:none;cursor:pointer;font-weight:600;text-decoration:none;transition:all .15s;white-space:nowrap}
+.ctl-add-btn:hover{background:#600018;color:#fff;text-decoration:none}
+.ctl-filter-chips{display:flex;gap:4px;flex-wrap:wrap}
+.ctl-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:10px;font-weight:600;
+  cursor:pointer;border:1px solid #E2E8F0;background:#fff;color:#64748B;transition:all .15s;white-space:nowrap}
+.ctl-chip:hover{border-color:#CBD5E1;background:#F8FAFC}
+.ctl-chip.active{background:#800020;color:#fff;border-color:#800020}
+.ctl-body{flex:1;overflow-y:auto;padding:16px 20px}
+.ctl-body::-webkit-scrollbar{width:5px}
+.ctl-body::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
+.ctl-empty{text-align:center;padding:60px 20px;color:#94A3B8}
+.ctl-empty i{font-size:40px;margin-bottom:12px;display:block}
+.ctl-loading{text-align:center;padding:60px 20px;color:#94A3B8}
+.ctl-loading i{font-size:28px;animation:lh-spin 1s linear infinite}
+
+/* Timeline items */
+.ctl-item{position:relative;padding:12px 16px 12px 12px;margin-bottom:12px;
+  border:1px solid #E2E8F0;border-radius:10px;background:#fff;transition:all .15s;
+  border-right:4px solid #CBD5E1}
+.ctl-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.06);border-color:#CBD5E1}
+.ctl-item[data-nature="request"]{border-right-color:#3B82F6}
+.ctl-item[data-nature="document"]{border-right-color:#8B5CF6}
+.ctl-item[data-nature="doc_status"]{border-right-color:#F59E0B}
+.ctl-item[data-nature="process"]{border-right-color:#10B981}
+.ctl-item-hdr{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.ctl-item-action{font-size:13px;font-weight:700;color:#1E293B}
+.ctl-item-date{font-size:10px;color:#94A3B8;font-family:'Courier New',monospace;white-space:nowrap}
+.ctl-item-party{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;
+  font-size:10px;font-weight:600;background:#F1F5F9;color:#475569;margin-bottom:4px}
+.ctl-item-party i{font-size:9px}
+.ctl-item-note{font-size:11px;color:#64748B;line-height:1.6;margin-top:4px}
+.ctl-item-meta{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:9px;color:#94A3B8}
+.ctl-item-status{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600}
+.ctl-item-status.pending{background:#FEF3C7;color:#92400E}
+.ctl-item-status.approved{background:#D1FAE5;color:#065F46}
+.ctl-item-status.rejected{background:#FEE2E2;color:#991B1B}
+.ctl-item-img{margin-top:6px}
+.ctl-item-img a{font-size:10px;color:#3B82F6;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.ctl-item-img a:hover{text-decoration:underline}
+
+/* date separator */
+.ctl-date-sep{text-align:center;margin:16px 0 8px;position:relative}
+.ctl-date-sep::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:#E2E8F0}
+.ctl-date-sep span{position:relative;background:#fff;padding:0 12px;font-size:10px;font-weight:600;color:#94A3B8}
+
+@media(max-width:600px){
+  .ctl-panel{width:100vw;max-width:100vw}
+  .ctl-case-info{flex-direction:column;gap:6px}
+}
+
+/* Timeline button in table */
+.jud-timeline-btn{
+  background:#fff;border:1px solid #800020;border-radius:8px;
+  height:28px;display:inline-flex;align-items:center;justify-content:center;gap:4px;
+  cursor:pointer;color:#800020;font-size:12px;font-weight:600;transition:all .15s;padding:4px 10px;white-space:nowrap}
+.jud-timeline-btn:hover{background:#800020;color:#fff;border-color:#800020}
+
 /* ═══ Dropdown & overflow fixes ═══ */
 .lh-panel .jud-act-wrap, .lh-panel .jca-act-wrap { position:relative;display:inline-block; }
 .lh-panel .jud-act-trigger, .lh-panel .jca-act-trigger {
@@ -172,6 +247,27 @@ $activeTab = Yii::$app->request->get('tab', 'cases');
 <?php Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '', 'size' => Modal::SIZE_LARGE]) ?>
 <?php Modal::end() ?>
 
+<!-- ═══ Case Timeline Side Panel ═══ -->
+<div class="ctl-overlay" id="ctlOverlay"></div>
+<div class="ctl-panel" id="ctlPanel">
+    <div class="ctl-hdr">
+        <h3><i class="fa fa-history"></i> <span id="ctlTitle">متابعة القضية</span></h3>
+        <button class="ctl-close" id="ctlClose">&times;</button>
+    </div>
+    <div class="ctl-case-info" id="ctlCaseInfo"></div>
+    <div class="ctl-toolbar">
+        <a href="#" class="ctl-add-btn" id="ctlAddAction" role="modal-remote">
+            <i class="fa fa-plus"></i> إضافة إجراء
+        </a>
+        <div class="ctl-filter-chips" id="ctlFilterChips">
+            <span class="ctl-chip active" data-filter="all">الكل</span>
+        </div>
+    </div>
+    <div class="ctl-body" id="ctlBody">
+        <div class="ctl-loading"><i class="fa fa-spinner"></i><div>جاري التحميل...</div></div>
+    </div>
+</div>
+
 <?php
 $casesUrl       = Url::to(['tab-cases']);
 $actionsUrl     = Url::to(['tab-actions']);
@@ -236,6 +332,131 @@ $js = <<<JS
     if (activeTab !== 'cases') {
         loadTab(activeTab);
     }
+
+    // ═══ Case Timeline Panel ═══
+    var ctlData = null;
+    var ctlFilter = 'all';
+
+    function ctlOpen(url, label) {
+        $('#ctlTitle').text('متابعة القضية ' + label);
+        $('#ctlBody').html('<div class="ctl-loading"><i class="fa fa-spinner"></i><div>جاري التحميل...</div></div>');
+        $('#ctlCaseInfo').html('');
+        $('#ctlFilterChips').html('<span class="ctl-chip active" data-filter="all">الكل</span>');
+        $('#ctlOverlay').addClass('open');
+        setTimeout(function(){ $('#ctlPanel').addClass('open'); }, 30);
+        ctlFilter = 'all';
+
+        $.getJSON(url, function(res) {
+            if (!res.success) {
+                $('#ctlBody').html('<div class="ctl-empty"><i class="fa fa-exclamation-circle"></i><div>' + (res.message || 'خطأ') + '</div></div>');
+                return;
+            }
+            ctlData = res;
+            $('#ctlAddAction').attr('href', res.addActionUrl);
+            ctlRenderInfo(res);
+            ctlRenderChips(res.parties);
+            ctlRenderTimeline(res.timeline);
+        }).fail(function(){
+            $('#ctlBody').html('<div class="ctl-empty"><i class="fa fa-exclamation-triangle"></i><div>حدث خطأ في الاتصال</div></div>');
+        });
+    }
+
+    function ctlClose() {
+        $('#ctlPanel').removeClass('open');
+        setTimeout(function(){ $('#ctlOverlay').removeClass('open'); }, 300);
+        ctlData = null;
+    }
+
+    function ctlRenderInfo(res) {
+        var c = res['case'];
+        var h = '';
+        h += '<div class="ctl-info-item"><i class="fa fa-hashtag"></i> القضية: <b>' + (c.judiciary_number || '—') + '/' + (c.year || '') + '</b></div>';
+        h += '<div class="ctl-info-item"><i class="fa fa-file-text-o"></i> العقد: <b>' + c.contract_id + '</b></div>';
+        if (c.court) h += '<div class="ctl-info-item"><i class="fa fa-institution"></i> <b>' + esc(c.court) + '</b></div>';
+        if (c.lawyer) h += '<div class="ctl-info-item"><i class="fa fa-user-secret"></i> <b>' + esc(c.lawyer) + '</b></div>';
+        if (c.type) h += '<div class="ctl-info-item"><i class="fa fa-tag"></i> <b>' + esc(c.type) + '</b></div>';
+        $('#ctlCaseInfo').html(h);
+    }
+
+    function ctlRenderChips(parties) {
+        var h = '<span class="ctl-chip active" data-filter="all">الكل</span>';
+        for (var i = 0; i < parties.length; i++) {
+            var p = parties[i];
+            var icon = p.type === 'guarantor' ? 'fa-shield' : 'fa-user';
+            h += '<span class="ctl-chip" data-filter="' + p.id + '"><i class="fa ' + icon + '"></i> ' + esc(p.name.split(' ').slice(0,2).join(' ')) + '</span>';
+        }
+        $('#ctlFilterChips').html(h);
+    }
+
+    function ctlRenderTimeline(items) {
+        if (!items || !items.length) {
+            $('#ctlBody').html('<div class="ctl-empty"><i class="fa fa-inbox"></i><div>لا توجد إجراءات مسجلة</div></div>');
+            return;
+        }
+        var filtered = items;
+        if (ctlFilter !== 'all') {
+            var fid = parseInt(ctlFilter);
+            filtered = items.filter(function(i) { return i.customer_id === fid; });
+        }
+        if (!filtered.length) {
+            $('#ctlBody').html('<div class="ctl-empty"><i class="fa fa-filter"></i><div>لا توجد إجراءات لهذا الطرف</div></div>');
+            return;
+        }
+
+        var h = '';
+        var lastDate = '';
+        for (var i = 0; i < filtered.length; i++) {
+            var a = filtered[i];
+            var d = a.action_date || '';
+            if (d && d !== lastDate) {
+                h += '<div class="ctl-date-sep"><span>' + esc(d) + '</span></div>';
+                lastDate = d;
+            }
+            var statusHtml = '';
+            if (a.request_status) {
+                var sMap = {pending:'قيد الانتظار', approved:'مقبول', rejected:'مرفوض'};
+                statusHtml = '<span class="ctl-item-status ' + a.request_status + '">' + (sMap[a.request_status] || a.request_status) + '</span>';
+            }
+            h += '<div class="ctl-item" data-nature="' + (a.action_nature || 'process') + '">';
+            h += '<div class="ctl-item-hdr">';
+            h += '<span class="ctl-item-action">' + esc(a.action_name || '—') + '</span>';
+            h += '<span class="ctl-item-date">' + esc(d) + '</span>';
+            h += '</div>';
+            h += '<div class="ctl-item-party"><i class="fa fa-user"></i> ' + esc(a.customer_name || '') + '</div>';
+            if (statusHtml) h += '<div>' + statusHtml + '</div>';
+            if (a.decision_text) h += '<div class="ctl-item-note" style="color:#1E293B;font-weight:600"><i class="fa fa-gavel" style="color:#F59E0B;margin-left:4px"></i> ' + esc(a.decision_text) + '</div>';
+            if (a.note) h += '<div class="ctl-item-note">' + esc(a.note) + '</div>';
+            if (a.image) h += '<div class="ctl-item-img"><a href="' + a.image + '" target="_blank"><i class="fa fa-paperclip"></i> مرفق</a></div>';
+            h += '<div class="ctl-item-meta">';
+            if (a.created_by) h += '<span><i class="fa fa-user-circle"></i> ' + esc(a.created_by) + '</span>';
+            if (a.created_at) h += '<span>' + esc(a.created_at) + '</span>';
+            h += '</div>';
+            h += '</div>';
+        }
+        $('#ctlBody').html(h);
+    }
+
+    function esc(s) {
+        if (!s) return '';
+        var d = document.createElement('div');
+        d.appendChild(document.createTextNode(s));
+        return d.innerHTML;
+    }
+
+    $(document).on('click', '.jud-timeline-btn', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        ctlOpen($(this).data('url'), $(this).data('label'));
+    });
+
+    $('#ctlClose, #ctlOverlay').on('click', function() { ctlClose(); });
+
+    $(document).on('click', '.ctl-chip', function() {
+        $('.ctl-chip').removeClass('active');
+        $(this).addClass('active');
+        ctlFilter = $(this).data('filter');
+        if (ctlData) ctlRenderTimeline(ctlData.timeline);
+    });
 
 })();
 JS;

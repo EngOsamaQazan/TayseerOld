@@ -42,7 +42,7 @@ class CustomersController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['index', 'view', 'create-summary', 'customer-data', 'search-customers'],
+                        'actions' => ['index', 'view', 'create-summary', 'customer-data', 'search-customers', 'search-suggest'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function ($rule, $action) {
@@ -580,6 +580,55 @@ class CustomersController extends Controller
                 'info' => $contracts_info->all(),
             ]
         ];
+    }
+
+    /**
+     * AJAX autocomplete for unified search widget on customers/index.
+     */
+    public function actionSearchSuggest($q = '')
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $q = trim($q);
+        if (mb_strlen($q) < 2) {
+            return ['results' => []];
+        }
+
+        $db = Yii::$app->db;
+        $rows = $db->createCommand(
+            "SELECT c.id, c.name, c.id_number, c.primary_phone_number, c.city,
+                    j.name AS job_name
+             FROM {{%customers}} c
+             LEFT JOIN {{%jobs}} j ON j.id = c.job_title
+             WHERE (c.is_deleted = 0 OR c.is_deleted IS NULL)
+               AND (
+                   c.id = :qInt
+                   OR c.name LIKE :qLike
+                   OR c.id_number LIKE :qLike
+                   OR c.primary_phone_number LIKE :qLike
+                   OR j.name LIKE :qLike
+               )
+             ORDER BY c.id DESC
+             LIMIT 10",
+            [
+                ':qInt'  => (int)$q,
+                ':qLike' => '%' . $q . '%',
+            ]
+        )->queryAll();
+
+        $results = [];
+        foreach ($rows as $r) {
+            $sub = '#' . $r['id'];
+            if (!empty($r['id_number'])) $sub .= ' · ' . $r['id_number'];
+            if (!empty($r['primary_phone_number'])) $sub .= ' · ☎ ' . $r['primary_phone_number'];
+            if (!empty($r['job_name'])) $sub .= ' · ' . $r['job_name'];
+            $results[] = [
+                'id'    => $r['id'],
+                'title' => $r['name'],
+                'sub'   => $sub,
+                'icon'  => 'fa-user',
+            ];
+        }
+        return ['results' => $results];
     }
 
     /**

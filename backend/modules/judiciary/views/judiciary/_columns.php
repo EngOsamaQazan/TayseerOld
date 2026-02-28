@@ -60,8 +60,8 @@ return [
             }
             return '<div style="display:flex;flex-direction:column;gap:2px;max-height:60px;overflow-y:auto;scrollbar-width:thin">' . implode('', array_map(fn($r) => '<div style="white-space:nowrap">' . $r . '</div>', $rows)) . '</div>';
         },
-        'headerOptions' => ['style' => 'width:30%'],
-        'contentOptions' => ['style' => 'max-width:280px;padding:4px 6px'],
+        'headerOptions' => ['style' => 'width:22%'],
+        'contentOptions' => ['style' => 'max-width:220px;padding:4px 6px'],
     ],
 
     /* المحكمة */
@@ -110,8 +110,69 @@ return [
             }
             return '<span style="font-family:\'Courier New\',monospace;color:#64748B">' . $num . '</span>';
         },
-        'headerOptions' => ['style' => 'width:12%;text-align:center'],
+        'headerOptions' => ['style' => 'width:10%;text-align:center'],
         'contentOptions' => ['style' => 'text-align:center;white-space:nowrap'],
+    ],
+
+    /* آخر إجراء لكل طرف */
+    [
+        'class' => '\kartik\grid\DataColumn',
+        'label' => 'آخر إجراء',
+        'format' => 'raw',
+        'value' => function ($m) {
+            static $cache = null;
+            if ($cache === null) {
+                $cache = [];
+                $db = Yii::$app->db;
+                $tblJa = $db->tablePrefix . 'judiciary_actions';
+                $jaColumns = $db->getTableSchema($tblJa)->columnNames;
+                $hasNature = in_array('action_nature', $jaColumns);
+                $natureSel = $hasNature ? ', ja.action_nature' : '';
+
+                $rows = $db->createCommand(
+                    "SELECT jca.judiciary_id, jca.customers_id, ja.name AS act_name,
+                            cu.name AS cust_name, jca.action_date $natureSel
+                     FROM {{%judiciary_customers_actions}} jca
+                     INNER JOIN {{%judiciary_actions}} ja ON ja.id = jca.judiciary_actions_id
+                     INNER JOIN {{%customers}} cu ON cu.id = jca.customers_id
+                     WHERE jca.is_deleted = 0
+                       AND jca.id = (
+                           SELECT MAX(j2.id) FROM {{%judiciary_customers_actions}} j2
+                           WHERE j2.judiciary_id = jca.judiciary_id
+                             AND j2.customers_id = jca.customers_id
+                             AND j2.is_deleted = 0
+                       )"
+                )->queryAll();
+                foreach ($rows as $r) {
+                    $jid = (int)$r['judiciary_id'];
+                    if (!isset($cache[$jid])) $cache[$jid] = [];
+                    $cache[$jid][] = $r;
+                }
+            }
+            $items = $cache[$m->id] ?? [];
+            if (empty($items)) return '<span style="color:#CBD5E1;font-size:11px">لا يوجد</span>';
+
+            $natureColors = [
+                'request' => '#3B82F6', 'document' => '#8B5CF6',
+                'doc_status' => '#F59E0B', 'process' => '#10B981',
+            ];
+
+            $html = '';
+            foreach ($items as $a) {
+                $clr = $natureColors[$a['action_nature'] ?? ''] ?? '#64748B';
+                $actName = $a['act_name'];
+                $custShort = NameHelper::short($a['cust_name']);
+                $date = $a['action_date'] ? date('m-d', strtotime($a['action_date'])) : '';
+
+                $html .= '<div style="display:flex;align-items:baseline;gap:4px;white-space:nowrap;overflow:hidden">'
+                    . '<span style="font-size:10px;font-weight:600;color:' . $clr . ';overflow:hidden;text-overflow:ellipsis" title="' . Html::encode($actName) . '">' . Html::encode($actName) . '</span>'
+                    . '<span style="font-size:9px;color:#94A3B8;flex-shrink:0">' . Html::encode($custShort) . ($date ? ' · ' . $date : '') . '</span>'
+                    . '</div>';
+            }
+            return '<div style="display:flex;flex-direction:column;gap:2px;max-width:220px;max-height:60px;overflow-y:auto;scrollbar-width:thin">' . $html . '</div>';
+        },
+        'headerOptions' => ['style' => 'width:16%'],
+        'contentOptions' => ['style' => 'padding:4px 6px'],
     ],
 
     /* الإجراءات */
@@ -126,6 +187,8 @@ return [
             $followUrl = Url::to(['/followUp/follow-up/index', 'contract_id' => $m->contract_id]);
             $delUrl   = Url::to(['/judiciary/judiciary/delete', 'id' => $m->id]);
 
+            $timelineUrl = Url::to(['/judiciary/judiciary/case-timeline', 'id' => $m->id]);
+
             $menu = '';
             if (Permissions::can(Permissions::JUD_CREATE)) {
                 $menu .= '<a href="' . $addActionUrl . '" role="modal-remote"><i class="fa fa-plus" style="color:#16A34A"></i> إضافة إجراء</a>';
@@ -135,18 +198,22 @@ return [
                 $menu .= '<a href="' . $editUrl . '"><i class="fa fa-pencil" style="color:#3B82F6"></i> تعديل</a>';
             }
             $menu .= '<a href="' . $printUrl . '"><i class="fa fa-print" style="color:#0EA5E9"></i> طباعة</a>';
-            $menu .= '<a href="' . $followUrl . '"><i class="fa fa-comments" style="color:#16A34A"></i> المتابعة</a>';
             if (Permissions::can(Permissions::JUD_DELETE)) {
                 $menu .= '<div class="jud-act-divider"></div>';
                 $menu .= '<a href="' . $delUrl . '" data-method="post" data-confirm="هل أنت متأكد من حذف هذه القضية؟"><i class="fa fa-trash" style="color:#EF4444"></i> حذف</a>';
             }
 
-            return '<div class="jud-act-wrap">'
+            $caseLabel = $m->judiciary_number ? ($m->judiciary_number . '/' . ($m->year ?: '')) : ('#' . $m->id);
+
+            return '<div style="display:flex;align-items:center;gap:4px;justify-content:center">'
+                . '<button type="button" class="jud-timeline-btn" data-url="' . $timelineUrl . '" data-label="' . Html::encode($caseLabel) . '" title="متابعة القضية"><i class="fa fa-dashboard"></i> متابعة</button>'
+                . '<div class="jud-act-wrap">'
                 . '<button type="button" class="jud-act-trigger"><i class="fa fa-ellipsis-v"></i></button>'
                 . '<div class="jud-act-menu">' . $menu . '</div>'
+                . '</div>'
                 . '</div>';
         },
-        'headerOptions' => ['style' => 'width:5%;text-align:center'],
-        'contentOptions' => ['style' => 'text-align:center;overflow:visible;position:relative'],
+        'headerOptions' => ['style' => 'width:12%;text-align:center'],
+        'contentOptions' => ['style' => 'text-align:center;overflow:visible;position:relative;white-space:nowrap'],
     ],
 ];

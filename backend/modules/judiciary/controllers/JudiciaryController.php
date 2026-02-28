@@ -55,6 +55,7 @@ class JudiciaryController extends Controller
                             'export-cases-excel', 'export-cases-pdf',
                             'export-actions-excel', 'export-actions-pdf',
                             'export-report-excel', 'export-report-pdf',
+                            'case-timeline',
                         ],
                         'allow' => true,
                         'roles' => ['@'],
@@ -560,6 +561,116 @@ class JudiciaryController extends Controller
         ]);
     }
 
+
+    /* ═══════════════════════════════════════════════════════════
+     *  متابعة القضية — Case Timeline (AJAX)
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionCaseTimeline($id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            $judiciary = Judiciary::findOne((int)$id);
+            if (!$judiciary) {
+                return ['success' => false, 'message' => 'القضية غير موجودة'];
+            }
+
+            $parties = Yii::$app->db->createCommand(
+                "SELECT cc.customer_id, cc.customer_type, cu.name
+                 FROM {{%contracts_customers}} cc
+                 INNER JOIN {{%customers}} cu ON cu.id = cc.customer_id
+                 WHERE cc.contract_id = :cid",
+                [':cid' => $judiciary->contract_id]
+            )->queryAll();
+
+            $partyList = [];
+            foreach ($parties as $p) {
+                $partyList[] = [
+                    'id' => (int)$p['customer_id'],
+                    'name' => $p['name'] ?? '',
+                    'type' => $p['customer_type'],
+                ];
+            }
+
+            $db = Yii::$app->db;
+            $tblJca = $db->tablePrefix . 'judiciary_customers_actions';
+            $tblJa  = $db->tablePrefix . 'judiciary_actions';
+            $tblCu  = $db->tablePrefix . 'customers';
+            $tblU   = $db->tablePrefix . 'user';
+
+            $jaColumns = $db->getTableSchema($tblJa)->columnNames;
+            $hasNature = in_array('action_nature', $jaColumns);
+            $hasType   = in_array('action_type', $jaColumns);
+
+            $jcaColumns = $db->getTableSchema($tblJca)->columnNames;
+            $hasReqStatus = in_array('request_status', $jcaColumns);
+            $hasDecision  = in_array('decision_text', $jcaColumns);
+            $hasImage     = in_array('image', $jcaColumns);
+
+            $selectCols = "jca.id, jca.judiciary_id, jca.customers_id, jca.judiciary_actions_id,
+                jca.action_date, jca.note, jca.created_at, jca.created_by,
+                ja.name AS action_name, cu.name AS customer_name, u.username AS created_by_name";
+            if ($hasNature) $selectCols .= ", ja.action_nature";
+            if ($hasType)   $selectCols .= ", ja.action_type";
+            if ($hasReqStatus) $selectCols .= ", jca.request_status";
+            if ($hasDecision)  $selectCols .= ", jca.decision_text";
+            if ($hasImage)     $selectCols .= ", jca.image";
+
+            $rows = $db->createCommand(
+                "SELECT $selectCols
+                 FROM `$tblJca` jca
+                 INNER JOIN `$tblJa` ja ON ja.id = jca.judiciary_actions_id
+                 INNER JOIN `$tblCu` cu ON cu.id = jca.customers_id
+                 LEFT JOIN `$tblU` u ON u.id = jca.created_by
+                 WHERE jca.judiciary_id = :jid AND jca.is_deleted = 0
+                 ORDER BY jca.action_date DESC, jca.id DESC",
+                [':jid' => (int)$id]
+            )->queryAll();
+
+            $timeline = [];
+            foreach ($rows as $a) {
+                $timeline[] = [
+                    'id' => (int)$a['id'],
+                    'action_name' => $a['action_name'] ?? '',
+                    'action_nature' => $a['action_nature'] ?? 'process',
+                    'action_type' => $a['action_type'] ?? '',
+                    'customer_id' => (int)$a['customers_id'],
+                    'customer_name' => $a['customer_name'] ?? '',
+                    'action_date' => $a['action_date'] ?? '',
+                    'note' => $a['note'] ?? '',
+                    'request_status' => $a['request_status'] ?? '',
+                    'decision_text' => $a['decision_text'] ?? '',
+                    'image' => $a['image'] ?? '',
+                    'created_by' => $a['created_by_name'] ?? '',
+                    'created_at' => !empty($a['created_at']) ? date('Y-m-d H:i', $a['created_at']) : '',
+                ];
+            }
+
+            $caseInfo = [
+                'id' => $judiciary->id,
+                'contract_id' => $judiciary->contract_id,
+                'judiciary_number' => $judiciary->judiciary_number,
+                'year' => $judiciary->year,
+                'court' => $judiciary->court->name ?? '',
+                'lawyer' => $judiciary->lawyer->name ?? '',
+                'type' => $judiciary->type->name ?? '',
+            ];
+
+            return [
+                'success' => true,
+                'case' => $caseInfo,
+                'parties' => $partyList,
+                'timeline' => $timeline,
+                'addActionUrl' => \yii\helpers\Url::to([
+                    '/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action',
+                    'contractID' => $judiciary->contract_id,
+                ]),
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
 
     /* ═══════════════════════════════════════════════════════════
      *  تصدير القضايا (تبويب القضايا) — Excel / PDF
@@ -1499,7 +1610,7 @@ class JudiciaryController extends Controller
                 $record->customers_id = $customerId;
                 $record->judiciary_actions_id = $caseActionId;
                 $record->action_date = $actionDate;
-                $record->note = $note;
+                $record->note = !empty($case['note']) ? $case['note'] : $note;
                 if ($actionDef && $actionDef->action_nature === 'request') {
                     $record->request_status = 'pending';
                 }

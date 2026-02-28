@@ -19,12 +19,13 @@ class CustomersSearch extends Customers
     public $contract_type;
     public $number_row;
     public $job_type;
+    public $q;
 
     public function rules()
     {
         return [
             [['id', 'job_title','number_row','job_type'], 'integer'],
-            [['name', 'status', 'city', 'job_title', 'id_number', 'primary_phone_number', 'contract_type'], 'safe'],
+            [['name', 'status', 'city', 'job_title', 'id_number', 'primary_phone_number', 'contract_type', 'q'], 'safe'],
         ];
     }
 
@@ -50,7 +51,31 @@ class CustomersSearch extends Customers
         $this->load($params);
         $query = Customers::find();
         if (!empty($params['CustomersSearch']['contract_type'])) {
-            $query = Customers::find()->innerJoin("(`os_contracts_customers` INNER JOIN os_contracts ON contract_id = os_contracts.id  and os_contracts.status = '".$params['CustomersSearch']['contract_type']."')ON customer_id = os_customers.id");
+            $ct = $params['CustomersSearch']['contract_type'];
+            if ($ct === 'judiciary') {
+                $query = Customers::find()->innerJoin(
+                    "(`os_contracts_customers` INNER JOIN os_contracts ON contract_id = os_contracts.id AND os_contracts.status = 'judiciary') ON customer_id = os_customers.id"
+                );
+            } elseif ($ct === 'judiciary_active' || $ct === 'judiciary_paid') {
+                $query = Customers::find()->innerJoin(
+                    "(`os_contracts_customers` INNER JOIN os_contracts ON contract_id = os_contracts.id AND os_contracts.status = 'judiciary') ON customer_id = os_customers.id"
+                );
+                $paidSql = "(SELECT ct.id FROM {{%contracts}} ct
+                    WHERE ct.status = 'judiciary'
+                      AND (ct.is_deleted = 0 OR ct.is_deleted IS NULL)
+                      AND (ct.total_value - COALESCE((SELECT SUM(i.payment_value) FROM {{%income}} i WHERE i.contract_id = ct.id AND (i.is_deleted = 0 OR i.is_deleted IS NULL)), 0)
+                                           - COALESCE((SELECT SUM(a.amount) FROM {{%contract_adjustments}} a WHERE a.contract_id = ct.id), 0)) <= 0)";
+                if ($ct === 'judiciary_paid') {
+                    $query->andWhere("os_contracts.id IN $paidSql");
+                } else {
+                    $query->andWhere("os_contracts.id NOT IN $paidSql");
+                }
+            } else {
+                $query = Customers::find()->innerJoin(
+                    "(`os_contracts_customers` INNER JOIN os_contracts ON contract_id = os_contracts.id AND os_contracts.status = :ctStatus) ON customer_id = os_customers.id",
+                    [':ctStatus' => $ct]
+                );
+            }
         }
         if (!empty($params['CustomersSearch']['job_Type'])) {
 
@@ -92,8 +117,29 @@ class CustomersSearch extends Customers
             ->andFilterWhere(['=', 'os_customers.id', $this->id])
             ->andFilterWhere(['=', 'job_title', $this->job_title])
             ->andFilterWhere(['like', 'id_number', $this->id_number])
-            ->andFilterWhere(['like', 'primary_phone_number', $this->primary_phone_number])->andWhere(['os_customers.is_deleted' => false]);;
+            ->andFilterWhere(['like', 'primary_phone_number', $this->primary_phone_number])->andWhere(['os_customers.is_deleted' => false]);
         $query->andFilterWhere(['=', 'name', $this->name]);
+
+        if (!empty($this->q)) {
+            $hasJobJoin = false;
+            $words = preg_split('/\s+/u', trim($this->q), -1, PREG_SPLIT_NO_EMPTY);
+            foreach ($words as $w) {
+                $or = ['or',
+                    ['like', 'os_customers.name', $w],
+                    ['like', 'os_customers.id_number', $w],
+                    ['like', 'os_customers.primary_phone_number', $w],
+                    ['like', 'qj.name', $w],
+                ];
+                if (is_numeric($w)) {
+                    $or[] = ['=', 'os_customers.id', (int)$w];
+                }
+                if (!$hasJobJoin) {
+                    $query->leftJoin('{{%jobs}} qj', 'qj.id = os_customers.job_title');
+                    $hasJobJoin = true;
+                }
+                $query->andWhere($or);
+            }
+        }
 
         return $dataProvider;
     }
@@ -102,8 +148,31 @@ class CustomersSearch extends Customers
     {
         $query = Customers::find();
         if (!empty($params['CustomersSearch']['contract_type'])) {
-            $query = Customers::find()->innerJoin("(`os_contracts_customers` INNER JOIN os_contracts ON contract_id = os_contracts.id  and os_contracts.status = '".$params['CustomersSearch']['contract_type']."')ON customer_id = os_customers.id");
-
+            $ct = $params['CustomersSearch']['contract_type'];
+            if ($ct === 'judiciary') {
+                $query = Customers::find()->innerJoin(
+                    "(`os_contracts_customers` INNER JOIN os_contracts ON contract_id = os_contracts.id AND os_contracts.status = 'judiciary') ON customer_id = os_customers.id"
+                );
+            } elseif ($ct === 'judiciary_active' || $ct === 'judiciary_paid') {
+                $query = Customers::find()->innerJoin(
+                    "(`os_contracts_customers` INNER JOIN os_contracts ON contract_id = os_contracts.id AND os_contracts.status = 'judiciary') ON customer_id = os_customers.id"
+                );
+                $paidSql = "(SELECT ct.id FROM {{%contracts}} ct
+                    WHERE ct.status = 'judiciary'
+                      AND (ct.is_deleted = 0 OR ct.is_deleted IS NULL)
+                      AND (ct.total_value - COALESCE((SELECT SUM(i.payment_value) FROM {{%income}} i WHERE i.contract_id = ct.id AND (i.is_deleted = 0 OR i.is_deleted IS NULL)), 0)
+                                           - COALESCE((SELECT SUM(a.amount) FROM {{%contract_adjustments}} a WHERE a.contract_id = ct.id), 0)) <= 0)";
+                if ($ct === 'judiciary_paid') {
+                    $query->andWhere("os_contracts.id IN $paidSql");
+                } else {
+                    $query->andWhere("os_contracts.id NOT IN $paidSql");
+                }
+            } else {
+                $query = Customers::find()->innerJoin(
+                    "(`os_contracts_customers` INNER JOIN os_contracts ON contract_id = os_contracts.id AND os_contracts.status = :ctStatus) ON customer_id = os_customers.id",
+                    [':ctStatus' => $ct]
+                );
+            }
         }
         if (!empty($params['CustomersSearch']['job_Type'])) {
 
@@ -132,6 +201,27 @@ class CustomersSearch extends Customers
             ->andFilterWhere(['like', 'id_number', $this->id_number])
             ->andFilterWhere(['like', 'primary_phone_number', $this->primary_phone_number])->andWhere(['os_customers.is_deleted' => false]);
         $query->andFilterWhere(['=', 'name', $this->name]);
+
+        if (!empty($this->q)) {
+            $hasJobJoin = false;
+            $words = preg_split('/\s+/u', trim($this->q), -1, PREG_SPLIT_NO_EMPTY);
+            foreach ($words as $w) {
+                $or = ['or',
+                    ['like', 'os_customers.name', $w],
+                    ['like', 'os_customers.id_number', $w],
+                    ['like', 'os_customers.primary_phone_number', $w],
+                    ['like', 'qj.name', $w],
+                ];
+                if (is_numeric($w)) {
+                    $or[] = ['=', 'os_customers.id', (int)$w];
+                }
+                if (!$hasJobJoin) {
+                    $query->leftJoin('{{%jobs}} qj', 'qj.id = os_customers.job_title');
+                    $hasJobJoin = true;
+                }
+                $query->andWhere($or);
+            }
+        }
 
         return $query->count();
     }

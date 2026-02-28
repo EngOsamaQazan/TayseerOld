@@ -56,7 +56,7 @@ class FollowUpReportSearch extends FollowUpReport
 
         $pageSize = !empty($params['FollowUpReportSearch']['number_row'])
             ? (int)$params['FollowUpReportSearch']['number_row']
-            : 20;
+            : 10;
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
@@ -228,7 +228,7 @@ class FollowUpReportSearch extends FollowUpReport
 
         $pageSize = !empty($params['FollowUpReportSearch']['number_row'])
             ? (int)$params['FollowUpReportSearch']['number_row']
-            : 20;
+            : 10;
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,

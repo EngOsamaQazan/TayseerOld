@@ -163,22 +163,32 @@ foreach ($natureOrder as $nature) {
 }
 .ba-row-action-chip .ba-chip-x:hover { color:#EF4444; }
 .ba-row-dd {
-    display:none; position:absolute; top:100%; right:0; z-index:998;
-    background:#fff; border:1px solid #E2E8F0; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.12);
-    max-height:200px; overflow-y:auto; min-width:220px; margin-top:4px;
+    display:none; position:fixed; z-index:9999;
+    background:#fff; border:1px solid #E2E8F0; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.15);
+    max-height:300px; overflow-y:auto; min-width:260px; width:280px;
 }
 .ba-row-dd.open { display:block; }
 .ba-row-dd-search {
-    padding:6px 10px; border:none; border-bottom:1px solid #E2E8F0;
-    font-size:11px; width:100%; outline:none; font-family:inherit;
+    padding:8px 10px; border:none; border-bottom:1px solid #E2E8F0;
+    font-size:12px; width:100%; outline:none; font-family:inherit;
+    position:sticky; top:0; background:#fff; z-index:1;
 }
 .ba-row-dd-item {
-    display:flex; align-items:center; gap:5px; padding:6px 10px; cursor:pointer;
-    font-size:11px; border-bottom:1px solid #F8F8F8; transition:background .12s;
+    display:flex; align-items:center; gap:5px; padding:7px 12px; cursor:pointer;
+    font-size:12px; border-bottom:1px solid #F8F8F8; transition:background .12s;
 }
 .ba-row-dd-item:last-child { border-bottom:none; }
 .ba-row-dd-item:hover { background:#FDF2F4; }
 .ba-row-dd-item .bullet { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+
+/* Per-row note */
+.ba-row-note-input {
+    width:100%; padding:4px 8px; border:1px solid #E2E8F0; border-radius:5px;
+    font-size:11px; font-family:inherit; outline:none; min-width:100px;
+    transition:border-color .15s;
+}
+.ba-row-note-input:focus { border-color:#800020; box-shadow:0 0 0 2px rgba(128,0,32,.08); }
+.ba-row-note-input::placeholder { color:#CBD5E1; }
 
 /* Progress */
 .ba-progress-bar { width:100%; height:8px; background:#E2E8F0; border-radius:4px; overflow:hidden; margin-bottom:16px; }
@@ -277,6 +287,7 @@ foreach ($natureOrder as $nature) {
                     <th>المدخل</th><th>رقم القضية</th><th>السنة</th>
                     <th>المحكمة</th><th>العقد</th><th>الأطراف</th>
                     <th>الإجراء</th>
+                    <th>ملاحظة</th>
                     <th>الحالة</th>
                 </tr></thead>
                 <tbody id="ba-results-body"></tbody>
@@ -368,8 +379,10 @@ var BA = (function() {
             if (r.status === 'matched' && r.parties && !r.selectedParties) {
                 r.selectedParties = r.parties.map(function(p) { return p.customer_id; });
             }
+            var isSelectable = r.status === 'matched' || r.status === 'multiple';
+            var isChecked = isSelectable && r._checked !== false;
             html += '<tr data-idx="' + i + '">';
-            html += '<td><input type="checkbox" class="ba-check ba-row-check" data-idx="' + i + '" ' + (r.status === 'matched' || r.status === 'multiple' ? 'checked' : 'disabled') + '></td>';
+            html += '<td><input type="checkbox" class="ba-check ba-row-check" data-idx="' + i + '" ' + (isSelectable ? (isChecked ? 'checked' : '') : 'disabled') + '></td>';
             html += '<td style="font-family:monospace;direction:ltr">' + esc(r.input) + '</td>';
             html += '<td><strong>' + (r.number || '\u2014') + '</strong></td>';
             html += '<td>' + (r.year || '\u2014') + '</td>';
@@ -387,6 +400,7 @@ var BA = (function() {
                 });
                 html += '</div></td>';
                 html += '<td>' + renderRowActionChip(i) + '</td>';
+                html += '<td><input type="text" class="ba-row-note-input" data-idx="' + i + '" placeholder="ملاحظة..." value="' + escAttr(r.rowNote || '') + '" onchange="BA.setRowNote(' + i + ',this.value)"></td>';
             } else if (r.status === 'multiple') {
                 html += '<td><select class="ba-court-select" data-idx="' + i + '" onchange="BA.resolveMultiple(' + i + ', this.value)">';
                 html += '<option value="">\u2014 اختر المحكمة \u2014</option>';
@@ -394,9 +408,9 @@ var BA = (function() {
                     html += '<option value="' + oi + '">' + esc(o.court_name) + ' (عقد ' + o.contract_id + ')</option>';
                 });
                 html += '</select></td>';
-                html += '<td>\u2014</td><td>\u2014</td><td>\u2014</td>';
+                html += '<td>\u2014</td><td>\u2014</td><td>\u2014</td><td>\u2014</td>';
             } else {
-                html += '<td colspan="4" style="color:#94A3B8">' + esc(r.message) + '</td>';
+                html += '<td colspan="5" style="color:#94A3B8">' + esc(r.message) + '</td>';
             }
             html += '<td><span class="ba-status ' + statusClass + '">' + statusLabel + '</span></td>';
             html += '</tr>';
@@ -408,6 +422,7 @@ var BA = (function() {
             (multi > 0 ? '<div class="ba-stat ba-stat-warn"><i class="fa fa-question-circle"></i> متعدد: ' + multi + '</div>' : '') +
             (notFound > 0 ? '<div class="ba-stat ba-stat-err"><i class="fa fa-times"></i> غير موجود: ' + notFound + '</div>' : '') +
             (errors > 0 ? '<div class="ba-stat ba-stat-err"><i class="fa fa-exclamation-triangle"></i> أخطاء: ' + errors + '</div>' : '');
+        syncCheckAll();
     }
 
     function renderRowActionChip(idx) {
@@ -426,16 +441,22 @@ var BA = (function() {
             + '</span>';
     }
 
+    function setRowNote(idx, val) {
+        parsedResults[idx].rowNote = val;
+    }
+
     /* ── Per-row action dropdown ── */
     function openRowActionDd(idx, evt) {
         evt.stopPropagation();
         closeAllDd();
         var chip = evt.currentTarget;
+        var rect = chip.getBoundingClientRect();
         var dd = document.createElement('div');
         dd.className = 'ba-row-dd open';
         dd.innerHTML = buildActionDdHtml('BA.pickRowAction(' + idx + ',');
-        chip.style.position = 'relative';
-        chip.appendChild(dd);
+        dd.style.top = (rect.bottom + 4) + 'px';
+        dd.style.right = (window.innerWidth - rect.right) + 'px';
+        document.body.appendChild(dd);
         openRowDd = dd;
         var search = dd.querySelector('.ba-row-dd-search');
         if (search) {
@@ -500,14 +521,14 @@ var BA = (function() {
 
     /* ── Shared dropdown builder ── */
     function buildActionDdHtml(onClickPrefix) {
-        var html = '<input type="text" class="ba-row-dd-search" placeholder="بحث..." onclick="event.stopPropagation()">';
+        var html = '<input type="text" class="ba-row-dd-search" placeholder="ابحث عن الإجراء..." onclick="event.stopPropagation()">';
         var lastNature = '';
         ALL_ACTIONS.forEach(function(a) {
             if (a.nature !== lastNature) {
                 html += '<div class="ba-toolbar-dd-nature">' + esc(a.natureLabel) + '</div>';
                 lastNature = a.nature;
             }
-            html += '<div class="ba-toolbar-dd-item" data-name="' + esc(a.name) + '" onclick="event.stopPropagation();' + onClickPrefix + a.id + ')">'
+            html += '<div class="ba-toolbar-dd-item" data-name="' + escAttr(a.name) + '" onclick="event.stopPropagation();' + onClickPrefix + a.id + ')">'
                 + '<span class="bullet" style="background:' + a.color + '"></span>'
                 + esc(a.name) + '</div>';
         });
@@ -515,9 +536,15 @@ var BA = (function() {
     }
 
     function filterDdItems(dd, q) {
-        q = (q || '').trim().toLowerCase();
+        q = (q || '').trim();
+        var qLower = q.toLowerCase();
+        var qNorm = normalizeArabic(q);
         dd.querySelectorAll('.ba-toolbar-dd-item').forEach(function(el) {
-            el.style.display = (el.dataset.name || '').toLowerCase().indexOf(q) !== -1 || !q ? '' : 'none';
+            if (!q) { el.style.display = ''; return; }
+            var name = el.dataset.name || '';
+            var found = name.toLowerCase().indexOf(qLower) !== -1
+                || normalizeArabic(name).indexOf(qNorm) !== -1;
+            el.style.display = found ? '' : 'none';
         });
         dd.querySelectorAll('.ba-toolbar-dd-nature').forEach(function(hdr) {
             var next = hdr.nextElementSibling;
@@ -528,6 +555,11 @@ var BA = (function() {
             }
             hdr.style.display = anyVisible || !q ? '' : 'none';
         });
+    }
+
+    function normalizeArabic(s) {
+        return s.replace(/[\u0610-\u061A\u064B-\u065F\u0670]/g, '')
+            .replace(/[إأآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
     }
 
     function closeAllDd() {
@@ -571,23 +603,38 @@ var BA = (function() {
     /* ── Check all ── */
     document.getElementById('ba-check-all').addEventListener('change', function() {
         var checked = this.checked;
-        document.querySelectorAll('.ba-row-check:not(:disabled)').forEach(function(c) { c.checked = checked; });
+        document.querySelectorAll('.ba-row-check:not(:disabled)').forEach(function(c) {
+            c.checked = checked;
+            var idx = parseInt(c.dataset.idx);
+            if (parsedResults[idx]) parsedResults[idx]._checked = checked;
+        });
     });
+
+    function syncCheckAll() {
+        var all = document.querySelectorAll('.ba-row-check:not(:disabled)');
+        var allChecked = all.length > 0;
+        all.forEach(function(c) { if (!c.checked) allChecked = false; });
+        var checkAll = document.getElementById('ba-check-all');
+        if (checkAll) checkAll.checked = allChecked;
+    }
 
     /* ── Build cases for execution ── */
     function getSelectedCases() {
+        var globalNote = document.getElementById('ba-note').value || '';
         var cases = [];
         document.querySelectorAll('.ba-row-check:checked').forEach(function(c) {
             var idx = parseInt(c.dataset.idx);
             var r = parsedResults[idx];
             if (r && r.status === 'matched' && r.judiciary_id && r.selectedAction) {
                 var partyIds = (r.selectedParties && r.selectedParties.length > 0) ? r.selectedParties : (r.parties || []).map(function(p) { return p.customer_id; });
+                var note = r.rowNote || globalNote;
                 cases.push({
                     input: r.input,
                     judiciary_id: r.judiciary_id,
                     contract_id: r.contract_id,
                     party_ids: partyIds,
-                    action_id: r.selectedAction.id
+                    action_id: r.selectedAction.id,
+                    note: note
                 });
             }
         });
@@ -677,6 +724,11 @@ var BA = (function() {
         return d.innerHTML;
     }
 
+    function escAttr(s) {
+        if (!s && s !== 0) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
     return {
         goStep: goStep,
         toggleParty: toggleParty,
@@ -686,6 +738,7 @@ var BA = (function() {
         pickRowAction: pickRowAction,
         clearRowAction: clearRowAction,
         pickBulkAction: pickBulkAction,
+        setRowNote: setRowNote,
         reset: reset
     };
 })();

@@ -234,7 +234,7 @@ a.fur-id-link:hover{text-decoration:underline}
                     <div class="ct-filter-group">
                         <label>عدد النتائج</label>
                         <?= $form->field($searchModel, 'number_row', ['template'=>'{input}'])->dropDownList([
-                            ''=>'افتراضي (20)','50'=>'50','100'=>'100','200'=>'200',
+                            ''=>'افتراضي (10)','20'=>'20','50'=>'50','100'=>'100','200'=>'200',
                         ], ['class'=>'ct-input']) ?>
                     </div>
                 </div>
