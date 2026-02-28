@@ -37,15 +37,7 @@ $isNew = $model->isNewRecord;
 /* Hide AdminLTE content header */
 $this->registerCss('.content-header { display: none !important; } .content-wrapper { padding-top: 0 !important; } .content { padding: 0 !important; }');
 
-/* Edit mode: show all sections, hide wizard nav */
-if (!$isNew) {
-    $this->registerCss('
-        .so-mode-edit .so-section { display: block !important; }
-        .so-mode-edit .so-nav { display: none !important; }
-        .so-mode-edit .so-section { border-top: 2px solid #e2e8f0; padding-top: 20px; margin-top: 10px; }
-        .so-mode-edit .so-section:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
-    ');
-}
+/* Edit mode styles are in smart-onboarding.css */
 
 /* Config for JS */
 $this->registerJs("window.soConfig = " . json_encode([
@@ -141,31 +133,29 @@ if (!$isNew) {
             ?>
             <?= $form->errorSummary($model, ['class' => 'alert alert-danger', 'style' => 'border-radius:8px; font-size:13px']) ?>
 
-            <!-- Wizard Steps (إضافة فقط) -->
-            <?php if ($isNew): ?>
+            <!-- Wizard Steps / Section Navigation -->
             <div class="so-steps">
-                <div class="so-step active" data-step="0">
-                    <span class="so-step-num">1</span>
+                <div class="so-step <?= $isNew ? 'active' : '' ?>" data-step="0">
+                    <span class="so-step-num"><?= $isNew ? '1' : '' ?><i class="fa fa-user so-step-icon"></i></span>
                     <span class="so-step-label">البيانات الشخصية</span>
                 </div>
                 <div class="so-step" data-step="1">
-                    <span class="so-step-num">2</span>
+                    <span class="so-step-num"><?= $isNew ? '2' : '' ?><i class="fa fa-briefcase so-step-icon"></i></span>
                     <span class="so-step-label">الوظيفة والدخل</span>
                 </div>
                 <div class="so-step" data-step="2">
-                    <span class="so-step-num">3</span>
+                    <span class="so-step-num"><?= $isNew ? '3' : '' ?><i class="fa fa-university so-step-icon"></i></span>
                     <span class="so-step-label">البنك والضمانات</span>
                 </div>
                 <div class="so-step" data-step="3">
-                    <span class="so-step-num">4</span>
+                    <span class="so-step-num"><?= $isNew ? '4' : '' ?><i class="fa fa-address-book so-step-icon"></i></span>
                     <span class="so-step-label">المعرّفون والمستندات</span>
                 </div>
                 <div class="so-step" data-step="4">
-                    <span class="so-step-num">5</span>
+                    <span class="so-step-num"><?= $isNew ? '5' : '' ?><i class="fa fa-image so-step-icon"></i></span>
                     <span class="so-step-label">الصور والمراجعة</span>
                 </div>
             </div>
-            <?php endif ?>
 
             <!-- ══════════════════════════════════════
                  STEP 1: البيانات الشخصية
@@ -703,7 +693,6 @@ if (!$isNew) {
             <?php else: ?>
             <!-- ═══ وضع التعديل: ملخص العميل ═══ -->
             <?php
-            // جلب بيانات فعلية
             $contractsCount = (int) $db->createCommand("SELECT COUNT(*) FROM os_contracts_customers WHERE customer_id=:cid", [':cid' => $model->id])->queryScalar();
             $activeContracts = (int) $db->createCommand("SELECT COUNT(*) FROM os_contracts_customers cc INNER JOIN os_contracts c ON c.id=cc.contract_id WHERE cc.customer_id=:cid AND c.status='active'", [':cid' => $model->id])->queryScalar();
             $totalPaid = (float) $db->createCommand("SELECT COALESCE(SUM(i.amount),0) FROM os_income i INNER JOIN os_contracts_customers cc ON cc.contract_id=i.contract_id WHERE cc.customer_id=:cid", [':cid' => $model->id])->queryScalar();
@@ -712,76 +701,72 @@ if (!$isNew) {
             ?>
             <div class="rp-mobile-handle">
                 <div class="rp-mobile-summary">
-                    <span style="font-size:14px; font-weight:700">ملخص العميل</span>
+                    <span class="rp-mobile-summary-title">ملخص العميل</span>
                 </div>
                 <div class="rp-mobile-handle-bar"></div>
             </div>
 
             <h3 class="rp-title"><i class="fa fa-user-circle"></i> ملخص العميل</h3>
 
-            <!-- صورة العميل -->
             <?php if (!empty($model->selected_image)): ?>
-            <div style="text-align:center; margin-bottom:14px">
-                <img src="<?= $model->selectedImagePath ?>" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid #e2e8f0" alt="">
+            <div class="rp-avatar">
+                <img src="<?= $model->selectedImagePath ?>" alt="">
             </div>
             <?php endif ?>
 
-            <!-- بطاقات الملخص -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px">
-                <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:10px; text-align:center">
-                    <div style="font-size:22px; font-weight:800; color:#0369a1"><?= $contractsCount ?></div>
-                    <div style="font-size:11px; color:#64748b">إجمالي العقود</div>
+            <div class="rp-summary-grid">
+                <div class="rp-summary-card rp-summary-blue">
+                    <div class="rp-summary-val"><?= $contractsCount ?></div>
+                    <div class="rp-summary-label">إجمالي العقود</div>
                 </div>
-                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px; text-align:center">
-                    <div style="font-size:22px; font-weight:800; color:#166534"><?= $activeContracts ?></div>
-                    <div style="font-size:11px; color:#64748b">عقود نشطة</div>
+                <div class="rp-summary-card rp-summary-green">
+                    <div class="rp-summary-val"><?= $activeContracts ?></div>
+                    <div class="rp-summary-label">عقود نشطة</div>
                 </div>
-                <div style="background:#fefce8; border:1px solid #fde68a; border-radius:8px; padding:10px; text-align:center">
-                    <div style="font-size:16px; font-weight:800; color:#92400e"><?= number_format($totalPaid, 0) ?></div>
-                    <div style="font-size:11px; color:#64748b">إجمالي المدفوع</div>
+                <div class="rp-summary-card rp-summary-amber">
+                    <div class="rp-summary-val"><?= number_format($totalPaid, 0) ?></div>
+                    <div class="rp-summary-label">إجمالي المدفوع</div>
                 </div>
-                <div style="background:#fdf2f8; border:1px solid #fbcfe8; border-radius:8px; padding:10px; text-align:center">
-                    <div style="font-size:16px; font-weight:800; color:#9d174d"><?= $existingImages ?></div>
-                    <div style="font-size:11px; color:#64748b">صور مرفوعة</div>
+                <div class="rp-summary-card rp-summary-pink">
+                    <div class="rp-summary-val"><?= $existingImages ?></div>
+                    <div class="rp-summary-label">صور مرفوعة</div>
                 </div>
             </div>
 
-            <!-- تفاصيل -->
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-size:12.5px; color:#334155">
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px">
-                    <span><i class="fa fa-phone" style="color:#0891b2"></i> الهاتف</span>
+            <div class="rp-details">
+                <div class="rp-details-row">
+                    <span><i class="fa fa-phone rp-icon-cyan"></i> الهاتف</span>
                     <b dir="ltr"><?= $model->primary_phone_number ?: '—' ?></b>
                 </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px">
-                    <span><i class="fa fa-id-card" style="color:#7c3aed"></i> الرقم الوطني</span>
+                <div class="rp-details-row">
+                    <span><i class="fa fa-id-card rp-icon-purple"></i> الرقم الوطني</span>
                     <b dir="ltr"><?= $model->id_number ?: '—' ?></b>
                 </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px">
-                    <span><i class="fa fa-money" style="color:#059669"></i> الراتب</span>
+                <div class="rp-details-row">
+                    <span><i class="fa fa-money rp-icon-green"></i> الراتب</span>
                     <b><?= $model->total_salary ? number_format($model->total_salary, 0) : '—' ?></b>
                 </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px">
-                    <span><i class="fa fa-calendar" style="color:#d97706"></i> آخر متابعة</span>
+                <div class="rp-details-row">
+                    <span><i class="fa fa-calendar rp-icon-amber"></i> آخر متابعة</span>
                     <b><?= $lastFollowUp ? date('Y-m-d', strtotime($lastFollowUp)) : 'لم يُتابع' ?></b>
                 </div>
                 <?php if (!empty($model->notes)): ?>
-                <div style="margin-top:8px; padding-top:8px; border-top:1px solid #e2e8f0">
-                    <span style="color:#64748b"><i class="fa fa-sticky-note"></i> ملاحظات:</span>
-                    <p style="margin:4px 0 0; font-size:12px"><?= Html::encode($model->notes) ?></p>
+                <div class="rp-details-notes">
+                    <span><i class="fa fa-sticky-note"></i> ملاحظات:</span>
+                    <p><?= Html::encode($model->notes) ?></p>
                 </div>
                 <?php endif ?>
             </div>
 
-            <!-- روابط سريعة -->
-            <div style="margin-top:14px; display:flex; flex-direction:column; gap:6px">
-                <a href="<?= Url::to(['view', 'id' => $model->id]) ?>" style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; text-decoration:none; color:#1e293b; font-size:13px; font-weight:600; transition:all .2s">
-                    <i class="fa fa-eye" style="color:#0891b2"></i> عرض ملف العميل الكامل
+            <div class="rp-quick-links">
+                <a href="<?= Url::to(['view', 'id' => $model->id]) ?>" class="rp-quick-link">
+                    <i class="fa fa-eye rp-icon-cyan"></i> عرض ملف العميل الكامل
                 </a>
-                <a href="<?= Url::to(['/contracts/contracts/create', 'customer_id' => $model->id]) ?>" style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; text-decoration:none; color:#1e293b; font-size:13px; font-weight:600; transition:all .2s">
-                    <i class="fa fa-file-text-o" style="color:#059669"></i> إنشاء عقد جديد
+                <a href="<?= Url::to(['/contracts/contracts/create', 'customer_id' => $model->id]) ?>" class="rp-quick-link">
+                    <i class="fa fa-file-text-o rp-icon-green"></i> إنشاء عقد جديد
                 </a>
-                <a href="<?= Url::to(['/site/image-manager']) ?>" style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; text-decoration:none; color:#1e293b; font-size:13px; font-weight:600; transition:all .2s">
-                    <i class="fa fa-image" style="color:#7c3aed"></i> إدارة الصور
+                <a href="<?= Url::to(['/site/image-manager']) ?>" class="rp-quick-link">
+                    <i class="fa fa-image rp-icon-purple"></i> إدارة الصور
                 </a>
             </div>
             <?php endif ?>

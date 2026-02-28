@@ -18,12 +18,13 @@
        ══════════════════════════════════════════ */
     $(function() {
         initWizard();
+        initEditModeNav();
         initRiskPanel();
         initLiveValidation();
         initDuplicateCheck();
         initConditionalFields();
         initDocumentUploads();
-        triggerRiskCalc(); // initial
+        triggerRiskCalc();
     });
 
     /* ══════════════════════════════════════════
@@ -119,6 +120,49 @@
 
     function saveStepState() {
         try { localStorage.setItem('so_step', SO.currentStep); } catch(e){}
+    }
+
+    /* ══════════════════════════════════════════
+       EDIT MODE — Section Navigation via Steps
+       ══════════════════════════════════════════ */
+    function initEditModeNav() {
+        if (!window.soConfig || !window.soConfig.isEditMode) return;
+
+        $('.so-step').first().addClass('active');
+
+        $(document).on('click', '.so-steps .so-step', function() {
+            var stepIdx = $(this).data('step');
+            var $section = $('.so-section[data-step="' + stepIdx + '"]');
+            if (!$section.length) return;
+
+            var headerOffset = 80;
+            var stepsHeight = $('.so-steps').outerHeight() || 60;
+            var targetTop = $section.offset().top - headerOffset - stepsHeight;
+
+            $('html, body').animate({ scrollTop: targetTop }, 400);
+
+            $('.so-step').removeClass('active');
+            $(this).addClass('active');
+        });
+
+        var scrollTimer = null;
+        $(window).on('scroll', function() {
+            clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(function() {
+                var scrollTop = $(window).scrollTop();
+                var headerOffset = 150 + ($('.so-steps').outerHeight() || 60);
+                var activeStep = 0;
+
+                $('.so-section').each(function() {
+                    if ($(this).offset().top <= scrollTop + headerOffset) {
+                        activeStep = $(this).data('step');
+                    }
+                });
+
+                $('.so-step').removeClass('active');
+                $('.so-step[data-step="' + activeStep + '"]').addClass('active');
+            }, 50);
+        });
     }
 
     /* ══════════════════════════════════════════
