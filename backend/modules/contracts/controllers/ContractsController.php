@@ -61,9 +61,11 @@ class ContractsController extends Controller
                     ],
                     [
                         'actions' => ['update', 'finish', 'finish-contract', 'cancel', 'cancel-contract',
-                            'return-to-continue', 'to-legal-department', 'convert-to-manager',
+                            'return-to-continue', 'to-legal-department', 'remove-from-legal-department',
+                            'convert-to-manager',
                             'is-read', 'chang-follow-up', 'is-connect', 'is-not-connect',
-                            'lookup-serial'],
+                            'lookup-serial',
+                            'add-adjustment', 'delete-adjustment', 'adjustments', 'refresh-status'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {

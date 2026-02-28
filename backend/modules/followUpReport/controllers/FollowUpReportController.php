@@ -597,6 +597,7 @@ SELECT
                 c.total_value
                 + IFNULL(exp_sum.total_expenses, 0)
                 + IFNULL(jud.total_lawyer, 0)
+                - IFNULL(adj.total_adjustments, 0)
                 - IFNULL(payments.total_paid, 0)
             )
         ELSE
@@ -631,13 +632,23 @@ LEFT JOIN (
     FROM os_expenses
     GROUP BY contract_id
 ) exp_sum ON exp_sum.contract_id = c.id
+LEFT JOIN (
+    SELECT contract_id, SUM(amount) AS total_adjustments
+    FROM os_contract_adjustments WHERE is_deleted = 0
+    GROUP BY contract_id
+) adj ON adj.contract_id = c.id
 WHERE
     c.status NOT IN ('finished','canceled','refused')
+    AND NOT (
+        c.status = 'judiciary'
+        AND (c.total_value + IFNULL(exp_sum.total_expenses, 0) + IFNULL(jud.total_lawyer, 0)
+             - IFNULL(adj.total_adjustments, 0) - IFNULL(payments.total_paid, 0)) <= 0.01
+    )
     AND (
         (c.is_can_not_contact = 0 AND (
             (jud.jud_id IS NOT NULL AND ls.id IS NULL AND
                 (c.total_value + IFNULL(exp_sum.total_expenses, 0) + IFNULL(jud.total_lawyer, 0)
-                 - IFNULL(payments.total_paid, 0)) > 5
+                 - IFNULL(adj.total_adjustments, 0) - IFNULL(payments.total_paid, 0)) > 5
             )
             OR
             ((jud.jud_id IS NULL OR ls.id IS NOT NULL) AND
@@ -687,6 +698,7 @@ SELECT
                 c.total_value
                 + IFNULL(exp_sum.total_expenses, 0)
                 + IFNULL(jud.total_lawyer, 0)
+                - IFNULL(adj.total_adjustments, 0)
                 - IFNULL(payments.total_paid, 0)
             )
         ELSE
@@ -720,7 +732,17 @@ LEFT JOIN (
     FROM os_expenses
     GROUP BY contract_id
 ) exp_sum ON exp_sum.contract_id = c.id
+LEFT JOIN (
+    SELECT contract_id, SUM(amount) AS total_adjustments
+    FROM os_contract_adjustments WHERE is_deleted = 0
+    GROUP BY contract_id
+) adj ON adj.contract_id = c.id
 WHERE c.is_can_not_contact = 1
+    AND NOT (
+        c.status = 'judiciary'
+        AND (c.total_value + IFNULL(exp_sum.total_expenses, 0) + IFNULL(jud.total_lawyer, 0)
+             - IFNULL(adj.total_adjustments, 0) - IFNULL(payments.total_paid, 0)) <= 0.01
+    )
 ORDER BY c.id DESC";
 
         $connection = Yii::$app->getDb();

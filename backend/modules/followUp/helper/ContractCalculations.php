@@ -105,11 +105,12 @@ class ContractCalculations
     }
 
     /**
-     * المبلغ الإجمالي = أصلي + كل Outcome + أتعاب محاماة − الخصومات
+     * المبلغ الإجمالي (الخام) = أصلي + كل Outcome + أتعاب محاماة
+     * لا يطرح الخصومات — يُستخدم للعرض كـ "إجمالي العقد"
      */
     public function totalDebt(): float
     {
-        return $this->getContractTotal() + $this->allExpenses() + $this->allLawyerCosts() - $this->totalAdjustments();
+        return $this->getContractTotal() + $this->allExpenses() + $this->allLawyerCosts();
     }
 
     /**
@@ -124,11 +125,11 @@ class ContractCalculations
     }
 
     /**
-     * المتبقي = المبلغ الإجمالي - المدفوع
+     * المتبقي = الإجمالي − المدفوع − الخصومات
      */
     public function remainingAmount(): float
     {
-        return max(0, $this->totalDebt() - $this->paidAmount());
+        return max(0, $this->totalDebt() - $this->paidAmount() - $this->totalAdjustments());
     }
 
     /**
@@ -167,21 +168,21 @@ class ContractCalculations
      */
     public function amountShouldBePaid(): float
     {
-        $total = $this->totalDebt();
+        $netTotal = $this->totalDebt() - $this->totalAdjustments();
 
         if ($this->hasJdicary() && !$this->latestSettlement) {
-            return $total;
+            return $netTotal;
         }
 
         if ($this->latestSettlement) {
             $months = $this->settlementTimeInterval() + 1;
             $monthly = (float)($this->latestSettlement->monthly_installment ?? 0);
-            return min($months * $monthly, $total);
+            return min($months * $monthly, $netTotal);
         }
 
         $months = $this->timeInterval() + 1;
         $monthly = (float)($this->original_contract->monthly_installment_value ?? 0);
-        return min($months * $monthly, $total);
+        return min($months * $monthly, $netTotal);
     }
 
     /**
@@ -190,7 +191,7 @@ class ContractCalculations
     public function deservedAmount(): float
     {
         if ($this->hasJdicary() && !$this->latestSettlement) {
-            return max(0, $this->totalDebt() - $this->paidAmount());
+            return max(0, $this->totalDebt() - $this->totalAdjustments() - $this->paidAmount());
         }
 
         $firstDate = $this->latestSettlement

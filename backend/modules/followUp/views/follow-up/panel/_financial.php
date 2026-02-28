@@ -26,6 +26,7 @@ $lawyerCosts = $financials['lawyer_costs'] ?? 0;
 $caseCosts = $financials['case_costs'] ?? 0;
 $contractValue = $financials['contract_value'] ?? 0;
 $allExpenses = $total - $contractValue - $lawyerCosts;
+$totalAdjustments = $financials['total_adjustments'] ?? 0;
 ?>
 
 <style>
@@ -114,7 +115,8 @@ $allExpenses = $total - $contractValue - $lawyerCosts;
         </div>
     </div>
 
-    <?php if ($hasJudiciary && ($lawyerCosts > 0 || $caseCosts > 0 || $allExpenses > 0)): ?>
+    <?php $showBreakdown = ($hasJudiciary && ($lawyerCosts > 0 || $caseCosts > 0 || $allExpenses > 0)) || $totalAdjustments > 0; ?>
+    <?php if ($showBreakdown): ?>
     <div class="ocp-debt-breakdown">
         <div class="ocp-debt-row">
             <span><i class="fa fa-file-text-o" style="color:#075985"></i> أصل العقد</span>
@@ -142,6 +144,16 @@ $allExpenses = $total - $contractValue - $lawyerCosts;
             <span><i class="fa fa-calculator"></i> الإجمالي</span>
             <span><?= number_format($total) ?></span>
         </div>
+        <?php if ($totalAdjustments > 0): ?>
+        <div class="ocp-debt-row" style="color:#dc2626">
+            <span><i class="fa fa-minus-circle" style="color:#dc2626"></i> الخصومات</span>
+            <span style="font-weight:700">-<?= number_format($totalAdjustments) ?></span>
+        </div>
+        <div class="ocp-debt-row" style="font-weight:700;color:#059669;border-top:1px solid #e2e8f0;padding-top:6px">
+            <span><i class="fa fa-check-circle" style="color:#059669"></i> الصافي بعد الخصم</span>
+            <span><?= number_format($total - $totalAdjustments) ?></span>
+        </div>
+        <?php endif ?>
     </div>
     <?php endif ?>
 </div>

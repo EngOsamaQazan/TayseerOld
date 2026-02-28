@@ -815,6 +815,8 @@ class FollowUpController extends Controller
         $caseCosts = $calc->caseCost();
         $contractOriginalValue = $calc->getContractTotal();
 
+        $totalAdjustments = $calc->totalAdjustments();
+
         $financials = [
             'total' => $total,
             'paid' => $paid,
@@ -828,6 +830,7 @@ class FollowUpController extends Controller
             'lawyer_costs' => $lawyerCosts,
             'case_costs' => $caseCosts,
             'contract_value' => $contractOriginalValue,
+            'total_adjustments' => $totalAdjustments,
         ];
 
         // Settlement data for financial snapshot

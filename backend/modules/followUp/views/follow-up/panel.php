@@ -28,9 +28,10 @@ CrudAsset::register($this);
  * @var array $judiciaryData
  */
 
-$isLegal = in_array($contract->status, ['judiciary', 'legal_department']);
-$isClosed = in_array($contract->status, ['finished', 'canceled']);
-$hasCase = $isLegal && !empty($judiciaryData['judiciary']);
+$isJudiciaryPaid = $contract->isJudiciaryPaid();
+$isLegal = in_array($contract->status, ['judiciary', 'legal_department']) && !$isJudiciaryPaid;
+$isClosed = in_array($contract->status, ['finished', 'canceled']) || $isJudiciaryPaid;
+$hasCase = in_array($contract->status, ['judiciary', 'legal_department']) && !empty($judiciaryData['judiciary']);
 
 $this->title = 'لوحة تحكم العقد #' . $contract->id;
 $this->params['breadcrumbs'][] = ['label' => 'تقارير المتابعة', 'url' => ['/followUpReport']];
@@ -71,9 +72,9 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/follow-up.js', ['depend
 $dpd = $riskData['dpd'] ?? 0;
 $dpdClass = $dpd <= 0 ? 'ok' : ($dpd <= 7 ? 'warning' : ($dpd <= 30 ? 'danger' : 'critical'));
 $riskLevel = $riskData['level'] ?? 'low';
-$showWarningStrip = in_array($riskLevel, ['high', 'critical']) || in_array($contract->status, ['judiciary', 'legal_department']);
-$statusBadge = \backend\modules\followUp\helper\RiskEngine::statusBadgeClass($contract->status);
-$statusLabel = \backend\modules\followUp\helper\RiskEngine::statusLabel($contract->status);
+$showWarningStrip = in_array($riskLevel, ['high', 'critical']) || $isLegal;
+$statusBadge = $isJudiciaryPaid ? 'closed' : \backend\modules\followUp\helper\RiskEngine::statusBadgeClass($contract->status);
+$statusLabel = $isJudiciaryPaid ? 'قضائي مسدد' : \backend\modules\followUp\helper\RiskEngine::statusLabel($contract->status);
 $customerName = $customer ? NameHelper::short($customer->name) : 'غير محدد';
 $lastPayment = $riskData['last_payment'] ?? ['date' => '-', 'amount' => 0];
 
@@ -344,7 +345,7 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                             <?php if ($isClosed): ?>
                                 <div class="ocp-action-closed-msg" style="grid-column:1/-1;text-align:center;padding:var(--ocp-space-lg);color:var(--ocp-text-muted)">
                                     <i class="fa fa-lock" style="font-size:24px;margin-bottom:8px;display:block"></i>
-                                    هذا العقد <?= $contract->status === 'finished' ? 'منتهي' : 'ملغي' ?> — لا يمكن تنفيذ إجراءات عليه
+                                    هذا العقد <?= $isJudiciaryPaid ? 'قضائي مسدد' : ($contract->status === 'finished' ? 'منتهي' : 'ملغي') ?> — لا يمكن تنفيذ إجراءات عليه
                                 </div>
                             <?php else: ?>
                             <button class="ocp-action-btn" data-action="call" onclick="OCP.openPanel('call')">
