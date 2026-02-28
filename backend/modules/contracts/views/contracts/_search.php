@@ -20,7 +20,8 @@ $db    = Yii::$app->db;
 $users   = $db->createCommand(
     "SELECT DISTINCT u.id, u.username FROM {{%user}} u
      INNER JOIN {{%auth_assignment}} a ON a.user_id = u.id
-     WHERE u.status = 10 ORDER BY u.username"
+     WHERE u.blocked_at IS NULL AND u.employee_type = 'Active'
+     ORDER BY u.username"
 )->queryAll();
 $jobType = $cache->getOrSet($p['key_job_type'], fn() => $db->createCommand($p['job_type_query'])->queryAll(), $d);
 

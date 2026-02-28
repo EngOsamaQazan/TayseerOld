@@ -40,7 +40,7 @@ $allUsers   = $isManager
         Yii::$app->db->createCommand(
             "SELECT DISTINCT u.id, u.username FROM {{%user}} u
              INNER JOIN {{%auth_assignment}} a ON a.user_id = u.id
-             WHERE u.status = 10
+             WHERE u.blocked_at IS NULL AND u.employee_type = 'Active'
              ORDER BY u.username"
         )->queryAll(),
         'id', 'username'
