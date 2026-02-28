@@ -148,6 +148,10 @@
     background: var(--cf-blue-l); color: var(--cf-navy);
     border: 1px solid #bfdbfe; animation: cf-fadeIn .2s;
 }
+.cf-chip-id {
+    font-style: normal; font-size: 11px; color: var(--cf-teal);
+    font-weight: 800; margin-left: 2px;
+}
 .cf-chip-rm {
     cursor: pointer; font-size: 10px; color: var(--cf-err);
     opacity: .6; transition: opacity .15s; margin-right: -2px;

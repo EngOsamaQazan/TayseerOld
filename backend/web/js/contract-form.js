@@ -165,7 +165,9 @@ var ContractForm = (function () {
         var chip = document.createElement('span');
         chip.className = 'cf-chip';
         chip.setAttribute('data-id', entry.id);
-        chip.innerHTML = esc(entry.name) +
+        var label = esc(entry.name);
+        if (entry.id) label = '<em class="cf-chip-id">#' + esc(entry.id) + '</em> ' + label;
+        chip.innerHTML = label +
             '<input type="hidden" name="' + this.inputName + '" value="' + esc(entry.id) + '">' +
             '<i class="fa fa-times cf-chip-rm"></i>';
 
@@ -402,6 +404,7 @@ var ContractForm = (function () {
 
         ajax(_cfg.customerDataUrl, { id: entry.id }, function (r) {
             if (r && r.model) {
+                document.getElementById('cf-nc-dbid').textContent = '#' + (r.model.id || entry.id);
                 document.getElementById('cf-nc-name').textContent = r.model.name || '\u2014';
                 document.getElementById('cf-nc-id').textContent = r.model.id_number || '\u2014';
                 document.getElementById('cf-nc-birth').textContent = r.model.birth_date || '\u2014';

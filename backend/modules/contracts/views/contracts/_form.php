@@ -89,6 +89,7 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/contract-form.js', ['de
         </div>
     </div>
     <div class="cf-cust-bar" id="cf-cust-bar">
+        <div class="cf-cust-chip"><small>ID</small><b id="cf-nc-dbid" style="color:var(--cf-teal)">—</b></div>
         <div class="cf-cust-chip"><small>الاسم</small><b id="cf-nc-name">—</b></div>
         <div class="cf-cust-chip"><small>الوطني</small><b id="cf-nc-id">—</b></div>
         <div class="cf-cust-chip"><small>الميلاد</small><b id="cf-nc-birth">—</b></div>
