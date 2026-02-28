@@ -33,8 +33,15 @@ $models     = $dataProvider->getModels();
 $pagination = $dataProvider->getPagination();
 $sort       = $dataProvider->getSort();
 $allUsers   = $isManager
-    ? ArrayHelper::map(\common\models\User::find()->select(['id', 'username'])->asArray()->all(), 'id', 'username')
-    : [];
+    ? ArrayHelper::map(
+        Yii::$app->db->createCommand(
+            "SELECT DISTINCT u.id, u.username FROM {{%user}} u
+             INNER JOIN {{%auth_assignment}} a ON a.user_id = u.id
+             WHERE u.status = 10
+             ORDER BY u.username"
+        )->queryAll(),
+        'id', 'username'
+    ) : [];
 
 $pre = $preloaded ?? [];
 $judByContract = [];

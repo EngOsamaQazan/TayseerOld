@@ -41,7 +41,7 @@ class CompaniesController extends Controller
                 'class' => AccessControl::className(),
                 'rules' => [
                     [
-                        'actions' => ['index', 'view', 'get-items'],
+                        'actions' => ['index', 'view', 'get-items', 'search-suggest'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function ($rule, $action) {
@@ -81,6 +81,37 @@ class CompaniesController extends Controller
                 ],
             ],
         ];
+    }
+
+    /**
+     * AJAX autocomplete for unified search.
+     */
+    public function actionSearchSuggest($q = '')
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $q = trim($q);
+        if (mb_strlen($q) < 2) return ['results' => []];
+
+        $rows = Companies::find()
+            ->select(['id', 'name', 'phone_number'])
+            ->andWhere(['or',
+                ['like', 'name', $q],
+                ['like', 'phone_number', $q],
+            ])
+            ->limit(10)
+            ->asArray()
+            ->all();
+
+        $results = [];
+        foreach ($rows as $r) {
+            $results[] = [
+                'id'    => $r['id'],
+                'title' => $r['name'],
+                'sub'   => $r['phone_number'] ?: '',
+                'icon'  => 'fa-building',
+            ];
+        }
+        return ['results' => $results];
     }
 
     /**

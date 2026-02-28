@@ -33,11 +33,19 @@ $models     = $dataProvider->getModels();
 $pagination = $dataProvider->getPagination();
 $sort       = $dataProvider->getSort();
 $allUsers   = $isManager
-    ? ArrayHelper::map(\common\models\User::find()->select(['id', 'username'])->asArray()->all(), 'id', 'username')
-    : [];
+    ? ArrayHelper::map(
+        Yii::$app->db->createCommand(
+            "SELECT DISTINCT u.id, u.username FROM {{%user}} u
+             INNER JOIN {{%auth_assignment}} a ON a.user_id = u.id
+             WHERE u.status = 10
+             ORDER BY u.username"
+        )->queryAll(),
+        'id', 'username'
+    ) : [];
 
 $statusLabels = [
-    'active' => 'نشط', 'judiciary' => 'قضاء',
+    'active' => 'نشط', 'judiciary' => 'قضائي فعّال',
+    'judiciary_paid' => 'قضائي مسدد',
     'legal_department' => 'قانوني', 'settlement' => 'تسوية',
     'finished' => 'منتهي', 'canceled' => 'ملغي',
 ];
@@ -255,9 +263,13 @@ $end   = $begin + count($models) - 1;
                         <td class="ct-td-money" data-label="الإجمالي"><?= number_format($m->total_value ?? 0, 0) ?></td>
                         <td class="ct-td-money ct-td-due" data-label="المستحق"><?= number_format($deserved, 0) ?></td>
                         <td class="ct-td-money ct-td-remain" data-label="المتبقي"><?= number_format($remaining, 0) ?></td>
+                        <?php
+                            $stKey = $m->status;
+                            if ($stKey === 'judiciary' && $remaining <= 0) $stKey = 'judiciary_paid';
+                        ?>
                         <td class="ct-td-status" data-label="الحالة">
-                            <span class="ct-badge ct-st-<?= $m->status ?>">
-                                <?= $statusLabels[$m->status] ?? $m->status ?>
+                            <span class="ct-badge ct-st-<?= $stKey ?>">
+                                <?= $statusLabels[$stKey] ?? $m->status ?>
                             </span>
                         </td>
                         <td class="ct-td-date" data-label="آخر متابعة">

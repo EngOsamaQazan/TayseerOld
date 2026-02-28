@@ -638,134 +638,134 @@ $this->params['breadcrumbs'] = [];
 
                 <?php /* ── Top-level requests (no process parent) ── */ ?>
                 <?php foreach ($usedTopLevel as $reqId => $reqData):
-                    $req = $reqData['action'];
-                    $stageLabel = $stageLabels[$req['action_type']] ?? 'عام';
-                    $docCount = count($reqData['documents']);
-                    $totalStatuses = 0;
-                    foreach ($reqData['documents'] as $dd) $totalStatuses += count($dd['statuses']);
-                ?>
-                <div class="ja-tree-chain">
+                $req = $reqData['action'];
+                $stageLabel = $stageLabels[$req['action_type']] ?? 'عام';
+                $docCount = count($reqData['documents']);
+                $totalStatuses = 0;
+                foreach ($reqData['documents'] as $dd) $totalStatuses += count($dd['statuses']);
+            ?>
+            <div class="ja-tree-chain">
                     <div class="ja-tree-node">
-                        <div class="ja-tree-node-icon" style="background:#EFF6FF;color:#3B82F6"><i class="fa fa-file-text-o"></i></div>
-                        <div class="ja-tree-node-body">
-                            <div class="ja-tree-node-name"><?= Html::encode($req['name']) ?></div>
-                            <div class="ja-tree-node-meta">
-                                <span class="ja-tree-stage"><?= Html::encode($stageLabel) ?></span>
-                                <span class="ja-tree-id">#<?= $req['id'] ?></span>
+                    <div class="ja-tree-node-icon" style="background:#EFF6FF;color:#3B82F6"><i class="fa fa-file-text-o"></i></div>
+                    <div class="ja-tree-node-body">
+                        <div class="ja-tree-node-name"><?= Html::encode($req['name']) ?></div>
+                        <div class="ja-tree-node-meta">
+                            <span class="ja-tree-stage"><?= Html::encode($stageLabel) ?></span>
+                            <span class="ja-tree-id">#<?= $req['id'] ?></span>
                                 <?= $renderUsageBadge($req['id']) ?>
-                                <?php if ($docCount > 0): ?>
+                            <?php if ($docCount > 0): ?>
                                 <span class="ja-tree-badge ja-tree-toggle" style="background:#DBEAFE;color:#1D4ED8" onclick="JATree.toggleChildren(this)" title="إظهار/إخفاء الكتب"><i class="fa fa-file-o"></i> <?= $docCount ?> كتاب <i class="fa fa-chevron-down" style="font-size:8px;margin-right:2px"></i></span>
-                                <?php endif; ?>
-                                <?php if ($totalStatuses > 0): ?>
-                                <span class="ja-tree-badge" style="background:#FED7AA;color:#C2410C"><i class="fa fa-exchange"></i> <?= $totalStatuses ?> حالة</span>
-                                <?php endif; ?>
-                            </div>
+                            <?php endif; ?>
+                            <?php if ($totalStatuses > 0): ?>
+                            <span class="ja-tree-badge" style="background:#FED7AA;color:#C2410C"><i class="fa fa-exchange"></i> <?= $totalStatuses ?> حالة</span>
+                            <?php endif; ?>
                         </div>
-                        <?= $renderNodeActions($req['id'], 'request', 0) ?>
                     </div>
+                        <?= $renderNodeActions($req['id'], 'request', 0) ?>
+                </div>
 
-                    <?php if (!empty($reqData['documents'])): ?>
-                    <div class="ja-tree-children">
-                        <?php foreach ($reqData['documents'] as $did => $docData):
-                            $doc = $docData['action'];
-                            $stCount = count($docData['statuses']);
-                        ?>
-                        <div class="ja-tree-branch">
-                            <div class="ja-tree-connector"></div>
+                <?php if (!empty($reqData['documents'])): ?>
+                <div class="ja-tree-children">
+                    <?php foreach ($reqData['documents'] as $did => $docData):
+                        $doc = $docData['action'];
+                        $stCount = count($docData['statuses']);
+                    ?>
+                    <div class="ja-tree-branch">
+                        <div class="ja-tree-connector"></div>
                             <div class="ja-tree-node">
-                                <div class="ja-tree-node-icon" style="background:#F5F3FF;color:#8B5CF6"><i class="fa fa-file-o"></i></div>
-                                <div class="ja-tree-node-body">
-                                    <div class="ja-tree-node-name"><?= Html::encode($doc['name']) ?></div>
-                                    <div class="ja-tree-node-meta">
-                                        <span class="ja-tree-id">#<?= $doc['id'] ?></span>
+                            <div class="ja-tree-node-icon" style="background:#F5F3FF;color:#8B5CF6"><i class="fa fa-file-o"></i></div>
+                            <div class="ja-tree-node-body">
+                                <div class="ja-tree-node-name"><?= Html::encode($doc['name']) ?></div>
+                                <div class="ja-tree-node-meta">
+                                    <span class="ja-tree-id">#<?= $doc['id'] ?></span>
                                         <?= $renderUsageBadge($doc['id']) ?>
-                                        <?php if ($stCount > 0): ?>
+                                    <?php if ($stCount > 0): ?>
                                         <span class="ja-tree-badge ja-tree-toggle" style="background:#FED7AA;color:#C2410C" onclick="JATree.toggleChildren(this)" title="إظهار/إخفاء الحالات"><i class="fa fa-exchange"></i> <?= $stCount ?> حالة <i class="fa fa-chevron-down" style="font-size:8px;margin-right:2px"></i></span>
-                                        <?php endif; ?>
-                                    </div>
+                                    <?php endif; ?>
                                 </div>
-                                <?= $renderNodeActions($doc['id'], 'document', $reqId) ?>
                             </div>
+                                <?= $renderNodeActions($doc['id'], 'document', $reqId) ?>
+                        </div>
 
-                            <?php if (!empty($docData['statuses'])): ?>
-                            <div class="ja-tree-children ja-tree-children-deep">
-                                <?php foreach ($docData['statuses'] as $st): ?>
-                                <div class="ja-tree-branch">
-                                    <div class="ja-tree-connector ja-tree-connector-deep"></div>
+                        <?php if (!empty($docData['statuses'])): ?>
+                        <div class="ja-tree-children ja-tree-children-deep">
+                            <?php foreach ($docData['statuses'] as $st): ?>
+                            <div class="ja-tree-branch">
+                                <div class="ja-tree-connector ja-tree-connector-deep"></div>
                                     <div class="ja-tree-node">
-                                        <div class="ja-tree-node-icon" style="background:#FFF7ED;color:#EA580C"><i class="fa fa-exchange"></i></div>
-                                        <div class="ja-tree-node-body">
-                                            <div class="ja-tree-node-name"><?= Html::encode($st['name']) ?></div>
+                                    <div class="ja-tree-node-icon" style="background:#FFF7ED;color:#EA580C"><i class="fa fa-exchange"></i></div>
+                                    <div class="ja-tree-node-body">
+                                        <div class="ja-tree-node-name"><?= Html::encode($st['name']) ?></div>
                                             <div class="ja-tree-node-meta">
                                                 <span class="ja-tree-id">#<?= $st['id'] ?></span>
                                                 <?= $renderUsageBadge($st['id']) ?>
-                                            </div>
-                                        </div>
-                                        <?= $renderNodeActions($st['id'], 'doc_status', $did) ?>
                                     </div>
+                                    </div>
+                                        <?= $renderNodeActions($st['id'], 'doc_status', $did) ?>
                                 </div>
-                                <?php endforeach; ?>
                             </div>
-                            <?php endif; ?>
+                            <?php endforeach; ?>
                         </div>
-                        <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
-                    <?php endif; ?>
+                    <?php endforeach; ?>
                 </div>
-                <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
 
                 <?php if (!empty($usedOrphanDocs)): ?>
-                <div class="ja-tree-orphan-section">
-                    <h4 class="ja-tree-orphan-title"><i class="fa fa-unlink"></i> كتب غير مرتبطة بطلبات</h4>
+            <div class="ja-tree-orphan-section">
+                <h4 class="ja-tree-orphan-title"><i class="fa fa-unlink"></i> كتب غير مرتبطة بطلبات</h4>
                     <?php foreach ($usedOrphanDocs as $od): ?>
                     <div class="ja-tree-node ja-tree-orphan" style="margin-bottom:8px">
-                        <div class="ja-tree-node-icon" style="background:#F5F3FF;color:#8B5CF6"><i class="fa fa-file-o"></i></div>
-                        <div class="ja-tree-node-body">
-                            <div class="ja-tree-node-name"><?= Html::encode($od['name']) ?></div>
+                    <div class="ja-tree-node-icon" style="background:#F5F3FF;color:#8B5CF6"><i class="fa fa-file-o"></i></div>
+                    <div class="ja-tree-node-body">
+                        <div class="ja-tree-node-name"><?= Html::encode($od['name']) ?></div>
                             <div class="ja-tree-node-meta">
                                 <span class="ja-tree-id">#<?= $od['id'] ?></span>
                                 <?= $renderUsageBadge($od['id']) ?>
-                            </div>
-                        </div>
-                        <?= $renderNodeActions($od['id'], 'document', 0) ?>
                     </div>
-                    <?php endforeach; ?>
+                    </div>
+                        <?= $renderNodeActions($od['id'], 'document', 0) ?>
                 </div>
-                <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
 
                 <?php if (!empty($usedOrphanStatuses)): ?>
-                <div class="ja-tree-orphan-section">
-                    <h4 class="ja-tree-orphan-title"><i class="fa fa-unlink"></i> حالات غير مرتبطة</h4>
+            <div class="ja-tree-orphan-section">
+                <h4 class="ja-tree-orphan-title"><i class="fa fa-unlink"></i> حالات غير مرتبطة</h4>
                     <?php foreach ($usedOrphanStatuses as $os): ?>
                     <div class="ja-tree-node ja-tree-orphan" style="margin-bottom:8px">
-                        <div class="ja-tree-node-icon" style="background:#FFF7ED;color:#EA580C"><i class="fa fa-exchange"></i></div>
-                        <div class="ja-tree-node-body">
-                            <div class="ja-tree-node-name"><?= Html::encode($os['name']) ?></div>
+                    <div class="ja-tree-node-icon" style="background:#FFF7ED;color:#EA580C"><i class="fa fa-exchange"></i></div>
+                    <div class="ja-tree-node-body">
+                        <div class="ja-tree-node-name"><?= Html::encode($os['name']) ?></div>
                             <div class="ja-tree-node-meta">
                                 <span class="ja-tree-id">#<?= $os['id'] ?></span>
                                 <?= $renderUsageBadge($os['id']) ?>
-                            </div>
-                        </div>
-                        <?= $renderNodeActions($os['id'], 'doc_status', 0) ?>
                     </div>
-                    <?php endforeach; ?>
+                    </div>
+                        <?= $renderNodeActions($os['id'], 'doc_status', 0) ?>
                 </div>
-                <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
 
                 <?php if (!empty($usedOrphanProcesses)): ?>
-                <div class="ja-tree-orphan-section">
-                    <h4 class="ja-tree-orphan-title"><i class="fa fa-cog"></i> إجراءات إدارية (مستقلة)</h4>
+            <div class="ja-tree-orphan-section">
+                <h4 class="ja-tree-orphan-title"><i class="fa fa-cog"></i> إجراءات إدارية (مستقلة)</h4>
                     <?php foreach ($usedOrphanProcesses as $pr): ?>
                     <div class="ja-tree-node" style="margin-bottom:8px">
-                        <div class="ja-tree-node-icon" style="background:#F1F5F9;color:#64748B"><i class="fa fa-cog"></i></div>
-                        <div class="ja-tree-node-body">
-                            <div class="ja-tree-node-name"><?= Html::encode($pr['name']) ?></div>
-                            <div class="ja-tree-node-meta">
-                                <span class="ja-tree-stage"><?= Html::encode($stageLabels[$pr['action_type']] ?? 'عام') ?></span>
-                                <span class="ja-tree-id">#<?= $pr['id'] ?></span>
+                    <div class="ja-tree-node-icon" style="background:#F1F5F9;color:#64748B"><i class="fa fa-cog"></i></div>
+                    <div class="ja-tree-node-body">
+                        <div class="ja-tree-node-name"><?= Html::encode($pr['name']) ?></div>
+                        <div class="ja-tree-node-meta">
+                            <span class="ja-tree-stage"><?= Html::encode($stageLabels[$pr['action_type']] ?? 'عام') ?></span>
+                            <span class="ja-tree-id">#<?= $pr['id'] ?></span>
                                 <?= $renderUsageBadge($pr['id']) ?>
-                            </div>
                         </div>
+                    </div>
                         <?= $renderNodeActions($pr['id']) ?>
                     </div>
                     <?php endforeach; ?>
@@ -867,11 +867,11 @@ $this->params['breadcrumbs'] = [];
                                                             </div>
                                                         </div>
                                                         <?= $renderNodeActions($st['id'], 'doc_status', $did) ?>
-                                                    </div>
-                                                </div>
-                                                <?php endforeach; ?>
-                                            </div>
-                                            <?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
                                         </div>
                                         <?php endforeach; ?>
                                     </div>
@@ -902,8 +902,8 @@ $this->params['breadcrumbs'] = [];
                                         <?php if ($docCount > 0): ?>
                                         <span class="ja-tree-badge ja-tree-toggle" style="background:#DBEAFE;color:#1D4ED8" onclick="event.stopPropagation();JATree.toggleChildren(this)" title="إظهار/إخفاء الكتب"><i class="fa fa-file-o"></i> <?= $docCount ?> كتاب <i class="fa fa-chevron-down" style="font-size:8px;margin-right:2px"></i></span>
                                         <?php endif; ?>
-                                    </div>
-                                </div>
+        </div>
+    </div>
                                 <?= $renderNodeActions($req['id'], 'request', 0) ?>
                             </div>
                             <?php if (!empty($reqData['documents'])): ?>

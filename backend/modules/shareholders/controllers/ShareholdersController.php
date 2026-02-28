@@ -3,6 +3,7 @@
 namespace backend\modules\shareholders\controllers;
 
 use Yii;
+use yii\web\Response;
 use backend\modules\shareholders\models\Shareholders;
 use backend\modules\shareholders\models\ShareholdersSearch;
 use yii\web\Controller;
@@ -20,7 +21,7 @@ class ShareholdersController extends Controller
                 'class' => AccessControl::className(),
                 'rules' => [
                     [
-                        'actions' => ['index', 'view', 'create', 'update', 'delete'],
+                        'actions' => ['index', 'view', 'create', 'update', 'delete', 'search-suggest'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function ($rule, $action) {
@@ -36,6 +37,36 @@ class ShareholdersController extends Controller
                 ],
             ],
         ];
+    }
+
+    public function actionSearchSuggest($q = '')
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $q = trim($q);
+        if (mb_strlen($q) < 2) return ['results' => []];
+
+        $rows = Shareholders::find()
+            ->select(['id', 'name', 'phone', 'national_id', 'email'])
+            ->andWhere(['or',
+                ['like', 'name', $q],
+                ['like', 'phone', $q],
+                ['like', 'national_id', $q],
+                ['like', 'email', $q],
+            ])
+            ->limit(10)
+            ->asArray()
+            ->all();
+
+        $results = [];
+        foreach ($rows as $r) {
+            $results[] = [
+                'id'    => $r['id'],
+                'title' => $r['name'],
+                'sub'   => ($r['phone'] ?: '') . ($r['national_id'] ? ' — ' . $r['national_id'] : ''),
+                'icon'  => 'fa-user',
+            ];
+        }
+        return ['results' => $results];
     }
 
     public function actionIndex()

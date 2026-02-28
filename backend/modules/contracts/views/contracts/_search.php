@@ -9,6 +9,7 @@ use yii\helpers\ArrayHelper;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
+use backend\widgets\UnifiedSearchWidget;
 use kartik\select2\Select2;
 
 $cache = Yii::$app->cache;
@@ -16,7 +17,11 @@ $p     = Yii::$app->params;
 $d     = $p['time_duration'];
 $db    = Yii::$app->db;
 
-$users   = $cache->getOrSet($p['key_users'], fn() => $db->createCommand($p['users_query'])->queryAll(), $d);
+$users   = $db->createCommand(
+    "SELECT DISTINCT u.id, u.username FROM {{%user}} u
+     INNER JOIN {{%auth_assignment}} a ON a.user_id = u.id
+     WHERE u.status = 10 ORDER BY u.username"
+)->queryAll();
 $jobType = $cache->getOrSet($p['key_job_type'], fn() => $db->createCommand($p['job_type_query'])->queryAll(), $d);
 
 $statusList = [
@@ -44,10 +49,12 @@ $statusList = [
     <!-- بحث موحّد -->
     <div class="ct-filter-group ct-filter-wide">
         <label><i class="fa fa-search"></i> بحث</label>
-        <?= $form->field($model, 'q', ['template' => '{input}'])->textInput([
+        <?= UnifiedSearchWidget::widget([
+            'name'        => 'ContractsSearch[q]',
+            'value'       => $model->q,
+            'searchUrl'   => Url::to(['search-suggest']),
             'placeholder' => 'رقم العقد، اسم العميل، رقم الهوية، رقم الهاتف...',
-            'class' => 'form-control',
-            'aria-label' => 'بحث موحّد',
+            'formSelector'=> '#contracts-search',
         ]) ?>
     </div>
 

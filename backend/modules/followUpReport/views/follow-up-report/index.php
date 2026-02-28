@@ -12,6 +12,7 @@ use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
 use kartik\select2\Select2;
 use backend\widgets\ExportButtons;
+use backend\widgets\UnifiedSearchWidget;
 use backend\helpers\NameHelper;
 
 /* Assets */
@@ -36,9 +37,12 @@ $pagination = $dataProvider->getPagination();
 $sort       = $dataProvider->getSort();
 $allUsers   = $isManager
     ? ArrayHelper::map(
-        Yii::$app->cache->getOrSet(Yii::$app->params["key_users"], function () {
-            return Yii::$app->db->createCommand(Yii::$app->params['users_query'])->queryAll();
-        }, Yii::$app->params['time_duration']),
+        Yii::$app->db->createCommand(
+            "SELECT DISTINCT u.id, u.username FROM {{%user}} u
+             INNER JOIN {{%auth_assignment}} a ON a.user_id = u.id
+             WHERE u.status = 10
+             ORDER BY u.username"
+        )->queryAll(),
         'id', 'username'
     ) : [];
 
@@ -58,7 +62,8 @@ $end   = $begin + count($models) - 1;
 $statusMap = [
     'active' => ['label' => 'نشط', 'color' => '#4CAF50'],
     'settlement' => ['label' => 'تسوية', 'color' => '#2196F3'],
-    'judiciary' => ['label' => 'قضائي', 'color' => '#F44336'],
+    'judiciary' => ['label' => 'قضائي فعّال', 'color' => '#F44336'],
+    'judiciary_paid' => ['label' => 'قضائي مسدد', 'color' => '#009688'],
     'legal_department' => ['label' => 'دائرة قانونية', 'color' => '#9C27B0'],
 ];
 $statusList = ['' => 'جميع الحالات'];
@@ -183,7 +188,13 @@ a.fur-id-link:hover{text-decoration:underline}
                 <div class="ct-filter-grid">
                     <div class="ct-filter-group ct-filter-wide">
                         <label><i class="fa fa-search"></i> بحث</label>
-                        <?= $form->field($searchModel, 'q', ['template'=>'{input}'])->textInput(['placeholder'=>'رقم العقد، اسم العميل، رقم الهوية، رقم الهاتف...','class'=>'ct-input']) ?>
+                        <?= UnifiedSearchWidget::widget([
+                            'name'        => 'FollowUpReportSearch[q]',
+                            'value'       => $searchModel->q,
+                            'searchUrl'   => Url::to(['search-suggest']),
+                            'placeholder' => 'رقم العقد، اسم العميل، رقم الهوية، رقم الهاتف...',
+                            'formSelector'=> '#fur-search',
+                        ]) ?>
                     </div>
                     <div class="ct-filter-group">
                         <label>حالة العقد</label>
@@ -280,9 +291,11 @@ a.fur-id-link:hover{text-decoration:underline}
                     $customerNamesFull = implode('، ', ArrayHelper::map($m->customers, 'id', 'name')) ?: '—';
                     $customerNamesShort = implode('، ', array_map([NameHelper::class, 'short'], ArrayHelper::map($m->customers, 'id', 'name'))) ?: '—';
                     $followName = $allUsers[$m->followed_by] ?? ($m->followedBy->username ?? '—');
-                    $st = $statusMap[$m->status] ?? ['label' => $m->status, 'color' => '#999'];
-                    $isNF = (int)$m->never_followed === 1;
                     $dueAmt = (float)($m->due_amount ?? 0);
+                    $stKey = $m->status;
+                    if ($stKey === 'judiciary' && $dueAmt <= 0) $stKey = 'judiciary_paid';
+                    $st = $statusMap[$stKey] ?? ['label' => $m->status, 'color' => '#999'];
+                    $isNF = (int)$m->never_followed === 1;
                     $panelUrl = Url::to(['/followUp/follow-up/panel', 'contract_id' => $m->id]);
                 ?>
                 <tr data-id="<?= $m->id ?>" <?= $isNF ? 'class="fur-row-nf"' : '' ?>>

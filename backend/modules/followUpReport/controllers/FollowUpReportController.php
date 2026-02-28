@@ -35,7 +35,8 @@ class FollowUpReportController extends Controller
                     ],
                     [
                         'actions' => ['logout', 'index', 'update', 'create', 'delete', 'no-contact',
-                        'export-excel', 'export-pdf', 'export-no-contact-excel', 'export-no-contact-pdf'],
+                        'export-excel', 'export-pdf', 'export-no-contact-excel', 'export-no-contact-pdf',
+                        'search-suggest'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -60,6 +61,60 @@ class FollowUpReportController extends Controller
 //            ],
 //        ],
         ];
+    }
+
+    /**
+     * AJAX autocomplete for unified search.
+     */
+    public function actionSearchSuggest($q = '')
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $q = trim($q);
+        if (mb_strlen($q) < 2) {
+            return ['results' => []];
+        }
+
+        $db = Yii::$app->db;
+        $rows = $db->createCommand(
+            "SELECT c.id, c.status,
+                    GROUP_CONCAT(DISTINCT cu.name SEPARATOR '، ') AS customer_name,
+                    MIN(cu.primary_phone_number) AS phone,
+                    MIN(cu.id_number) AS id_number
+             FROM {{%contracts}} c
+             LEFT JOIN {{%contracts_customers}} cc ON cc.contract_id = c.id AND cc.type IN (1,3)
+             LEFT JOIN {{%customers}} cu ON cu.id = cc.customer_id
+             WHERE (c.is_deleted = 0 OR c.is_deleted IS NULL)
+               AND c.status NOT IN ('finished','canceled')
+               AND (
+                   c.id = :qInt
+                   OR cu.name LIKE :qLike
+                   OR cu.id_number LIKE :qLike
+                   OR cu.primary_phone_number LIKE :qLike
+                   OR cu.id = :qInt
+               )
+             GROUP BY c.id
+             ORDER BY c.id DESC
+             LIMIT 10"
+        , [
+            ':qInt'  => (int)$q,
+            ':qLike' => '%' . $q . '%',
+        ])->queryAll();
+
+        $statusLabels = [
+            'active' => 'نشط', 'settlement' => 'تسوية',
+            'judiciary' => 'قضائي', 'legal_department' => 'قانوني',
+        ];
+        $results = [];
+        foreach ($rows as $r) {
+            $stLabel = $statusLabels[$r['status']] ?? $r['status'];
+            $results[] = [
+                'id'    => $r['id'],
+                'title' => $r['customer_name'] ?: ('عقد #' . $r['id']),
+                'sub'   => 'عقد #' . $r['id'] . ' — ' . $stLabel . ($r['phone'] ? ' — ' . $r['phone'] : ''),
+                'icon'  => 'fa-gavel',
+            ];
+        }
+        return ['results' => $results];
     }
 
     /**
@@ -90,7 +145,7 @@ class FollowUpReportController extends Controller
             "SELECT COUNT(*) FROM os_follow_up_report WHERE is_can_not_contact = 0 AND never_followed = 1"
         )->queryScalar();
         $overduePromiseCount = $db->createCommand(
-            "SELECT COUNT(*) FROM os_follow_up_report WHERE is_can_not_contact = 0 AND promise_to_pay_at IS NOT NULL AND promise_to_pay_at <= CURDATE()"
+            "SELECT COUNT(*) FROM os_follow_up_report WHERE is_can_not_contact = 0 AND promise_to_pay_at IS NOT NULL AND promise_to_pay_at <= CURDATE() AND due_amount > 0"
         )->queryScalar();
         $noContactCount = $db->createCommand(
             "SELECT COUNT(*) FROM os_follow_up_report WHERE is_can_not_contact = 1"

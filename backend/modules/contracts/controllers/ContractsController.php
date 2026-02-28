@@ -44,7 +44,8 @@ class ContractsController extends Controller
                     [
                         'actions' => ['index', 'view', 'index-legal-department', 'legal-department',
                             'print-preview', 'print-first-page', 'print-second-page',
-                            'export-excel', 'export-pdf', 'export-legal-excel', 'export-legal-pdf'],
+                            'export-excel', 'export-pdf', 'export-legal-excel', 'export-legal-pdf',
+                            'search-suggest'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -87,6 +88,54 @@ class ContractsController extends Controller
                 'actions' => ['logout' => ['post'], 'delete' => ['post']],
             ],
         ];
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+     *  بحث مقترحات — Search Suggest (AJAX)
+     * ══════════════════════════════════════════════════════════════ */
+
+    public function actionSearchSuggest($q = '')
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $q = trim($q);
+        if (mb_strlen($q) < 2) {
+            return ['results' => []];
+        }
+
+        $db = Yii::$app->db;
+        $rows = $db->createCommand(
+            "SELECT c.id, c.status, c.total_value,
+                    GROUP_CONCAT(DISTINCT cu.name SEPARATOR '، ') AS customer_name,
+                    MIN(cu.primary_phone_number) AS phone
+             FROM {{%contracts}} c
+             LEFT JOIN {{%contracts_customers}} cc ON cc.contract_id = c.id AND cc.type IN (1,3)
+             LEFT JOIN {{%customers}} cu ON cu.id = cc.customer_id
+             WHERE (c.is_deleted = 0 OR c.is_deleted IS NULL)
+               AND (
+                   c.id = :qInt
+                   OR cu.name LIKE :qLike
+                   OR cu.id_number LIKE :qLike
+                   OR cu.primary_phone_number LIKE :qLike
+                   OR cu.id = :qInt
+               )
+             GROUP BY c.id
+             ORDER BY c.id DESC
+             LIMIT 10"
+        , [
+            ':qInt'  => (int)$q,
+            ':qLike' => '%' . $q . '%',
+        ])->queryAll();
+
+        $results = [];
+        foreach ($rows as $r) {
+            $results[] = [
+                'id'    => $r['id'],
+                'title' => $r['customer_name'] ?: ('عقد #' . $r['id']),
+                'sub'   => 'عقد #' . $r['id'] . ($r['phone'] ? ' — ' . $r['phone'] : ''),
+                'icon'  => 'fa-file-text-o',
+            ];
+        }
+        return ['results' => $results];
     }
 
     /* ══════════════════════════════════════════════════════════════
