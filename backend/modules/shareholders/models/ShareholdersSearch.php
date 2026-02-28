@@ -8,11 +8,13 @@ use yii\data\ActiveDataProvider;
 
 class ShareholdersSearch extends Shareholders
 {
+    public $q;
+
     public function rules()
     {
         return [
             [['id', 'share_count', 'is_active', 'is_deleted', 'created_at', 'updated_at', 'created_by'], 'integer'],
-            [['name', 'phone', 'email', 'national_id', 'join_date', 'documents', 'notes'], 'safe'],
+            [['name', 'phone', 'email', 'national_id', 'join_date', 'documents', 'notes', 'q'], 'safe'],
         ];
     }
 
@@ -34,6 +36,16 @@ class ShareholdersSearch extends Shareholders
 
         if (!$this->validate()) {
             return $dataProvider;
+        }
+
+        if (!empty($this->q)) {
+            $q = trim($this->q);
+            $query->andWhere(['or',
+                ['like', 'name', $q],
+                ['like', 'phone', $q],
+                ['like', 'national_id', $q],
+                ['like', 'email', $q],
+            ]);
         }
 
         $query->andFilterWhere([
@@ -59,6 +71,16 @@ class ShareholdersSearch extends Shareholders
 
         if (!$this->validate()) {
             return 0;
+        }
+
+        if (!empty($this->q)) {
+            $q = trim($this->q);
+            $query->andWhere(['or',
+                ['like', 'name', $q],
+                ['like', 'phone', $q],
+                ['like', 'national_id', $q],
+                ['like', 'email', $q],
+            ]);
         }
 
         $query->andFilterWhere([

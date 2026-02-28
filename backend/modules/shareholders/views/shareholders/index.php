@@ -154,23 +154,13 @@ $companyTotalShares = $primaryCompany ? (int) $primaryCompany->total_shares : 0;
     </div>
 
     <form method="get" action="<?= Url::to(['index']) ?>" class="sh-search">
-        <div class="form-group">
-            <label>اسم المساهم</label>
-            <input type="text" name="ShareholdersSearch[name]" class="form-control" placeholder="ابحث بالاسم..."
-                   value="<?= Html::encode($searchModel->name) ?>">
-        </div>
-        <div class="form-group">
-            <label>الهاتف</label>
-            <input type="text" name="ShareholdersSearch[phone]" class="form-control" placeholder="ابحث بالهاتف..."
-                   value="<?= Html::encode($searchModel->phone) ?>">
-        </div>
-        <div class="form-group">
-            <label>رقم الهوية</label>
-            <input type="text" name="ShareholdersSearch[national_id]" class="form-control" placeholder="ابحث برقم الهوية..."
-                   value="<?= Html::encode($searchModel->national_id) ?>">
+        <div class="form-group" style="flex:3;min-width:250px">
+            <label><i class="fa fa-search"></i> بحث</label>
+            <input type="text" name="ShareholdersSearch[q]" class="form-control" placeholder="الاسم، رقم الهاتف، رقم الهوية..."
+                   value="<?= Html::encode($searchModel->q) ?>">
         </div>
         <button type="submit" class="sh-search-btn"><i class="fa fa-search"></i> بحث</button>
-        <?php if (!empty($searchModel->name) || !empty($searchModel->phone) || !empty($searchModel->national_id)): ?>
+        <?php if (!empty($searchModel->q)): ?>
             <?= Html::a('<i class="fa fa-times"></i> مسح', ['index'], ['class' => 'sh-btn sh-btn-outline', 'style' => 'height:38px']) ?>
         <?php endif ?>
     </form>

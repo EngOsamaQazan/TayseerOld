@@ -16,11 +16,12 @@ class CompaniesSearch extends Companies
      * @inheritdoc
      */
     public $number_row;
+    public $q;
     public function rules()
     {
         return [
             [['id', 'created_by', 'created_at', 'updated_at', 'is_deleted'], 'integer'],
-            [['name', 'phone_number', 'logo', 'last_updated_by','is_deleted','is_primary_company'], 'safe'],
+            [['name', 'phone_number', 'logo', 'last_updated_by','is_deleted','is_primary_company', 'q'], 'safe'],
         ];
     }
 
@@ -71,6 +72,14 @@ class CompaniesSearch extends Companies
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ]);
+        if (!empty($this->q)) {
+            $q = trim($this->q);
+            $query->andWhere(['or',
+                ['like', 'name', $q],
+                ['like', 'phone_number', $q],
+            ]);
+        }
+
         $query->andFilterWhere(['=', 'name', $this->name])
             ->andFilterWhere(['=', 'phone_number', $this->phone_number])
             ->andFilterWhere(['=', 'logo', $this->logo])
@@ -89,9 +98,15 @@ class CompaniesSearch extends Companies
         $this->load($params);
 
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
             return $dataProvider;
+        }
+
+        if (!empty($this->q)) {
+            $q = trim($this->q);
+            $query->andWhere(['or',
+                ['like', 'name', $q],
+                ['like', 'phone_number', $q],
+            ]);
         }
 
         $query->andFilterWhere([

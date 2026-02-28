@@ -54,14 +54,12 @@ $sortLink = function ($attr, $label) use ($sort, $sortOrders) {
 $begin = $pagination->getOffset() + 1;
 $end   = $begin + count($models) - 1;
 
-/* Status map */
+/* Status map — aligned with Contracts model */
 $statusMap = [
-    'pending' => ['label' => 'قيد الانتظار', 'color' => '#FF9800'],
     'active' => ['label' => 'نشط', 'color' => '#4CAF50'],
-    'reconciliation' => ['label' => 'تسوية', 'color' => '#2196F3'],
+    'settlement' => ['label' => 'تسوية', 'color' => '#2196F3'],
     'judiciary' => ['label' => 'قضائي', 'color' => '#F44336'],
     'legal_department' => ['label' => 'دائرة قانونية', 'color' => '#9C27B0'],
-    'settlement' => ['label' => 'مصالحة', 'color' => '#00BCD4'],
 ];
 $statusList = ['' => 'جميع الحالات'];
 foreach ($statusMap as $k => $v) $statusList[$k] = $v['label'];
@@ -183,13 +181,9 @@ a.fur-id-link:hover{text-decoration:underline}
                 <?php $form = ActiveForm::begin(['id'=>'fur-search','method'=>'get','action'=>['index'],'options'=>['class'=>'ct-filter-form']]); ?>
                 <?= $form->field($searchModel, 'is_can_not_contact', ['template' => '{input}'])->hiddenInput()->label(false) ?>
                 <div class="ct-filter-grid">
-                    <div class="ct-filter-group">
-                        <label>رقم العقد</label>
-                        <?= $form->field($searchModel, 'id', ['template'=>'{input}'])->textInput(['placeholder'=>'رقم العقد','class'=>'ct-input']) ?>
-                    </div>
-                    <div class="ct-filter-group">
-                        <label>اسم العميل</label>
-                        <?= $form->field($searchModel, 'customer_name', ['template'=>'{input}'])->textInput(['placeholder'=>'اسم العميل','class'=>'ct-input']) ?>
+                    <div class="ct-filter-group ct-filter-wide">
+                        <label><i class="fa fa-search"></i> بحث</label>
+                        <?= $form->field($searchModel, 'q', ['template'=>'{input}'])->textInput(['placeholder'=>'رقم العقد، اسم العميل، رقم الهوية، رقم الهاتف...','class'=>'ct-input']) ?>
                     </div>
                     <div class="ct-filter-group">
                         <label>حالة العقد</label>

@@ -12,6 +12,7 @@ use backend\modules\contracts\models\Contracts;
  */
 class ContractsSearch extends Contracts
 {
+    public $q;
     public $customer_name;
     public $seller_name;
     public $to_date;
@@ -28,7 +29,7 @@ class ContractsSearch extends Contracts
     {
         return [
             [['id', 'seller_id', 'is_deleted', 'number_row', 'job_Type'], 'integer'],
-            [['Date_of_sale', 'first_installment_date', 'monthly_installment_value', 'notes', 'updated_at', 'customer_name', 'seller_name', 'from_date', 'job_Type', 'to_date', 'job_title'], 'safe'],
+            [['Date_of_sale', 'first_installment_date', 'monthly_installment_value', 'notes', 'updated_at', 'customer_name', 'seller_name', 'from_date', 'job_Type', 'to_date', 'job_title', 'q'], 'safe'],
             [['total_value', 'first_installment_value'], 'number'],
             [['from_date', 'to_date', 'job_title'], 'string']
         ];
@@ -94,10 +95,20 @@ class ContractsSearch extends Contracts
         $this->load($params);
 
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
             return $dataProvider;
         }
+
+        if (!empty($this->q)) {
+            $q = trim($this->q);
+            $query->andWhere(['or',
+                ['os_contracts.id' => $q],
+                ['c.id' => $q],
+                ['like', 'c.name', $q],
+                ['like', 'c.id_number', $q],
+                ['like', 'c.primary_phone_number', $q],
+            ]);
+        }
+
         $query->andFilterWhere([
             'Date_of_sale' => $this->Date_of_sale,
             'total_value' => $this->total_value,
@@ -107,7 +118,6 @@ class ContractsSearch extends Contracts
             'updated_at' => $this->updated_at,
             'is_deleted' => $this->is_deleted,
         ]);
-
 
         $query->andFilterWhere(['os_contracts.id' => $this->id]);
         $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
@@ -232,6 +242,18 @@ class ContractsSearch extends Contracts
         if (!$this->validate()) {
             return $dataProvider;
         }
+
+        if (!empty($this->q)) {
+            $q = trim($this->q);
+            $query->andWhere(['or',
+                ['os_contracts.id' => $q],
+                ['c.id' => $q],
+                ['like', 'c.name', $q],
+                ['like', 'c.id_number', $q],
+                ['like', 'c.primary_phone_number', $q],
+            ]);
+        }
+
         $query->andFilterWhere([
             'Date_of_sale' => $this->Date_of_sale,
             'total_value' => $this->total_value,
@@ -241,7 +263,6 @@ class ContractsSearch extends Contracts
             'updated_at' => $this->updated_at,
             'is_deleted' => $this->is_deleted,
         ]);
-
 
         $query->andFilterWhere(['os_contracts.id' => $this->id]);
         $query->andFilterWhere(['like', 'c.name', $this->customer_name]);

@@ -37,9 +37,9 @@ $allUsers   = $isManager
     : [];
 
 $statusLabels = [
-    'active' => 'نشط', 'pending' => 'معلّق', 'judiciary' => 'قضاء',
-    'legal_department' => 'قانوني', 'settlement' => 'تسوية', 'finished' => 'منتهي',
-    'canceled' => 'ملغي', 'refused' => 'مرفوض',
+    'active' => 'نشط', 'judiciary' => 'قضاء',
+    'legal_department' => 'قانوني', 'settlement' => 'تسوية',
+    'finished' => 'منتهي', 'canceled' => 'ملغي',
 ];
 
 /* Sort helper */
@@ -156,7 +156,7 @@ $end   = $begin + count($models) - 1;
                         <label>الحالة</label>
                         <?= $form->field($searchModel, 'status', ['template' => '{input}'])->dropDownList([
                             '' => '-- جميع الحالات --',
-                            'active' => 'نشط', 'pending' => 'معلّق', 'legal_department' => 'قانوني',
+                            'active' => 'نشط', 'legal_department' => 'قانوني',
                             'judiciary' => 'قضاء', 'settlement' => 'تسوية',
                         ], ['class' => 'form-control']) ?>
                     </div>

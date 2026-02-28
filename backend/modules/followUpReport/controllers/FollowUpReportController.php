@@ -443,8 +443,8 @@ ORDER BY c.id DESC";
         }
 
         $statusMap = [
-            'pending' => 'قيد الانتظار', 'active' => 'نشط', 'reconciliation' => 'تسوية',
-            'judiciary' => 'قضائي', 'legal_department' => 'دائرة قانونية', 'settlement' => 'مصالحة',
+            'active' => 'نشط', 'settlement' => 'تسوية',
+            'judiciary' => 'قضائي', 'legal_department' => 'دائرة قانونية',
         ];
 
         $exportRows = [];
@@ -484,9 +484,9 @@ ORDER BY c.id DESC";
         $dataProvider = $searchModel->searchNoContact(Yii::$app->request->queryParams);
 
         $statusLabels = [
-            'active' => 'نشط', 'pending' => 'معلّق', 'judiciary' => 'قضاء',
-            'legal_department' => 'قانوني', 'settlement' => 'تسوية', 'finished' => 'منتهي',
-            'canceled' => 'ملغي', 'refused' => 'مرفوض',
+            'active' => 'نشط', 'judiciary' => 'قضاء',
+            'legal_department' => 'قانوني', 'settlement' => 'تسوية',
+            'finished' => 'منتهي', 'canceled' => 'ملغي',
         ];
 
         return $this->exportData($dataProvider, [
@@ -534,9 +534,9 @@ ORDER BY c.id DESC";
         $dataProvider = $searchModel->searchNoContact(Yii::$app->request->queryParams);
 
         $statusLabels = [
-            'active' => 'نشط', 'pending' => 'معلّق', 'judiciary' => 'قضاء',
-            'legal_department' => 'قانوني', 'settlement' => 'تسوية', 'finished' => 'منتهي',
-            'canceled' => 'ملغي', 'refused' => 'مرفوض',
+            'active' => 'نشط', 'judiciary' => 'قضاء',
+            'legal_department' => 'قانوني', 'settlement' => 'تسوية',
+            'finished' => 'منتهي', 'canceled' => 'ملغي',
         ];
 
         return $this->exportData($dataProvider, [
@@ -638,7 +638,7 @@ LEFT JOIN (
     GROUP BY contract_id
 ) adj ON adj.contract_id = c.id
 WHERE
-    c.status NOT IN ('finished','canceled','refused')
+    c.status NOT IN ('finished','canceled')
     AND NOT (
         c.status = 'judiciary'
         AND (c.total_value + IFNULL(exp_sum.total_expenses, 0) + IFNULL(jud.total_lawyer, 0)

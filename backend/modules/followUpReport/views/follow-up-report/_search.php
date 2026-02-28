@@ -73,7 +73,7 @@ use backend\helpers\FlatpickrWidget;
         </div>
         <div class="col-md-4">
             <?=
-            $form->field($model, 'status')->dropDownList(['' => 'All', 'pending' => 'pending', 'active' => 'active', 'reconciliation' => 'reconciliation', 'judiciary' => 'judiciary', 'canceled' => 'canceled', 'refused' => 'refused', 'legal_department' => 'legal_department', 'finished' => 'finished', 'settlement' => 'settlement']);
+            $form->field($model, 'status')->dropDownList(['' => 'All', 'active' => 'active', 'judiciary' => 'judiciary', 'legal_department' => 'legal_department', 'settlement' => 'settlement', 'finished' => 'finished', 'canceled' => 'canceled']);
             ?>
         </div>
     </div>

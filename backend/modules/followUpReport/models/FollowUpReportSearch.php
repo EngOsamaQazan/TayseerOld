@@ -13,6 +13,7 @@ use backend\modules\followUpReport\models\FollowUpNoContact;
  */
 class FollowUpReportSearch extends FollowUpReport
 {
+    public $q;
     public $customer_name;
     public $seller_name;
     public $number_row;
@@ -30,7 +31,7 @@ class FollowUpReportSearch extends FollowUpReport
             [['id', 'seller_id', 'is_deleted', 'number_row', 'followed_by', 'never_followed', 'is_can_not_contact'], 'integer'],
             [['type', 'Date_of_sale', 'first_installment_date', 'notes', 'status', 'updated_at',
               'selected_image', 'company_id', 'customer_name', 'seller_name',
-              'last_follow_up', 'promise_to_pay_at', 'reminder'], 'safe'],
+              'last_follow_up', 'promise_to_pay_at', 'reminder', 'q'], 'safe'],
             [['total_value', 'first_installment_value', 'monthly_installment_value', 'users_follow_up', 'effective_installment'], 'number'],
         ];
     }
@@ -95,25 +96,32 @@ class FollowUpReportSearch extends FollowUpReport
             $query->andWhere(['os_follow_up_report.is_can_not_contact' => (int)$this->is_can_not_contact]);
         }
 
-        // ── فلاتر أساسية ──
+        // ── بحث موحّد (رقم عقد / اسم عميل / رقم وطني / هاتف / رقم عميل) ──
+        if (!empty($this->q)) {
+            $q = trim($this->q);
+            $query->andWhere(['or',
+                ['os_follow_up_report.id' => $q],
+                ['c.id' => $q],
+                ['like', 'c.name', $q],
+                ['like', 'c.id_number', $q],
+                ['like', 'c.primary_phone_number', $q],
+            ]);
+        }
+
         $query->andFilterWhere([
             'os_follow_up_report.id' => $this->id,
             'seller_id' => $this->seller_id,
         ]);
 
-        // ── حالة العقد ──
         if (!empty($this->status)) {
             $query->andFilterWhere(['co.status' => $this->status]);
         }
 
-        // ── فلتر "لم يُتابع أبداً" ──
         if ($this->never_followed !== null && $this->never_followed !== '') {
             $query->andFilterWhere(['never_followed' => $this->never_followed]);
         }
 
-        // ── فلتر التذكير — بشكل لا يستثني العقود بدون متابعات ──
         if (!empty($this->reminder)) {
-            // اعرض العقود التي تذكيرها <= التاريخ المحدد أو التي لم تُتابع أبداً
             $query->andWhere([
                 'or',
                 ['<=', 'reminder', $this->reminder],
@@ -121,19 +129,15 @@ class FollowUpReportSearch extends FollowUpReport
             ]);
         }
 
-        // ── فلتر وعد بالدفع ──
         $query->andFilterWhere(['<=', 'promise_to_pay_at', $this->promise_to_pay_at]);
 
-        // ── بحث نصي ──
         $query->andFilterWhere(['like', 'type', $this->type])
             ->andFilterWhere(['like', 'notes', $this->notes])
             ->andFilterWhere(['like', 'company_id', $this->company_id]);
 
-        // ── العميل ──
         $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
         $query->andFilterWhere(['=', 'c.is_deleted', false]);
 
-        // ── البائع ──
         $query->andFilterWhere(['like', 's.name', $this->seller_name]);
 
         // ── صلاحيات المتابع ──
@@ -160,9 +164,19 @@ class FollowUpReportSearch extends FollowUpReport
             return 0;
         }
 
-        // ── فلتر بدون أرقام تواصل ──
         if ($this->is_can_not_contact !== null && $this->is_can_not_contact !== '') {
             $query->andWhere(['os_follow_up_report.is_can_not_contact' => (int)$this->is_can_not_contact]);
+        }
+
+        if (!empty($this->q)) {
+            $q = trim($this->q);
+            $query->andWhere(['or',
+                ['os_follow_up_report.id' => $q],
+                ['c.id' => $q],
+                ['like', 'c.name', $q],
+                ['like', 'c.id_number', $q],
+                ['like', 'c.primary_phone_number', $q],
+            ]);
         }
 
         $query->andFilterWhere([

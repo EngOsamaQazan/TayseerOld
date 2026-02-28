@@ -161,18 +161,13 @@ echo $this->render('@backend/views/_section_tabs', [
 
     <!-- Search -->
     <form method="get" action="<?= Url::to(['index']) ?>" class="inv-search">
-        <div class="form-group">
-            <label>اسم المُستثمر</label>
-            <input type="text" name="CompaniesSearch[name]" class="form-control" placeholder="ابحث بالاسم..."
-                   value="<?= Html::encode($searchModel->name) ?>">
-        </div>
-        <div class="form-group">
-            <label>رقم الهاتف</label>
-            <input type="text" name="CompaniesSearch[phone_number]" class="form-control" placeholder="ابحث برقم الهاتف..."
-                   value="<?= Html::encode($searchModel->phone_number) ?>">
+        <div class="form-group" style="flex:3;min-width:250px">
+            <label><i class="fa fa-search"></i> بحث</label>
+            <input type="text" name="CompaniesSearch[q]" class="form-control" placeholder="الاسم، رقم الهاتف..."
+                   value="<?= Html::encode($searchModel->q) ?>">
         </div>
         <button type="submit" class="inv-search-btn"><i class="fa fa-search"></i> بحث</button>
-        <?php if (!empty($searchModel->name) || !empty($searchModel->phone_number)): ?>
+        <?php if (!empty($searchModel->q)): ?>
             <?= Html::a('<i class="fa fa-times"></i> مسح', ['index'], ['class' => 'inv-btn inv-btn-outline', 'style' => 'height:38px']) ?>
         <?php endif ?>
     </form>

@@ -41,47 +41,13 @@ $statusList = [
 
 <div class="ct-filter-grid">
 
-    <!-- رقم العقد -->
-    <div class="ct-filter-group">
-        <label for="contractssearch-id">رقم العقد</label>
-        <?= $form->field($model, 'id', ['template' => '{input}'])->textInput([
-            'placeholder' => 'أدخل رقم العقد',
-            'type' => 'number',
+    <!-- بحث موحّد -->
+    <div class="ct-filter-group ct-filter-wide">
+        <label><i class="fa fa-search"></i> بحث</label>
+        <?= $form->field($model, 'q', ['template' => '{input}'])->textInput([
+            'placeholder' => 'رقم العقد، اسم العميل، رقم الهوية، رقم الهاتف...',
             'class' => 'form-control',
-            'aria-label' => 'رقم العقد',
-        ]) ?>
-    </div>
-
-    <!-- العميل -->
-    <div class="ct-filter-group ct-filter-customer">
-        <label for="contractssearch-customer_name">العميل</label>
-        <?= $form->field($model, 'customer_name', ['template' => '{input}'])->widget(Select2::class, [
-            'initValueText' => $model->customer_name,
-            'options' => [
-                'placeholder' => 'ابحث بالاسم أو الرقم الوطني...',
-                'aria-label' => 'بحث العميل',
-            ],
-            'pluginOptions' => [
-                'allowClear' => true,
-                'dir' => 'rtl',
-                'minimumInputLength' => 1,
-                'ajax' => [
-                    'url' => Url::to(['/customers/customers/search-customers', 'mode' => 'name']),
-                    'dataType' => 'json',
-                    'delay' => 300,
-                    'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
-                    'processResults' => new \yii\web\JsExpression('function(d){return d}'),
-                    'cache' => true,
-                ],
-                'templateResult' => new \yii\web\JsExpression(
-                    "function(i){if(i.loading)return i.text;" .
-                    "var h='<div><b>'+i.text+'</b>';" .
-                    "if(i.id_number)h+=' <small style=\"color:#64748b\">· '+i.id_number+'</small>';" .
-                    "if(i.phone)h+=' <small style=\"color:#0891b2\">☎ '+i.phone+'</small>';" .
-                    "return $(h+'</div>')}"
-                ),
-                'templateSelection' => new \yii\web\JsExpression("function(i){return i.text||i.id}"),
-            ],
+            'aria-label' => 'بحث موحّد',
         ]) ?>
     </div>
 
@@ -129,16 +95,6 @@ $statusList = [
             'data' => ArrayHelper::map($users, 'id', 'username'),
             'options' => ['placeholder' => 'اختر المتابع', 'aria-label' => 'المتابع'],
             'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-        ]) ?>
-    </div>
-
-    <!-- الهاتف -->
-    <div class="ct-filter-group">
-        <label>الهاتف</label>
-        <?= $form->field($model, 'phone_number', ['template' => '{input}'])->textInput([
-            'placeholder' => 'رقم الهاتف',
-            'class' => 'form-control',
-            'aria-label' => 'الهاتف',
         ]) ?>
     </div>
 

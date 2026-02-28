@@ -253,6 +253,13 @@ body:has(.ct-page) .content-header {
   gap: 14px 18px;
   align-items: end;
 }
+.ct-filter-wide {
+  grid-column: 1 / -1;
+}
+.ct-filter-wide .ct-input {
+  font-size: 15px;
+  padding: 10px 14px;
+}
 .ct-legal-filters {
   display: flex;
   flex-direction: column;
