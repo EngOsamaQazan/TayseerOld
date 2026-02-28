@@ -1456,15 +1456,15 @@ class JudiciaryController extends Controller
         $casesRaw = $request->post('cases', '[]');
         $cases = is_string($casesRaw) ? json_decode($casesRaw, true) : $casesRaw;
         if (!is_array($cases)) $cases = [];
-        $actionId = (int)$request->post('action_id');
+        $globalActionId = (int)$request->post('action_id', 0);
         $actionDate = $request->post('action_date', date('Y-m-d'));
         $note = $request->post('note', '');
 
-        if (empty($cases) || !$actionId) {
+        if (empty($cases)) {
             return ['success' => false, 'message' => 'بيانات ناقصة'];
         }
 
-        $actionDef = \backend\modules\judiciaryActions\models\JudiciaryActions::findOne($actionId);
+        $actionDefCache = [];
         $savedTotal = 0;
         $errors = [];
         $details = [];
@@ -1472,12 +1472,18 @@ class JudiciaryController extends Controller
         foreach ($cases as $case) {
             $judiciaryId = (int)($case['judiciary_id'] ?? 0);
             $contractId = (int)($case['contract_id'] ?? 0);
-            if (!$judiciaryId) {
+            $caseActionId = (int)($case['action_id'] ?? $globalActionId);
+
+            if (!$judiciaryId || !$caseActionId) {
                 $errors[] = $case['input'] ?? '?';
                 continue;
             }
 
-            // Use per-case party selection if provided, otherwise all parties
+            if (!isset($actionDefCache[$caseActionId])) {
+                $actionDefCache[$caseActionId] = \backend\modules\judiciaryActions\models\JudiciaryActions::findOne($caseActionId);
+            }
+            $actionDef = $actionDefCache[$caseActionId];
+
             $partyIds = $case['party_ids'] ?? [];
             if (empty($partyIds)) {
                 $allParties = $this->getCaseParties($contractId);
@@ -1491,7 +1497,7 @@ class JudiciaryController extends Controller
                 $record = new JudiciaryCustomersActions();
                 $record->judiciary_id = $judiciaryId;
                 $record->customers_id = $customerId;
-                $record->judiciary_actions_id = $actionId;
+                $record->judiciary_actions_id = $caseActionId;
                 $record->action_date = $actionDate;
                 $record->note = $note;
                 if ($actionDef && $actionDef->action_nature === 'request') {
@@ -1505,6 +1511,7 @@ class JudiciaryController extends Controller
             $details[] = [
                 'input' => $case['input'] ?? '',
                 'judiciary_id' => $judiciaryId,
+                'action_id' => $caseActionId,
                 'saved' => $caseSaved,
             ];
         }

@@ -1,10 +1,11 @@
 <?php
 /**
  * الإدخال المجمّع الذكي للإجراءات القضائية
- * Wizard: لصق → مراجعة → إجراء → تنفيذ
+ * Wizard: لصق → مراجعة + تعيين الإجراءات → تنفيذ
  */
 use yii\helpers\Url;
 use yii\helpers\Html;
+use yii\helpers\Json;
 use yii\helpers\ArrayHelper;
 use backend\modules\judiciaryActions\models\JudiciaryActions;
 
@@ -25,10 +26,25 @@ $natureIcons  = ['request' => 'fa-file-text-o', 'document' => 'fa-file-o', 'doc_
 $natureColors = ['request' => '#3B82F6', 'document' => '#8B5CF6', 'doc_status' => '#EA580C', 'process' => '#64748B'];
 $grouped = [];
 foreach ($allActions as $a) { $grouped[$a->action_nature ?: 'process'][] = $a; }
+
+$actionsJson = [];
+$natureOrder = ['request', 'document', 'doc_status', 'process'];
+foreach ($natureOrder as $nature) {
+    if (empty($grouped[$nature])) continue;
+    foreach ($grouped[$nature] as $a) {
+        $actionsJson[] = [
+            'id' => $a->id,
+            'name' => $a->name,
+            'nature' => $nature,
+            'natureLabel' => $natureLabels[$nature],
+            'color' => $natureColors[$nature],
+        ];
+    }
+}
 ?>
 
 <style>
-.ba { font-family:'Tajawal','Cairo',sans-serif; direction:rtl; max-width:960px; margin:0 auto; }
+.ba { font-family:'Tajawal','Cairo',sans-serif; direction:rtl; max-width:1100px; margin:0 auto; }
 
 /* Steps indicator */
 .ba-steps { display:flex; gap:0; margin-bottom:24px; background:#fff; border-radius:12px; border:1px solid #E2E8F0; overflow:hidden; }
@@ -62,10 +78,51 @@ foreach ($allActions as $a) { $grouped[$a->action_nature ?: 'process'][] = $a; }
 .ba-hint { display:flex; align-items:center; gap:8px; padding:10px 14px; background:#F0F9FF; border-radius:8px; font-size:12px; color:#0369A1; margin-bottom:14px; }
 .ba-hint i { font-size:16px; }
 
-/* Step 2: Results table */
-.ba-results { border:1px solid #E2E8F0; border-radius:10px; overflow:hidden; }
+/* Toolbar */
+.ba-toolbar {
+    display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;
+    padding:14px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; margin-bottom:14px;
+}
+.ba-toolbar-group { display:flex; flex-direction:column; gap:4px; }
+.ba-toolbar-group label { font-size:11px; font-weight:600; color:#64748B; }
+.ba-toolbar-group input, .ba-toolbar-group textarea { padding:7px 10px; border:1px solid #D1D5DB; border-radius:7px; font-size:12px; font-family:inherit; outline:none; }
+.ba-toolbar-group input:focus, .ba-toolbar-group textarea:focus { border-color:#800020; box-shadow:0 0 0 2px rgba(128,0,32,.08); }
+.ba-toolbar-action-pick {
+    position:relative; flex:1; min-width:200px;
+}
+.ba-toolbar-action-input {
+    width:100%; padding:7px 10px; border:1px solid #D1D5DB; border-radius:7px;
+    font-size:12px; font-family:inherit; outline:none; cursor:pointer; background:#fff;
+}
+.ba-toolbar-action-input:focus { border-color:#800020; box-shadow:0 0 0 2px rgba(128,0,32,.08); }
+.ba-toolbar-dd {
+    display:none; position:absolute; top:100%; left:0; right:0; z-index:999;
+    background:#fff; border:1px solid #E2E8F0; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.12);
+    max-height:260px; overflow-y:auto; margin-top:4px;
+}
+.ba-toolbar-dd.open { display:block; }
+.ba-toolbar-dd-item {
+    display:flex; align-items:center; gap:6px; padding:7px 12px; cursor:pointer;
+    font-size:12px; border-bottom:1px solid #F5F5F5; transition:background .12s;
+}
+.ba-toolbar-dd-item:last-child { border-bottom:none; }
+.ba-toolbar-dd-item:hover { background:#FDF2F4; }
+.ba-toolbar-dd-item .bullet { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.ba-toolbar-dd-nature {
+    padding:5px 12px; font-size:10px; font-weight:700; color:#64748B; background:#F8FAFC;
+    text-transform:uppercase; letter-spacing:.5px; position:sticky; top:0;
+}
+.ba-apply-btn {
+    padding:7px 18px; border-radius:7px; border:none; background:#800020; color:#fff;
+    font-size:12px; font-weight:600; font-family:inherit; cursor:pointer; white-space:nowrap;
+    transition:background .2s;
+}
+.ba-apply-btn:hover { background:#600018; }
+
+/* Results table */
+.ba-results { border:1px solid #E2E8F0; border-radius:10px; overflow-x:auto; }
 .ba-results table { width:100%; border-collapse:collapse; font-size:12px; }
-.ba-results th { background:linear-gradient(135deg,#800020,#a0003a); color:#fff; padding:10px 12px; font-weight:600; text-align:right; }
+.ba-results th { background:linear-gradient(135deg,#800020,#a0003a); color:#fff; padding:10px 12px; font-weight:600; text-align:right; white-space:nowrap; }
 .ba-results td { padding:10px 12px; border-bottom:1px solid #F1F5F9; vertical-align:middle; }
 .ba-results tr:hover td { background:#FDF2F4; }
 .ba-status { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
@@ -75,7 +132,7 @@ foreach ($allActions as $a) { $grouped[$a->action_nature ?: 'process'][] = $a; }
 .ba-status-error { background:#F1F5F9; color:#64748B; }
 .ba-court-select { padding:4px 8px; border:1px solid #E2E8F0; border-radius:6px; font-size:11px; font-family:inherit; }
 .ba-parties-list { font-size:11px; color:#64748B; }
-.ba-party-chips { display:flex; flex-wrap:wrap; gap:4px; max-width:220px; }
+.ba-party-chips { display:flex; flex-wrap:wrap; gap:4px; max-width:180px; }
 .ba-party-chip {
     display:inline-flex; align-items:center; gap:4px; padding:2px 8px;
     border-radius:6px; font-size:10px; font-weight:600; cursor:pointer;
@@ -87,48 +144,47 @@ foreach ($allActions as $a) { $grouped[$a->action_nature ?: 'process'][] = $a; }
 .ba-party-chip.selected .chip-check { color:#800020; }
 .ba-party-selectall {
     font-size:10px; color:#059669; cursor:pointer; font-weight:600;
-    padding:2px 6px; border-radius:4px; background:#ECFDF5; border:none;
-    margin-bottom:2px;
+    padding:2px 6px; border-radius:4px; background:#ECFDF5; border:none; margin-bottom:2px;
 }
 .ba-check { width:16px; height:16px; cursor:pointer; accent-color:#800020; }
 
-/* Step 3: Action selector */
-.ba-action-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-.ba-action-box { border:1px solid #E2E8F0; border-radius:10px; padding:14px; }
-.ba-action-box label { font-size:12px; font-weight:600; color:#64748B; margin-bottom:6px; display:block; }
-.ba-action-box input, .ba-action-box textarea, .ba-action-box select {
-    width:100%; padding:8px 12px; border:1px solid #D1D5DB; border-radius:8px;
-    font-size:13px; font-family:inherit; outline:none;
+/* Per-row action chip */
+.ba-row-action-chip {
+    display:inline-flex; align-items:center; gap:4px; padding:3px 10px;
+    border-radius:16px; font-size:11px; font-weight:600; cursor:pointer;
+    border:1.5px solid #E2E8F0; background:#fff; transition:all .15s;
+    white-space:nowrap; position:relative;
 }
-.ba-action-box input:focus, .ba-action-box textarea:focus { border-color:#800020; box-shadow:0 0 0 3px rgba(128,0,32,.1); }
+.ba-row-action-chip:hover { border-color:#800020; background:#FDF2F4; }
+.ba-row-action-chip.has-action { border-color:#3B82F6; background:#EFF6FF; color:#1D4ED8; }
+.ba-row-action-chip .ba-chip-bullet { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.ba-row-action-chip .ba-chip-x {
+    font-size:12px; font-weight:700; color:#94A3B8; margin-right:2px; cursor:pointer;
+}
+.ba-row-action-chip .ba-chip-x:hover { color:#EF4444; }
+.ba-row-dd {
+    display:none; position:absolute; top:100%; right:0; z-index:998;
+    background:#fff; border:1px solid #E2E8F0; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.12);
+    max-height:200px; overflow-y:auto; min-width:220px; margin-top:4px;
+}
+.ba-row-dd.open { display:block; }
+.ba-row-dd-search {
+    padding:6px 10px; border:none; border-bottom:1px solid #E2E8F0;
+    font-size:11px; width:100%; outline:none; font-family:inherit;
+}
+.ba-row-dd-item {
+    display:flex; align-items:center; gap:5px; padding:6px 10px; cursor:pointer;
+    font-size:11px; border-bottom:1px solid #F8F8F8; transition:background .12s;
+}
+.ba-row-dd-item:last-child { border-bottom:none; }
+.ba-row-dd-item:hover { background:#FDF2F4; }
+.ba-row-dd-item .bullet { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
 
-/* Action tree (reuse from jaf) */
-.ba-nature-group { margin-bottom:6px; }
-.ba-nature-header {
-    display:flex; align-items:center; gap:6px; padding:6px 10px;
-    background:#F8FAFC; border-radius:8px 8px 0 0; border:1px solid #E2E8F0; border-bottom:none;
-    font-weight:700; font-size:12px; cursor:pointer;
-}
-.ba-nature-list { display:flex; flex-direction:column; border:1px solid #E2E8F0; border-radius:0 0 8px 8px; max-height:180px; overflow-y:auto; }
-.ba-nature-list.collapsed { display:none; }
-.ba-action-item {
-    display:flex; align-items:center; gap:8px; padding:6px 12px;
-    border-bottom:1px solid #F1F5F9; cursor:pointer; font-size:12px; transition:all .15s;
-}
-.ba-action-item:last-child { border-bottom:none; }
-.ba-action-item:hover { background:#F8FAFC; }
-.ba-action-item.selected { background:#EFF6FF; font-weight:600; color:#1D4ED8; }
-.ba-action-item .bullet { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-.ba-action-search { margin-bottom:8px; }
-
-/* Step 4: Progress */
+/* Progress */
 .ba-progress-bar { width:100%; height:8px; background:#E2E8F0; border-radius:4px; overflow:hidden; margin-bottom:16px; }
 .ba-progress-fill { height:100%; background:linear-gradient(90deg,#800020,#10B981); transition:width .3s; border-radius:4px; }
 .ba-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
-.ba-summary-card {
-    padding:16px; border-radius:10px; text-align:center;
-    border:1px solid #E2E8F0;
-}
+.ba-summary-card { padding:16px; border-radius:10px; text-align:center; border:1px solid #E2E8F0; }
 .ba-summary-card .num { font-size:28px; font-weight:800; }
 .ba-summary-card .lbl { font-size:12px; color:#64748B; }
 .ba-detail-log { max-height:300px; overflow-y:auto; border:1px solid #E2E8F0; border-radius:8px; }
@@ -159,22 +215,21 @@ foreach ($allActions as $a) { $grouped[$a->action_nature ?: 'process'][] = $a; }
 .ba-stat-total { background:#F0F0FF; color:#4338CA; }
 
 @media (max-width:768px) {
-    .ba-action-grid { grid-template-columns:1fr; }
+    .ba-toolbar { flex-direction:column; }
     .ba-summary { grid-template-columns:1fr; }
     .ba-steps { flex-wrap:wrap; }
 }
 </style>
 
 <div class="ba">
-    <!-- Steps Indicator -->
+    <!-- Steps Indicator (3 steps) -->
     <div class="ba-steps">
         <div class="ba-step active" data-step="1"><span class="ba-step-num">1</span> لصق الأرقام</div>
-        <div class="ba-step" data-step="2"><span class="ba-step-num">2</span> مراجعة ومطابقة</div>
-        <div class="ba-step" data-step="3"><span class="ba-step-num">3</span> الإجراء والتفاصيل</div>
-        <div class="ba-step" data-step="4"><span class="ba-step-num">4</span> التنفيذ</div>
+        <div class="ba-step" data-step="2"><span class="ba-step-num">2</span> مراجعة وتعيين الإجراءات</div>
+        <div class="ba-step" data-step="3"><span class="ba-step-num">3</span> التنفيذ</div>
     </div>
 
-    <!-- ═══ Step 1: Paste Numbers ═══ -->
+    <!-- Step 1: Paste Numbers -->
     <div class="ba-panel active" id="ba-step1">
         <h3 style="margin:0 0 14px;font-size:18px;font-weight:700;color:#1E293B"><i class="fa fa-paste" style="color:#800020;margin-left:8px"></i> لصق أرقام القضايا</h3>
         <div class="ba-hint">
@@ -189,88 +244,53 @@ foreach ($allActions as $a) { $grouped[$a->action_nature ?: 'process'][] = $a; }
         </div>
     </div>
 
-    <!-- ═══ Step 2: Review & Match ═══ -->
+    <!-- Step 2: Review + Assign Actions -->
     <div class="ba-panel" id="ba-step2">
-        <h3 style="margin:0 0 14px;font-size:18px;font-weight:700;color:#1E293B"><i class="fa fa-check-square-o" style="color:#800020;margin-left:8px"></i> مراجعة النتائج</h3>
+        <h3 style="margin:0 0 14px;font-size:18px;font-weight:700;color:#1E293B"><i class="fa fa-check-square-o" style="color:#800020;margin-left:8px"></i> مراجعة وتعيين الإجراءات</h3>
         <div class="ba-stats" id="ba-stats"></div>
+
+        <!-- Toolbar: bulk action assignment + date + note -->
+        <div class="ba-toolbar">
+            <div class="ba-toolbar-group ba-toolbar-action-pick">
+                <label><i class="fa fa-gavel"></i> الإجراء</label>
+                <input type="text" class="ba-toolbar-action-input" id="ba-bulk-action-input" placeholder="ابحث واختر الإجراء..." autocomplete="off">
+                <div class="ba-toolbar-dd" id="ba-bulk-dd"></div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+                <button type="button" class="ba-apply-btn" id="ba-apply-all-btn"><i class="fa fa-check-double"></i> تطبيق على المحدد</button>
+            </div>
+            <div class="ba-toolbar-group" style="min-width:130px">
+                <label><i class="fa fa-calendar"></i> التاريخ</label>
+                <input type="date" id="ba-action-date" value="<?= date('Y-m-d') ?>">
+            </div>
+            <div class="ba-toolbar-group" style="flex:1;min-width:160px">
+                <label><i class="fa fa-sticky-note-o"></i> ملاحظات</label>
+                <input type="text" id="ba-note" placeholder="ملاحظات مشتركة (اختياري)...">
+            </div>
+        </div>
+
+        <!-- Results table with action column -->
         <div class="ba-results">
             <table>
                 <thead><tr>
                     <th style="width:36px"><input type="checkbox" class="ba-check" id="ba-check-all" checked></th>
                     <th>المدخل</th><th>رقم القضية</th><th>السنة</th>
-                    <th>المحكمة</th><th>العقد</th><th>الأطراف</th><th>الحالة</th>
+                    <th>المحكمة</th><th>العقد</th><th>الأطراف</th>
+                    <th>الإجراء</th>
+                    <th>الحالة</th>
                 </tr></thead>
                 <tbody id="ba-results-body"></tbody>
             </table>
         </div>
+
         <div class="ba-actions">
             <button class="ba-btn ba-btn-secondary" onclick="BA.goStep(1)"><i class="fa fa-arrow-right"></i> السابق</button>
-            <button class="ba-btn ba-btn-primary" id="ba-next2"><i class="fa fa-arrow-left"></i> التالي — اختيار الإجراء</button>
-        </div>
-    </div>
-
-    <!-- ═══ Step 3: Select Action ═══ -->
-    <div class="ba-panel" id="ba-step3">
-        <h3 style="margin:0 0 14px;font-size:18px;font-weight:700;color:#1E293B"><i class="fa fa-gavel" style="color:#800020;margin-left:8px"></i> اختيار الإجراء</h3>
-        <p style="color:#64748B;font-size:13px;margin-bottom:14px">سيتم تطبيق الإجراء على <strong id="ba-case-count">0</strong> قضية</p>
-
-        <div class="ba-action-grid">
-            <div class="ba-action-box" style="grid-column:span 2">
-                <label><i class="fa fa-sitemap"></i> الإجراء القضائي</label>
-                <input type="text" class="ba-action-search" id="ba-action-search" placeholder="ابحث في الإجراءات...">
-                <input type="hidden" id="ba-action-id" value="">
-                <div id="ba-action-tree" style="max-height:250px;overflow-y:auto">
-                    <?php
-                    $natureOrder = ['request', 'document', 'doc_status', 'process'];
-                    foreach ($natureOrder as $nature):
-                        if (empty($grouped[$nature])) continue;
-                    ?>
-                    <div class="ba-nature-group">
-                        <div class="ba-nature-header" onclick="BA.toggleNature(this)">
-                            <i class="fa <?= $natureIcons[$nature] ?>" style="color:<?= $natureColors[$nature] ?>"></i>
-                            <span style="color:<?= $natureColors[$nature] ?>"><?= $natureLabels[$nature] ?></span>
-                            <span style="font-weight:400;color:#94A3B8;font-size:11px" data-count="<?= count($grouped[$nature]) ?>">(<?= count($grouped[$nature]) ?>)</span>
-                        </div>
-                        <div class="ba-nature-list collapsed">
-                            <?php foreach ($grouped[$nature] as $a): ?>
-                            <div class="ba-action-item" data-id="<?= $a->id ?>" onclick="BA.selectAction(this)">
-                                <span class="bullet" style="background:<?= $natureColors[$nature] ?>"></span>
-                                <?= Html::encode($a->name) ?>
-                            </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-                <div id="ba-selected-action" style="display:none;margin-top:8px;padding:8px 12px;background:#EFF6FF;border-radius:8px;font-size:13px;font-weight:600;color:#1D4ED8">
-                    <i class="fa fa-check-circle"></i> <span></span>
-                </div>
-            </div>
-
-            <div class="ba-action-box">
-                <label><i class="fa fa-calendar"></i> تاريخ الإجراء</label>
-                <input type="date" id="ba-action-date" value="<?= date('Y-m-d') ?>">
-            </div>
-            <div class="ba-action-box">
-                <label><i class="fa fa-users"></i> الأطراف</label>
-                <p style="font-size:12px;color:#64748B;margin:0;padding:8px 0">
-                    <i class="fa fa-info-circle"></i> تم تحديد الأطراف لكل قضية في الخطوة السابقة
-                </p>
-            </div>
-            <div class="ba-action-box" style="grid-column:span 2">
-                <label><i class="fa fa-sticky-note-o"></i> ملاحظات (اختياري)</label>
-                <textarea id="ba-note" rows="2" placeholder="ملاحظات مشتركة لجميع الإجراءات..." style="resize:vertical;min-height:50px"></textarea>
-            </div>
-        </div>
-
-        <div class="ba-actions">
-            <button class="ba-btn ba-btn-secondary" onclick="BA.goStep(2)"><i class="fa fa-arrow-right"></i> السابق</button>
             <button class="ba-btn ba-btn-primary" id="ba-execute-btn"><i class="fa fa-rocket"></i> تأكيد وتنفيذ</button>
         </div>
     </div>
 
-    <!-- ═══ Step 4: Execution ═══ -->
-    <div class="ba-panel" id="ba-step4">
+    <!-- Step 3: Execution Results -->
+    <div class="ba-panel" id="ba-step3">
         <h3 style="margin:0 0 14px;font-size:18px;font-weight:700;color:#1E293B"><i class="fa fa-check-circle" style="color:#10B981;margin-left:8px"></i> نتيجة التنفيذ</h3>
         <div class="ba-progress-bar"><div class="ba-progress-fill" id="ba-progress" style="width:0%"></div></div>
         <div class="ba-summary" id="ba-summary"></div>
@@ -284,11 +304,17 @@ foreach ($allActions as $a) { $grouped[$a->action_nature ?: 'process'][] = $a; }
 
 <script>
 var BA = (function() {
-    var PARSE_URL = '<?= $parseUrl ?>';
+    'use strict';
+    var PARSE_URL   = '<?= $parseUrl ?>';
     var EXECUTE_URL = '<?= $executeUrl ?>';
+    var CSRF_PARAM  = '<?= Yii::$app->request->csrfParam ?>';
+    var CSRF_TOKEN  = '<?= Yii::$app->request->csrfToken ?>';
+    var ALL_ACTIONS = <?= Json::encode($actionsJson) ?>;
     var parsedResults = [];
-    var selectedAction = null;
+    var bulkSelectedAction = null;
+    var openRowDd = null;
 
+    /* ── Navigation ── */
     function goStep(n) {
         document.querySelectorAll('.ba-panel').forEach(function(p) { p.classList.remove('active'); });
         document.getElementById('ba-step' + n).classList.add('active');
@@ -300,20 +326,17 @@ var BA = (function() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // Step 1: Parse
+    /* ── Step 1: Parse ── */
     document.getElementById('ba-parse-btn').addEventListener('click', function() {
         var input = document.getElementById('ba-input').value.trim();
         if (!input) { alert('أدخل أرقام القضايا أولاً'); return; }
-
         var btn = this;
         btn.disabled = true;
         btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جارٍ التحليل...';
-
-        var formData = new FormData();
-        formData.append('numbers', input);
-        formData.append('<?= Yii::$app->request->csrfParam ?>', '<?= Yii::$app->request->csrfToken ?>');
-
-        fetch(PARSE_URL, { method: 'POST', body: formData })
+        var fd = new FormData();
+        fd.append('numbers', input);
+        fd.append(CSRF_PARAM, CSRF_TOKEN);
+        fetch(PARSE_URL, { method:'POST', body:fd })
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 btn.disabled = false;
@@ -322,9 +345,7 @@ var BA = (function() {
                     parsedResults = data.results;
                     renderResults();
                     goStep(2);
-                } else {
-                    alert('خطأ في التحليل');
-                }
+                } else { alert('خطأ في التحليل'); }
             })
             .catch(function() {
                 btn.disabled = false;
@@ -333,66 +354,53 @@ var BA = (function() {
             });
     });
 
+    /* ── Step 2: Render Table ── */
     function renderResults() {
         var matched = 0, multi = 0, notFound = 0, errors = 0;
         var html = '';
-
         parsedResults.forEach(function(r, i) {
             var statusClass = 'ba-status-' + r.status;
-            var statusLabel = { matched: '✅ متطابق', multiple: '⚠️ متعدد', not_found: '❌ غير موجود', error: '⚡ خطأ' }[r.status] || r.status;
+            var statusLabel = { matched:'\u2705 متطابق', multiple:'\u26A0\uFE0F متعدد', not_found:'\u274C غير موجود', error:'\u26A1 خطأ' }[r.status] || r.status;
             if (r.status === 'matched') matched++;
             else if (r.status === 'multiple') multi++;
             else if (r.status === 'not_found') notFound++;
             else errors++;
-
-            // Initialize selectedParties for matched cases (all selected by default)
             if (r.status === 'matched' && r.parties && !r.selectedParties) {
                 r.selectedParties = r.parties.map(function(p) { return p.customer_id; });
             }
-
             html += '<tr data-idx="' + i + '">';
             html += '<td><input type="checkbox" class="ba-check ba-row-check" data-idx="' + i + '" ' + (r.status === 'matched' || r.status === 'multiple' ? 'checked' : 'disabled') + '></td>';
             html += '<td style="font-family:monospace;direction:ltr">' + esc(r.input) + '</td>';
-            html += '<td><strong>' + (r.number || '—') + '</strong></td>';
-            html += '<td>' + (r.year || '—') + '</td>';
-
+            html += '<td><strong>' + (r.number || '\u2014') + '</strong></td>';
+            html += '<td>' + (r.year || '\u2014') + '</td>';
             if (r.status === 'matched') {
                 html += '<td>' + esc(r.court_name) + '</td>';
-                html += '<td>' + (r.contract_id || '—') + '</td>';
-                // Party chips with multi-select
+                html += '<td>' + (r.contract_id || '\u2014') + '</td>';
                 html += '<td class="ba-parties-list"><div class="ba-party-chips">';
                 if (r.parties && r.parties.length > 1) {
-                    var allSelected = r.selectedParties && r.selectedParties.length === r.parties.length;
-                    html += '<button type="button" class="ba-party-selectall" onclick="BA.toggleAllParties(' + i + ')">'
-                        + (allSelected ? '✕ إلغاء الكل' : '✓ تحديد الكل') + '</button>';
+                    var allSel = r.selectedParties && r.selectedParties.length === r.parties.length;
+                    html += '<button type="button" class="ba-party-selectall" onclick="BA.toggleAllParties(' + i + ')">' + (allSel ? '\u2715 إلغاء الكل' : '\u2713 تحديد الكل') + '</button>';
                 }
                 (r.parties || []).forEach(function(p) {
                     var isSel = r.selectedParties && r.selectedParties.indexOf(p.customer_id) !== -1;
-                    var typeLabel = p.customer_type === 'client' ? 'مدين' : 'كفيل';
-                    html += '<span class="ba-party-chip ' + (isSel ? 'selected' : '') + '" '
-                        + 'onclick="BA.toggleParty(' + i + ',' + p.customer_id + ')" '
-                        + 'title="' + typeLabel + '">'
-                        + '<span class="chip-check">' + (isSel ? '☑' : '☐') + '</span> '
-                        + esc(p.name)
-                        + '</span>';
+                    html += '<span class="ba-party-chip ' + (isSel ? 'selected' : '') + '" onclick="BA.toggleParty(' + i + ',' + p.customer_id + ')" title="' + (p.customer_type === 'client' ? 'مدين' : 'كفيل') + '"><span class="chip-check">' + (isSel ? '\u2611' : '\u2610') + '</span> ' + esc(p.name) + '</span>';
                 });
                 html += '</div></td>';
+                html += '<td>' + renderRowActionChip(i) + '</td>';
             } else if (r.status === 'multiple') {
                 html += '<td><select class="ba-court-select" data-idx="' + i + '" onchange="BA.resolveMultiple(' + i + ', this.value)">';
-                html += '<option value="">— اختر المحكمة —</option>';
+                html += '<option value="">\u2014 اختر المحكمة \u2014</option>';
                 (r.options || []).forEach(function(o, oi) {
                     html += '<option value="' + oi + '">' + esc(o.court_name) + ' (عقد ' + o.contract_id + ')</option>';
                 });
                 html += '</select></td>';
-                html += '<td>—</td><td>—</td>';
+                html += '<td>\u2014</td><td>\u2014</td><td>\u2014</td>';
             } else {
-                html += '<td colspan="3" style="color:#94A3B8">' + esc(r.message) + '</td>';
+                html += '<td colspan="4" style="color:#94A3B8">' + esc(r.message) + '</td>';
             }
-
             html += '<td><span class="ba-status ' + statusClass + '">' + statusLabel + '</span></td>';
             html += '</tr>';
         });
-
         document.getElementById('ba-results-body').innerHTML = html;
         document.getElementById('ba-stats').innerHTML =
             '<div class="ba-stat ba-stat-total"><i class="fa fa-list"></i> الكل: ' + parsedResults.length + '</div>' +
@@ -402,30 +410,151 @@ var BA = (function() {
             (errors > 0 ? '<div class="ba-stat ba-stat-err"><i class="fa fa-exclamation-triangle"></i> أخطاء: ' + errors + '</div>' : '');
     }
 
+    function renderRowActionChip(idx) {
+        var r = parsedResults[idx];
+        if (!r || r.status !== 'matched') return '';
+        var act = r.selectedAction;
+        if (act) {
+            return '<span class="ba-row-action-chip has-action" onclick="BA.openRowActionDd(' + idx + ', event)">'
+                + '<span class="ba-chip-bullet" style="background:' + esc(act.color) + '"></span>'
+                + esc(act.name)
+                + '<span class="ba-chip-x" onclick="event.stopPropagation();BA.clearRowAction(' + idx + ')">&times;</span>'
+                + '</span>';
+        }
+        return '<span class="ba-row-action-chip" onclick="BA.openRowActionDd(' + idx + ', event)">'
+            + '<i class="fa fa-plus" style="font-size:10px;color:#94A3B8"></i> تعيين إجراء'
+            + '</span>';
+    }
+
+    /* ── Per-row action dropdown ── */
+    function openRowActionDd(idx, evt) {
+        evt.stopPropagation();
+        closeAllDd();
+        var chip = evt.currentTarget;
+        var dd = document.createElement('div');
+        dd.className = 'ba-row-dd open';
+        dd.innerHTML = buildActionDdHtml('BA.pickRowAction(' + idx + ',');
+        chip.style.position = 'relative';
+        chip.appendChild(dd);
+        openRowDd = dd;
+        var search = dd.querySelector('.ba-row-dd-search');
+        if (search) {
+            search.focus();
+            search.addEventListener('input', function() { filterDdItems(dd, this.value); });
+        }
+    }
+
+    function pickRowAction(idx, actionId) {
+        var act = ALL_ACTIONS.filter(function(a) { return a.id == actionId; })[0];
+        if (act) parsedResults[idx].selectedAction = act;
+        closeAllDd();
+        renderResults();
+    }
+
+    function clearRowAction(idx) {
+        parsedResults[idx].selectedAction = null;
+        renderResults();
+    }
+
+    /* ── Bulk action dropdown ── */
+    var bulkInput = document.getElementById('ba-bulk-action-input');
+    var bulkDd    = document.getElementById('ba-bulk-dd');
+
+    bulkInput.addEventListener('focus', function() {
+        bulkDd.innerHTML = buildActionDdHtml('BA.pickBulkAction(');
+        bulkDd.classList.add('open');
+    });
+    bulkInput.addEventListener('input', function() {
+        filterDdItems(bulkDd, this.value);
+    });
+
+    function pickBulkAction(actionId) {
+        var act = ALL_ACTIONS.filter(function(a) { return a.id == actionId; })[0];
+        if (act) {
+            bulkSelectedAction = act;
+            bulkInput.value = act.name;
+        }
+        bulkDd.classList.remove('open');
+    }
+
+    document.getElementById('ba-apply-all-btn').addEventListener('click', function() {
+        if (!bulkSelectedAction) { alert('اختر الإجراء أولاً من القائمة'); return; }
+        var applied = 0;
+        document.querySelectorAll('.ba-row-check:checked').forEach(function(c) {
+            var idx = parseInt(c.dataset.idx);
+            var r = parsedResults[idx];
+            if (r && r.status === 'matched') {
+                r.selectedAction = bulkSelectedAction;
+                applied++;
+            }
+        });
+        renderResults();
+        if (applied > 0) {
+            var toast = document.createElement('div');
+            toast.textContent = '\u2705 تم تعيين "' + bulkSelectedAction.name + '" لـ ' + applied + ' قضية';
+            toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#166534;color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;font-family:inherit';
+            document.body.appendChild(toast);
+            setTimeout(function() { toast.remove(); }, 2500);
+        }
+    });
+
+    /* ── Shared dropdown builder ── */
+    function buildActionDdHtml(onClickPrefix) {
+        var html = '<input type="text" class="ba-row-dd-search" placeholder="بحث..." onclick="event.stopPropagation()">';
+        var lastNature = '';
+        ALL_ACTIONS.forEach(function(a) {
+            if (a.nature !== lastNature) {
+                html += '<div class="ba-toolbar-dd-nature">' + esc(a.natureLabel) + '</div>';
+                lastNature = a.nature;
+            }
+            html += '<div class="ba-toolbar-dd-item" data-name="' + esc(a.name) + '" onclick="event.stopPropagation();' + onClickPrefix + a.id + ')">'
+                + '<span class="bullet" style="background:' + a.color + '"></span>'
+                + esc(a.name) + '</div>';
+        });
+        return html;
+    }
+
+    function filterDdItems(dd, q) {
+        q = (q || '').trim().toLowerCase();
+        dd.querySelectorAll('.ba-toolbar-dd-item').forEach(function(el) {
+            el.style.display = (el.dataset.name || '').toLowerCase().indexOf(q) !== -1 || !q ? '' : 'none';
+        });
+        dd.querySelectorAll('.ba-toolbar-dd-nature').forEach(function(hdr) {
+            var next = hdr.nextElementSibling;
+            var anyVisible = false;
+            while (next && !next.classList.contains('ba-toolbar-dd-nature')) {
+                if (next.style.display !== 'none') anyVisible = true;
+                next = next.nextElementSibling;
+            }
+            hdr.style.display = anyVisible || !q ? '' : 'none';
+        });
+    }
+
+    function closeAllDd() {
+        bulkDd.classList.remove('open');
+        if (openRowDd) { openRowDd.remove(); openRowDd = null; }
+    }
+    document.addEventListener('click', function(e) {
+        if (!bulkDd.contains(e.target) && e.target !== bulkInput) bulkDd.classList.remove('open');
+        if (openRowDd && !openRowDd.contains(e.target)) { openRowDd.remove(); openRowDd = null; }
+    });
+
+    /* ── Party toggles ── */
     function toggleParty(caseIdx, customerId) {
         var r = parsedResults[caseIdx];
         if (!r || !r.selectedParties) return;
         var idx = r.selectedParties.indexOf(customerId);
-        if (idx !== -1) {
-            r.selectedParties.splice(idx, 1);
-        } else {
-            r.selectedParties.push(customerId);
-        }
+        if (idx !== -1) r.selectedParties.splice(idx, 1);
+        else r.selectedParties.push(customerId);
         renderResults();
     }
-
     function toggleAllParties(caseIdx) {
         var r = parsedResults[caseIdx];
         if (!r || !r.parties) return;
         var allIds = r.parties.map(function(p) { return p.customer_id; });
-        if (r.selectedParties && r.selectedParties.length === allIds.length) {
-            r.selectedParties = [];
-        } else {
-            r.selectedParties = allIds.slice();
-        }
+        r.selectedParties = (r.selectedParties && r.selectedParties.length === allIds.length) ? [] : allIds.slice();
         renderResults();
     }
-
     function resolveMultiple(idx, optionIdx) {
         if (optionIdx === '' || optionIdx === undefined) return;
         var r = parsedResults[idx];
@@ -439,116 +568,83 @@ var BA = (function() {
         renderResults();
     }
 
-    // Check all
+    /* ── Check all ── */
     document.getElementById('ba-check-all').addEventListener('change', function() {
         var checked = this.checked;
         document.querySelectorAll('.ba-row-check:not(:disabled)').forEach(function(c) { c.checked = checked; });
     });
 
-    // Step 2 → 3
-    document.getElementById('ba-next2').addEventListener('click', function() {
-        var selected = getSelectedCases();
-        if (selected.length === 0) { alert('اختر قضية واحدة على الأقل'); return; }
-        document.getElementById('ba-case-count').textContent = selected.length;
-        goStep(3);
-    });
-
+    /* ── Build cases for execution ── */
     function getSelectedCases() {
         var cases = [];
         document.querySelectorAll('.ba-row-check:checked').forEach(function(c) {
             var idx = parseInt(c.dataset.idx);
             var r = parsedResults[idx];
-            if (r && r.status === 'matched' && r.judiciary_id) {
+            if (r && r.status === 'matched' && r.judiciary_id && r.selectedAction) {
                 var partyIds = (r.selectedParties && r.selectedParties.length > 0) ? r.selectedParties : (r.parties || []).map(function(p) { return p.customer_id; });
                 cases.push({
                     input: r.input,
                     judiciary_id: r.judiciary_id,
                     contract_id: r.contract_id,
-                    party_ids: partyIds
+                    party_ids: partyIds,
+                    action_id: r.selectedAction.id
                 });
             }
         });
         return cases;
     }
 
-    // Action tree
-    function toggleNature(el) {
-        var list = el.nextElementSibling;
-        list.classList.toggle('collapsed');
-    }
-
-    function selectAction(el) {
-        document.querySelectorAll('.ba-action-item').forEach(function(a) { a.classList.remove('selected'); });
-        el.classList.add('selected');
-        selectedAction = el.dataset.id;
-        document.getElementById('ba-action-id').value = selectedAction;
-        var sel = document.getElementById('ba-selected-action');
-        sel.style.display = 'block';
-        sel.querySelector('span').textContent = el.textContent.trim();
-    }
-
-    // Action search
-    document.getElementById('ba-action-search').addEventListener('input', function() {
-        var q = this.value.trim().toLowerCase();
-        document.querySelectorAll('.ba-nature-list').forEach(function(l) { l.classList.remove('collapsed'); });
-        if (!q) {
-            document.querySelectorAll('.ba-action-item').forEach(function(a) { a.style.display = ''; });
-            document.querySelectorAll('.ba-nature-list').forEach(function(l) { l.classList.add('collapsed'); });
-            document.querySelectorAll('.ba-nature-group').forEach(function(g) { g.style.display = ''; });
-            return;
-        }
-        document.querySelectorAll('.ba-action-item').forEach(function(a) {
-            a.style.display = a.textContent.trim().toLowerCase().indexOf(q) !== -1 ? '' : 'none';
-        });
-        document.querySelectorAll('.ba-nature-group').forEach(function(g) {
-            var visible = g.querySelectorAll('.ba-action-item:not([style*="display: none"])').length;
-            g.style.display = visible > 0 ? '' : 'none';
-        });
-    });
-
-    // Step 3: Execute
+    /* ── Execute ── */
     document.getElementById('ba-execute-btn').addEventListener('click', function() {
-        if (!selectedAction) { alert('اختر الإجراء القضائي'); return; }
         var cases = getSelectedCases();
-        if (cases.length === 0) { alert('لا توجد قضايا محددة'); return; }
+        var totalChecked = document.querySelectorAll('.ba-row-check:checked').length;
+        var matchedChecked = 0;
+        document.querySelectorAll('.ba-row-check:checked').forEach(function(c) {
+            var idx = parseInt(c.dataset.idx);
+            if (parsedResults[idx] && parsedResults[idx].status === 'matched') matchedChecked++;
+        });
+        var noAction = matchedChecked - cases.length;
 
-        var actionName = document.querySelector('.ba-action-item.selected') ? document.querySelector('.ba-action-item.selected').textContent.trim() : '';
+        if (matchedChecked === 0) { alert('اختر قضية واحدة على الأقل'); return; }
+        if (noAction > 0) { alert('هناك ' + noAction + ' قضية محددة بدون إجراء. عيّن الإجراء لكل قضية أو أزل التحديد عنها.'); return; }
+        if (cases.length === 0) { alert('لا توجد قضايا جاهزة للتنفيذ'); return; }
+
+        var actionSummary = {};
+        cases.forEach(function(c) {
+            var a = ALL_ACTIONS.filter(function(x) { return x.id == c.action_id; })[0];
+            var name = a ? a.name : '#' + c.action_id;
+            actionSummary[name] = (actionSummary[name] || 0) + 1;
+        });
+        var summaryLines = Object.keys(actionSummary).map(function(k) { return '\u25B8 ' + k + ': ' + actionSummary[k] + ' قضية'; }).join('\n');
+
         var msg = 'تأكيد الإدخال المجمّع:\n\n'
-            + '▸ عدد القضايا: ' + cases.length + '\n'
-            + '▸ الإجراء: ' + actionName + '\n'
-            + '▸ التاريخ: ' + document.getElementById('ba-action-date').value + '\n\n'
+            + summaryLines + '\n'
+            + '\u25B8 التاريخ: ' + document.getElementById('ba-action-date').value + '\n\n'
             + 'هل تريد المتابعة؟';
         if (!confirm(msg)) return;
 
         var btn = this;
         btn.disabled = true;
         btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جارٍ التنفيذ...';
-        goStep(4);
+        goStep(3);
         document.getElementById('ba-progress').style.width = '30%';
 
-        var formData = new FormData();
-        formData.append('<?= Yii::$app->request->csrfParam ?>', '<?= Yii::$app->request->csrfToken ?>');
-        formData.append('action_id', selectedAction);
-        formData.append('action_date', document.getElementById('ba-action-date').value);
-        formData.append('note', document.getElementById('ba-note').value);
-        formData.append('cases', JSON.stringify(cases));
+        var fd = new FormData();
+        fd.append(CSRF_PARAM, CSRF_TOKEN);
+        fd.append('action_date', document.getElementById('ba-action-date').value);
+        fd.append('note', document.getElementById('ba-note').value);
+        fd.append('cases', JSON.stringify(cases));
 
-        fetch(EXECUTE_URL, { method: 'POST', body: formData })
+        fetch(EXECUTE_URL, { method:'POST', body:fd })
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 document.getElementById('ba-progress').style.width = '100%';
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa fa-rocket"></i> تأكيد وتنفيذ';
-
-                var totalCases = data.total_cases || 0;
-                var totalSaved = data.total_saved || 0;
-                var totalErrors = (data.errors || []).length;
-
                 document.getElementById('ba-summary').innerHTML =
-                    '<div class="ba-summary-card" style="border-color:#10B981"><div class="num" style="color:#10B981">' + totalSaved + '</div><div class="lbl">إجراء تم إضافته</div></div>' +
-                    '<div class="ba-summary-card" style="border-color:#3B82F6"><div class="num" style="color:#3B82F6">' + totalCases + '</div><div class="lbl">قضية تمت معالجتها</div></div>' +
-                    '<div class="ba-summary-card" style="border-color:#EF4444"><div class="num" style="color:#EF4444">' + totalErrors + '</div><div class="lbl">أخطاء</div></div>';
-
+                    '<div class="ba-summary-card" style="border-color:#10B981"><div class="num" style="color:#10B981">' + (data.total_saved || 0) + '</div><div class="lbl">إجراء تم إضافته</div></div>' +
+                    '<div class="ba-summary-card" style="border-color:#3B82F6"><div class="num" style="color:#3B82F6">' + (data.total_cases || 0) + '</div><div class="lbl">قضية تمت معالجتها</div></div>' +
+                    '<div class="ba-summary-card" style="border-color:#EF4444"><div class="num" style="color:#EF4444">' + ((data.errors || []).length) + '</div><div class="lbl">أخطاء</div></div>';
                 var logHtml = '';
                 (data.details || []).forEach(function(d) {
                     var icon = d.saved > 0 ? '<i class="fa fa-check-circle" style="color:#10B981"></i>' : '<i class="fa fa-times-circle" style="color:#EF4444"></i>';
@@ -556,7 +652,7 @@ var BA = (function() {
                 });
                 document.getElementById('ba-log').innerHTML = logHtml;
             })
-            .catch(function(err) {
+            .catch(function() {
                 document.getElementById('ba-progress').style.width = '100%';
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa fa-rocket"></i> تأكيد وتنفيذ';
@@ -564,18 +660,18 @@ var BA = (function() {
             });
     });
 
+    /* ── Reset ── */
     function reset() {
         document.getElementById('ba-input').value = '';
         parsedResults = [];
-        selectedAction = null;
-        document.getElementById('ba-action-id').value = '';
-        document.getElementById('ba-selected-action').style.display = 'none';
-        document.querySelectorAll('.ba-action-item').forEach(function(a) { a.classList.remove('selected'); });
+        bulkSelectedAction = null;
+        bulkInput.value = '';
+        document.getElementById('ba-note').value = '';
         goStep(1);
     }
 
     function esc(s) {
-        if (!s && s !== 0) return '—';
+        if (!s && s !== 0) return '\u2014';
         var d = document.createElement('div');
         d.appendChild(document.createTextNode(s));
         return d.innerHTML;
@@ -583,11 +679,13 @@ var BA = (function() {
 
     return {
         goStep: goStep,
-        toggleNature: toggleNature,
-        selectAction: selectAction,
-        resolveMultiple: resolveMultiple,
         toggleParty: toggleParty,
         toggleAllParties: toggleAllParties,
+        resolveMultiple: resolveMultiple,
+        openRowActionDd: openRowActionDd,
+        pickRowAction: pickRowAction,
+        clearRowAction: clearRowAction,
+        pickBulkAction: pickBulkAction,
         reset: reset
     };
 })();
