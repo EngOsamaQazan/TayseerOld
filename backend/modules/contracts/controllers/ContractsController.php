@@ -108,7 +108,7 @@ class ContractsController extends Controller
                     GROUP_CONCAT(DISTINCT cu.name SEPARATOR '، ') AS customer_name,
                     MIN(cu.primary_phone_number) AS phone
              FROM {{%contracts}} c
-             LEFT JOIN {{%contracts_customers}} cc ON cc.contract_id = c.id AND cc.type IN (1,3)
+             LEFT JOIN {{%contracts_customers}} cc ON cc.contract_id = c.id
              LEFT JOIN {{%customers}} cu ON cu.id = cc.customer_id
              WHERE (c.is_deleted = 0 OR c.is_deleted IS NULL)
                AND (

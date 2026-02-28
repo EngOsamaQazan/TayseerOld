@@ -531,7 +531,6 @@ var BA = (function() {
         formData.append('action_id', selectedAction);
         formData.append('action_date', document.getElementById('ba-action-date').value);
         formData.append('note', document.getElementById('ba-note').value);
-        formData.append('party_mode', document.getElementById('ba-party-mode').value);
         formData.append('cases', JSON.stringify(cases));
 
         fetch(EXECUTE_URL, { method: 'POST', body: formData })
