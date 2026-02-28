@@ -102,6 +102,7 @@ var ContractForm = (function () {
             for (var i = 0; i < results.length; i++) {
                 var r = results[i];
                 html += '<div class="cf-dropdown-item" data-id="' + r.id + '" data-name="' + esc(r.text) + '" data-idnum="' + esc(r.id_number || '') + '" data-phone="' + esc(r.phone || '') + '">';
+                html += '<span class="cf-dd-id">#' + r.id + '</span>';
                 html += '<b>' + esc(r.text) + '</b>';
                 if (r.id_number) html += '<small>' + esc(r.id_number) + '</small>';
                 if (r.phone) html += '<small style="color:#0891b2">\u260E ' + esc(r.phone) + '</small>';

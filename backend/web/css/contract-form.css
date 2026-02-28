@@ -64,11 +64,12 @@
 .cf-card {
     background: var(--cf-surface); border: 1px solid var(--cf-border);
     border-radius: var(--cf-r); margin-bottom: 16px;
-    overflow: hidden; box-shadow: var(--cf-shadow);
+    box-shadow: var(--cf-shadow); overflow: visible;
 }
 .cf-card-hd {
     padding: 11px 16px; background: var(--cf-bg);
     border-bottom: 1px solid var(--cf-border);
+    border-radius: var(--cf-r) var(--cf-r) 0 0;
     display: flex; align-items: center; gap: 8px;
 }
 .cf-card-hd i {
@@ -119,7 +120,7 @@
     display: none; position: absolute; top: 100%; left: 0; right: 0;
     background: var(--cf-surface); border: 1.5px solid var(--cf-blue);
     border-top: none; border-radius: 0 0 var(--cf-r-sm) var(--cf-r-sm);
-    max-height: 240px; overflow-y: auto; z-index: 100;
+    max-height: 240px; overflow-y: auto; z-index: 9999;
     box-shadow: var(--cf-shadow-md);
 }
 .cf-dropdown.open { display: block; }
@@ -132,6 +133,11 @@
 .cf-dropdown-item.highlighted { background: var(--cf-blue-l); }
 .cf-dropdown-item b { color: var(--cf-text); }
 .cf-dropdown-item small { color: var(--cf-text2); margin-right: 6px; font-size: 11.5px; }
+.cf-dd-id {
+    display: inline-block; background: var(--cf-teal-l); color: var(--cf-teal);
+    font-size: 10.5px; font-weight: 800; padding: 1px 6px; border-radius: 8px;
+    margin-left: 6px; min-width: 36px; text-align: center;
+}
 .cf-dropdown-empty {
     padding: 12px; text-align: center; color: var(--cf-text3); font-size: 12px;
 }
