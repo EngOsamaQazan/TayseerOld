@@ -20,11 +20,12 @@ $this->params['breadcrumbs'][] = $this->title;
         </div>
         <div class="box-body">
             <?= $this->render('_form', [
-                'model'          => $model,
-                'customers'      => $customers,
-                'companies'      => $companies,
-                'inventoryItems' => $inventoryItems,
-                'scannedSerials' => $scannedSerials,
+                'model'              => $model,
+                'companies'          => $companies,
+                'inventoryItems'     => $inventoryItems,
+                'scannedSerials'     => $scannedSerials,
+                'existingCustomers'  => $existingCustomers ?? [],
+                'existingGuarantors' => $existingGuarantors ?? [],
             ]) ?>
         </div>
     </div>

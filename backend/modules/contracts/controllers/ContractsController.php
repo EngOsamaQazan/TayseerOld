@@ -522,11 +522,20 @@ class ContractsController extends Controller
             $model->monthly_installment_value = Contracts::MONTHLY_INSTALLMENT_VALE;
 
         if (!Yii::$app->request->isPost) {
+            $params = $this->buildFormParams($model);
             $customerId = Yii::$app->request->get('id');
             if ($customerId) {
-                $model->customer_id = $customerId;
+                $cust = \backend\modules\customers\models\Customers::findOne($customerId);
+                if ($cust) {
+                    $params['existingCustomers'] = [[
+                        'id' => $cust->id,
+                        'name' => $cust->name,
+                        'id_number' => $cust->id_number ?? '',
+                        'phone' => $cust->primary_phone_number ?? '',
+                    ]];
+                }
             }
-            return $this->render('create', $this->buildFormParams($model));
+            return $this->render('create', $params);
         }
 
         $transaction = Yii::$app->db->beginTransaction();
@@ -590,16 +599,6 @@ class ContractsController extends Controller
         $model = $this->findModel($id);
 
         if (!Yii::$app->request->isPost) {
-            // تحميل بيانات العملاء الحالية — تحويل الكائنات إلى IDs
-            if ($model->type === 'solidarity') {
-                $cList = $model->customers;
-                $model->customers_ids = !empty($cList) ? ArrayHelper::getColumn($cList, 'id') : [];
-            } else {
-                $cust = $model->customer;
-                $model->customer_id = $cust ? $cust->id : null;
-                $gList = $model->guarantor;
-                $model->guarantors_ids = !empty($gList) ? ArrayHelper::getColumn($gList, 'id') : [];
-            }
             return $this->render('update', $this->buildFormParams($model));
         }
 
@@ -640,12 +639,6 @@ class ContractsController extends Controller
         } catch (\Exception $e) {
             $transaction->rollBack();
             Yii::$app->session->setFlash('error', 'حدث خطأ: ' . $e->getMessage());
-            if ($model->type === 'solidarity') {
-                $model->customers_ids = $model->customers;
-            } else {
-                $model->customer_id = $model->customers;
-                $model->guarantors_ids = $model->guarantor;
-            }
             return $this->render('update', $this->buildFormParams($model));
         }
     }
@@ -942,12 +935,13 @@ class ContractsController extends Controller
      */
     private function buildFormParams($model)
     {
-        // العملاء يتم تحميلهم عبر AJAX — لا حاجة لتحميلهم هنا
         $companies = ArrayHelper::map(Companies::find()->asArray()->all(), 'id', 'name');
         $inventoryItems = ArrayHelper::map(InventoryItems::find()->asArray()->all(), 'id', 'item_name');
 
-        // تحميل الأرقام التسلسلية المربوطة بالعقد (لوضع التعديل)
         $scannedSerials = [];
+        $existingCustomers = [];
+        $existingGuarantors = [];
+
         if (!$model->isNewRecord) {
             $items = ContractInventoryItem::find()
                 ->where(['contract_id' => $model->id])
@@ -965,14 +959,31 @@ class ContractsController extends Controller
                     ];
                 }
             }
+
+            foreach ($model->contractsCustomers as $cc) {
+                $cust = $cc->customer ?? null;
+                if (!$cust) continue;
+                $entry = [
+                    'id'   => $cust->id,
+                    'name' => $cust->name,
+                    'id_number' => $cust->id_number ?? '',
+                    'phone' => $cust->primary_phone_number ?? '',
+                ];
+                if ($cc->customer_type === 'client') {
+                    $existingCustomers[] = $entry;
+                } else {
+                    $existingGuarantors[] = $entry;
+                }
+            }
         }
 
         return [
-            'model'          => $model,
-            'customers'      => [],  // يتم تحميل العملاء عبر AJAX — نمرر مصفوفة فارغة لتجنب خطأ Undefined variable
-            'companies'      => $companies,
-            'inventoryItems' => $inventoryItems,
-            'scannedSerials' => $scannedSerials,
+            'model'              => $model,
+            'companies'          => $companies,
+            'inventoryItems'     => $inventoryItems,
+            'scannedSerials'     => $scannedSerials,
+            'existingCustomers'  => $existingCustomers,
+            'existingGuarantors' => $existingGuarantors,
         ];
     }
 
