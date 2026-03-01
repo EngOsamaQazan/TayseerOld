@@ -2,10 +2,6 @@
 /**
  * Fahras API — البحث عن العملاء وبيانات العقود
  * يُستدعى من نظام الفهرس المركزي
- *
- * ملاحظة مهمة: مكتبة smplPDO لا تعيد تعيين $this->bind في flush()
- * لذلك يجب تعيين $db->bind = [] يدوياً قبل كل استدعاء run() مباشر
- * لمنع تلوث الـ bind parameters من استدعاءات get_var/get_count السابقة
  */
 date_default_timezone_set("Asia/Amman");
 
@@ -120,10 +116,12 @@ for ($i = 0; $i < count($result); ++$i) {
     $array[$i]['work_address'] = ($stmtWork && is_object($stmtWork)) ? ($stmtWork->fetchColumn() ?: '') : '';
   } catch (Exception $e) { $array[$i]['work_address'] = ''; }
 
-  // ─── حالة العقود وتاريخ البيع والقضايا ───
+  // ─── حالة العقود وتاريخ البيع والمبلغ المتبقي والقضايا ───
   $check_court = 0;
   $array[$i]['status'] = '';
   $array[$i]['sell_date'] = '';
+  $array[$i]['remaining_amount'] = null;
+  $array[$i]['created_on'] = '';
 
   if (!empty($contacts_ids)) {
     $safeIds = implode(',', array_map('intval', explode(',', $contacts_ids)));
@@ -141,6 +139,32 @@ for ($i = 0; $i < count($result); ++$i) {
       $stmtSale = $db->run("SELECT GROUP_CONCAT(Date_of_sale SEPARATOR ',') FROM os_contracts WHERE id IN ({$safeIds})");
       $array[$i]['sell_date'] = ($stmtSale && is_object($stmtSale)) ? ($stmtSale->fetchColumn() ?: '') : '';
     } catch (Exception $e) {}
+
+    // تاريخ إنشاء العقد الفعلي (غير قابل للتعديل) — يُستخدم كتاريخ مرجعي في الفهرس
+    try {
+      $db->bind = [];
+      $stmtCreated = $db->run("SELECT GROUP_CONCAT(created_at SEPARATOR ',') FROM os_contracts WHERE id IN ({$safeIds})");
+      $array[$i]['created_on'] = ($stmtCreated && is_object($stmtCreated)) ? ($stmtCreated->fetchColumn() ?: '') : '';
+    } catch (Exception $e) {}
+
+    // المبلغ المتبقي — نفس معادلة ContractCalculations::remainingAmount()
+    // remaining = max(0, total_value + expenses + lawyer_cost - paid - adjustments)
+    try {
+      $db->bind = [];
+      $stmtRemaining = $db->run("
+        SELECT ROUND(SUM(GREATEST(0,
+          COALESCE(c.total_value, 0)
+          + COALESCE((SELECT SUM(e.amount) FROM os_expenses e WHERE e.contract_id = c.id), 0)
+          + COALESCE((SELECT SUM(j.lawyer_cost) FROM os_judiciary j WHERE j.contract_id = c.id AND j.is_deleted = 0), 0)
+          - COALESCE((SELECT SUM(i.amount) FROM os_income i WHERE i.contract_id = c.id), 0)
+          - COALESCE((SELECT SUM(a.amount) FROM os_contract_adjustments a WHERE a.contract_id = c.id AND a.is_deleted = 0), 0)
+        )), 2) AS remaining
+        FROM os_contracts c
+        WHERE c.id IN ({$safeIds})
+      ");
+      $remainingVal = ($stmtRemaining && is_object($stmtRemaining)) ? $stmtRemaining->fetchColumn() : null;
+      $array[$i]['remaining_amount'] = ($remainingVal !== null && $remainingVal !== false) ? (float)$remainingVal : null;
+    } catch (Exception $e) { $array[$i]['remaining_amount'] = null; }
 
     // القضايا
     try {

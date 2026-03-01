@@ -549,6 +549,8 @@ class smplPDO extends PDO {
 		$this->result=null;
 		$this->error=null;
 		$this->insert_id=null;
-		$this->num_rows=0;	
+		$this->num_rows=0;
+		$this->bind=array();
+		$this->sql=null;
 	}
 }
