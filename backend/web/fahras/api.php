@@ -2,10 +2,12 @@
 /**
  * Fahras API — البحث عن العملاء وبيانات العقود
  * يُستدعى من نظام الفهرس المركزي
+ *
+ * يُرجع صف لكل عقد (وليس لكل عميل) لتمكين مقارنة العقود الفردية
+ * عبر الشركات لكشف المخالفات بدقة
  */
 date_default_timezone_set("Asia/Amman");
 
-// إخفاء الأخطاء في الإنتاج — تُسجَّل في log فقط
 ini_set('display_errors', 0);
 ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
@@ -19,15 +21,12 @@ $db_host = 'localhost';
 $db_user = 'osama';
 $db_pass = 'O$amaDaTaBase@123';
 
-// تحويل اسم الشركة لاسم قاعدة البيانات الصحيح
-// الفهرس يرسل db=erp لنماء و db=jadal لجدل
 $dbMap = [
   'jadal' => 'namaa_jadal',
   'namaa' => 'namaa_erp',
   'erp'   => 'namaa_erp',
 ];
 
-// تحويل معرف DB إلى اسم الحساب المعروض
 $accountMap = [
   'jadal' => 'جدل',
   'namaa' => 'نماء',
@@ -60,123 +59,91 @@ if (!isset($_REQUEST['search']) || trim($_REQUEST['search']) === '') {
 }
 
 $search = $_REQUEST['search'];
-// حماية من SQL Injection
 $search = addslashes($search);
 
-// البحث في العملاء — يدعم البحث بالاسم ورقم الهوية ورقم الهاتف
-$db->bind = [];
-$stmt = $db->run("SELECT * FROM os_customers WHERE name LIKE '%{$search}%' OR id_number LIKE '%{$search}%' OR primary_phone_number LIKE '%{$search}%' LIMIT 100");
-$result = $stmt ? $stmt->fetchAll() : [];
-
-$array = [];
 $accountLabel = $accountMap[$requestDb] ?? $requestDb;
 
-for ($i = 0; $i < count($result); ++$i) {
+$statusMap = [
+  'active'           => 'نشط',
+  'finished'         => 'منتهي',
+  'canceled'         => 'ملغي',
+  'judiciary'        => 'قضائي',
+  'settlement'       => 'تسوية',
+  'legal_department' => 'قانوني',
+  'pending'          => 'معلّق',
+  'refused'          => 'مرفوض',
+];
 
-  $row = $result[$i];
-  $custId = (int)$row['id'];
+// ─── استعلام رئيسي: عقد واحد = صف واحد ───
+// يجلب كل عقد مرتبط بعميل يطابق البحث مع حساب المبلغ المتبقي لكل عقد
+$db->bind = [];
+$stmt = $db->run("
+  SELECT
+    cu.id AS customer_id,
+    cu.name,
+    cu.id_number,
+    cu.primary_phone_number,
+    cu.job_title,
+    co.id AS contract_id,
+    co.status,
+    co.Date_of_sale,
+    co.created_at AS contract_created_at,
+    co.total_value,
+    COALESCE((SELECT SUM(e.amount) FROM os_expenses e WHERE e.contract_id = co.id), 0) AS expenses_sum,
+    COALESCE((SELECT SUM(j.lawyer_cost) FROM os_judiciary j WHERE j.contract_id = co.id AND j.is_deleted = 0), 0) AS lawyer_sum,
+    COALESCE((SELECT SUM(i.amount) FROM os_income i WHERE i.contract_id = co.id), 0) AS paid_sum,
+    COALESCE((SELECT SUM(a.amount) FROM os_contract_adjustments a WHERE a.contract_id = co.id AND a.is_deleted = 0), 0) AS adjustments_sum,
+    (SELECT COUNT(*) FROM os_judiciary jc WHERE jc.contract_id = co.id AND jc.is_deleted = 0) AS court_cases
+  FROM os_customers cu
+  INNER JOIN os_contracts_customers cc ON cc.customer_id = cu.id AND cc.customer_type = 'client'
+  INNER JOIN os_contracts co ON co.id = cc.contract_id
+  WHERE co.status != 'canceled'
+    AND (cu.name LIKE '%{$search}%'
+     OR cu.id_number LIKE '%{$search}%'
+     OR cu.primary_phone_number LIKE '%{$search}%')
+  ORDER BY co.created_at ASC
+  LIMIT 200
+");
+$rows = ($stmt && is_object($stmt)) ? $stmt->fetchAll() : [];
 
-  $array[$i]['account'] = $accountLabel;
-  $array[$i]['cid'] = $custId;
-  $array[$i]['name'] = $row['name'] ?? '';
-  $array[$i]['national_id'] = $row['id_number'] ?? '';
-  $array[$i]['phone'] = $row['primary_phone_number'] ?? '';
+$array = [];
 
-  // ─── العقود المرتبطة (يجب أن تأتي قبل get_var لأن get_var تلوث $db->bind) ───
-  $contacts_ids = '';
-  try {
-    $db->bind = [];
-    $stmtContracts = $db->run("SELECT GROUP_CONCAT(contract_id SEPARATOR ',') FROM os_contracts_customers WHERE customer_id = " . $custId);
-    $contacts_ids = ($stmtContracts && is_object($stmtContracts)) ? ($stmtContracts->fetchColumn() ?: '') : '';
-  } catch (Exception $e) { $contacts_ids = ''; }
+foreach ($rows as $row) {
+  $custId     = (int)$row['customer_id'];
+  $contractId = (int)$row['contract_id'];
 
-  if ($contacts_ids === false || $contacts_ids === null) $contacts_ids = '';
-  $array[$i]['id'] = $contacts_ids;
+  $totalDebt = (float)($row['total_value'] ?? 0)
+             + (float)$row['expenses_sum']
+             + (float)$row['lawyer_sum'];
 
-  // ─── الوظيفة ───
-  $jobId = $row['job_title'] ?? 0;
+  $totalPaid = (float)$row['paid_sum']
+             + (float)$row['adjustments_sum'];
+
+  $remaining = round(max(0, $totalDebt - $totalPaid), 2);
+
+  // الوظيفة
   $jobName = '';
+  $jobId = $row['job_title'] ?? 0;
   if (!empty($jobId)) {
     try {
       $jobName = $db->get_var('os_jobs', ['id' => $jobId], ['name']) ?: '';
     } catch (Exception $e) { $jobName = ''; }
   }
-  $array[$i]['work'] = $jobName;
 
-  // ─── العناوين (يجب تنظيف bind قبل كل run) ───
+  // العناوين
+  $homeAddr = '';
+  $workAddr = '';
   try {
-    $db->bind = [];
     $stmtHome = $db->run("SELECT GROUP_CONCAT(address SEPARATOR '##-##') FROM os_address WHERE address_type = 2 AND customers_id = " . $custId);
-    $array[$i]['home_address'] = ($stmtHome && is_object($stmtHome)) ? ($stmtHome->fetchColumn() ?: '') : '';
-  } catch (Exception $e) { $array[$i]['home_address'] = ''; }
+    $homeAddr = ($stmtHome && is_object($stmtHome)) ? ($stmtHome->fetchColumn() ?: '') : '';
+  } catch (Exception $e) {}
 
   try {
-    $db->bind = [];
     $stmtWork = $db->run("SELECT GROUP_CONCAT(address SEPARATOR '##-##') FROM os_address WHERE address_type = 1 AND customers_id = " . $custId);
-    $array[$i]['work_address'] = ($stmtWork && is_object($stmtWork)) ? ($stmtWork->fetchColumn() ?: '') : '';
-  } catch (Exception $e) { $array[$i]['work_address'] = ''; }
+    $workAddr = ($stmtWork && is_object($stmtWork)) ? ($stmtWork->fetchColumn() ?: '') : '';
+  } catch (Exception $e) {}
 
-  // ─── حالة العقود وتاريخ البيع والمبلغ المتبقي والقضايا ───
-  $check_court = 0;
-  $array[$i]['status'] = '';
-  $array[$i]['sell_date'] = '';
-  $array[$i]['remaining_amount'] = null;
-  $array[$i]['created_on'] = '';
-
-  if (!empty($contacts_ids)) {
-    $safeIds = implode(',', array_map('intval', explode(',', $contacts_ids)));
-
-    // حالة العقود
-    try {
-      $db->bind = [];
-      $stmtStatus = $db->run("SELECT GROUP_CONCAT(status SEPARATOR ',') FROM os_contracts WHERE id IN ({$safeIds})");
-      $array[$i]['status'] = ($stmtStatus && is_object($stmtStatus)) ? ($stmtStatus->fetchColumn() ?: '') : '';
-    } catch (Exception $e) {}
-
-    // تاريخ البيع
-    try {
-      $db->bind = [];
-      $stmtSale = $db->run("SELECT GROUP_CONCAT(Date_of_sale SEPARATOR ',') FROM os_contracts WHERE id IN ({$safeIds})");
-      $array[$i]['sell_date'] = ($stmtSale && is_object($stmtSale)) ? ($stmtSale->fetchColumn() ?: '') : '';
-    } catch (Exception $e) {}
-
-    // تاريخ إنشاء العقد الفعلي (غير قابل للتعديل) — يُستخدم كتاريخ مرجعي في الفهرس
-    try {
-      $db->bind = [];
-      $stmtCreated = $db->run("SELECT GROUP_CONCAT(created_at SEPARATOR ',') FROM os_contracts WHERE id IN ({$safeIds})");
-      $array[$i]['created_on'] = ($stmtCreated && is_object($stmtCreated)) ? ($stmtCreated->fetchColumn() ?: '') : '';
-    } catch (Exception $e) {}
-
-    // المبلغ المتبقي — نفس معادلة ContractCalculations::remainingAmount()
-    // remaining = max(0, total_value + expenses + lawyer_cost - paid - adjustments)
-    try {
-      $db->bind = [];
-      $stmtRemaining = $db->run("
-        SELECT ROUND(SUM(GREATEST(0,
-          COALESCE(c.total_value, 0)
-          + COALESCE((SELECT SUM(e.amount) FROM os_expenses e WHERE e.contract_id = c.id), 0)
-          + COALESCE((SELECT SUM(j.lawyer_cost) FROM os_judiciary j WHERE j.contract_id = c.id AND j.is_deleted = 0), 0)
-          - COALESCE((SELECT SUM(i.amount) FROM os_income i WHERE i.contract_id = c.id), 0)
-          - COALESCE((SELECT SUM(a.amount) FROM os_contract_adjustments a WHERE a.contract_id = c.id AND a.is_deleted = 0), 0)
-        )), 2) AS remaining
-        FROM os_contracts c
-        WHERE c.id IN ({$safeIds})
-      ");
-      $remainingVal = ($stmtRemaining && is_object($stmtRemaining)) ? $stmtRemaining->fetchColumn() : null;
-      $array[$i]['remaining_amount'] = ($remainingVal !== null && $remainingVal !== false) ? (float)$remainingVal : null;
-    } catch (Exception $e) { $array[$i]['remaining_amount'] = null; }
-
-    // القضايا
-    try {
-      $db->bind = [];
-      $stmtCourt = $db->run("SELECT COUNT(*) FROM `os_judiciary` WHERE `contract_id` IN ({$safeIds}) AND `is_deleted` = 0");
-      $check_court = ($stmtCourt && is_object($stmtCourt)) ? (int)$stmtCourt->fetchColumn() : 0;
-    } catch (Exception $e) { $check_court = 0; }
-  }
-
-  $array[$i]['court_status'] = ($check_court > 0) ? 'مشتكى عليه' : 'غير مشتكى عليه';
-
-  // ─── عدد المرفقات (صور العميل) ───
+  // المرفقات
   $attCount = 0;
   try {
     $attCount = (int)$db->get_count('os_ImageManager', ['customer_id' => $custId]);
@@ -185,7 +152,24 @@ for ($i = 0; $i < count($result); ++$i) {
       $attCount = (int)$db->get_count('os_ImageManager', ['contractId' => $custId]);
     } catch (Exception $e2) { $attCount = 0; }
   }
-  $array[$i]['attachments'] = $attCount;
+
+  $array[] = [
+    'account'          => $accountLabel,
+    'cid'              => $custId,
+    'id'               => (string)$contractId,
+    'name'             => $row['name'] ?? '',
+    'national_id'      => $row['id_number'] ?? '',
+    'phone'            => $row['primary_phone_number'] ?? '',
+    'work'             => $jobName,
+    'home_address'     => $homeAddr,
+    'work_address'     => $workAddr,
+    'status'           => $statusMap[$row['status'] ?? ''] ?? ($row['status'] ?? ''),
+    'sell_date'        => $row['Date_of_sale'] ?? '',
+    'created_on'       => $row['contract_created_at'] ?? '',
+    'remaining_amount' => $remaining,
+    'court_status'     => ((int)$row['court_cases'] > 0) ? 'مشتكى عليه' : 'غير مشتكى عليه',
+    'attachments'      => $attCount,
+  ];
 }
 
 echo json_encode($array, JSON_UNESCAPED_UNICODE);
