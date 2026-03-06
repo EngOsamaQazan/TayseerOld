@@ -1,0 +1,1800 @@
+TABLE_NAME	COLUMN_NAME	COLUMN_TYPE	IS_NULLABLE	COLUMN_KEY	COLUMN_DEFAULT	EXTRA
+os_address	id	int(11)	NO	PRI	NULL	auto_increment
+os_address	customers_id	int(11)	YES	MUL	NULL	
+os_address	address	varchar(255)	YES		NULL	
+os_address	address_city	varchar(255)	YES		NULL	
+os_address	address_area	varchar(255)	YES		NULL	
+os_address	address_street	varchar(500)	YES		NULL	
+os_address	address_building	varchar(255)	YES		NULL	
+os_address	postal_code	varchar(20)	YES		NULL	
+os_address	plus_code	varchar(20)	YES		NULL	
+os_address	latitude	decimal(11,8)	YES		NULL	
+os_address	longitude	decimal(11,8)	YES		NULL	
+os_address	created_at	timestamp	YES		NULL	
+os_address	updated_at	timestamp	YES		NULL	
+os_address	is_deleted	int(1)	YES		0	
+os_address	address_type	int(11)	YES		NULL	
+os_ai_recommendations	id	int(11)	NO	PRI	NULL	auto_increment
+os_ai_recommendations	contract_id	int(11)	NO	MUL	NULL	
+os_ai_recommendations	recommendation_type	enum('next_best_action','alternative','playbook')	NO	MUL	NULL	
+os_ai_recommendations	action	varchar(255)	NO		NULL	
+os_ai_recommendations	reasons	text	YES		NULL	
+os_ai_recommendations	confidence	tinyint(3) unsigned	YES		0	
+os_ai_recommendations	risk_impact	enum('low','medium','high')	YES		'medium'	
+os_ai_recommendations	playbook_id	varchar(20)	YES		NULL	
+os_ai_recommendations	input_signals	text	YES		NULL	
+os_ai_recommendations	user_feedback	enum('executed','rejected','not_applicable')	YES	MUL	NULL	
+os_ai_recommendations	rejection_reason	text	YES		NULL	
+os_ai_recommendations	executed_by	int(11)	YES		NULL	
+os_ai_recommendations	executed_at	datetime	YES		NULL	
+os_ai_recommendations	created_at	datetime	NO		current_timestamp()	
+os_attendance	id	int(11)	NO		NULL	
+os_attendance	user_id	int(11)	NO		NULL	
+os_attendance	location_id	int(11)	NO		NULL	
+os_attendance	check_in_time	timestamp	NO		current_timestamp()	on update current_timestamp()
+os_attendance	check_out_time	timestamp	NO		'0000-00-00 00:00:00'	
+os_attendance	manual_checked_in_by	int(11)	NO		0	
+os_attendance	manual_checked_out_by	int(11)	NO		0	
+os_attendance	is_manual_actions	enum('yes','no')	NO		'no'	
+os_auth_assignment	item_name	varchar(64)	NO	PRI	NULL	
+os_auth_assignment	user_id	varchar(64)	NO	PRI	NULL	
+os_auth_assignment	created_at	int(11)	YES		NULL	
+os_auth_item	name	varchar(64)	NO	PRI	NULL	
+os_auth_item	type	smallint(6)	NO	MUL	NULL	
+os_auth_item	description	text	YES		NULL	
+os_auth_item	rule_name	varchar(64)	YES	MUL	NULL	
+os_auth_item	data	blob	YES		NULL	
+os_auth_item	created_at	int(11)	YES		NULL	
+os_auth_item	updated_at	int(11)	YES		NULL	
+os_auth_item_child	parent	varchar(64)	NO	PRI	NULL	
+os_auth_item_child	child	varchar(64)	NO	PRI	NULL	
+os_auth_rule	name	varchar(64)	NO		NULL	
+os_auth_rule	data	blob	YES		NULL	
+os_auth_rule	created_at	int(11)	YES		NULL	
+os_auth_rule	updated_at	int(11)	YES		NULL	
+os_bancks	id	int(11)	NO	PRI	NULL	auto_increment
+os_bancks	name	varchar(255)	NO		NULL	
+os_bancks	created_at	int(11)	YES		NULL	
+os_bancks	updated_at	int(11)	YES		NULL	
+os_bancks	created_by	int(11)	YES		NULL	
+os_bancks	last_updated_by	int(11)	YES		NULL	
+os_bancks	is_deleted	int(11)	YES		0	
+os_bank_deposit	id	int(11)	NO		NULL	
+os_bank_deposit	date	date	NO		NULL	
+os_bank_deposit	contract_id	int(11)	NO		NULL	
+os_bank_deposit	amount	float	NO		NULL	
+os_bank_deposit	description	varchar(250)	NO		NULL	
+os_bank_deposit	receiver_number	int(11)	NO		NULL	
+os_bank_deposit	created_at	int(11)	NO		NULL	
+os_bank_deposit	created_by	int(11)	NO		NULL	
+os_bank_deposit	updated_at	int(11)	NO		NULL	
+os_bank_deposit	last_updated_by	int(11)	NO		NULL	
+os_bank_deposit	is_deleted	int(11)	NO		NULL	
+os_capital_transactions	id	int(11)	NO	PRI	NULL	auto_increment
+os_capital_transactions	company_id	int(11)	NO	MUL	NULL	
+os_capital_transactions	transaction_type	enum('إيداع','سحب','إعادة_رأس_مال')	NO		NULL	
+os_capital_transactions	amount	decimal(15,2)	NO		NULL	
+os_capital_transactions	transaction_date	date	NO		NULL	
+os_capital_transactions	balance_after	decimal(15,2)	YES		NULL	
+os_capital_transactions	payment_method	varchar(100)	YES		NULL	
+os_capital_transactions	reference_number	varchar(100)	YES		NULL	
+os_capital_transactions	notes	text	YES		NULL	
+os_capital_transactions	created_by	int(11)	YES		NULL	
+os_capital_transactions	created_at	int(11)	YES		NULL	
+os_citizen	id	int(11)	NO	PRI	NULL	auto_increment
+os_citizen	name	varchar(255)	NO		NULL	
+os_citizen	created_at	int(11)	YES		NULL	
+os_citizen	updated_at	int(11)	YES		NULL	
+os_citizen	created_by	int(11)	YES		NULL	
+os_citizen	last_updated_by	int(11)	YES		NULL	
+os_citizen	is_deleted	int(11)	YES		0	
+os_city	id	int(11)	NO	PRI	NULL	auto_increment
+os_city	name	varchar(255)	NO		NULL	
+os_city	created_at	int(11)	YES		NULL	
+os_city	updated_at	int(11)	YES		NULL	
+os_city	created_by	int(11)	YES		NULL	
+os_city	last_updated_by	int(11)	YES		NULL	
+os_city	is_deleted	int(11)	YES		0	
+os_collection	id	int(11)	NO	PRI	NULL	auto_increment
+os_collection	contract_id	int(11)	YES	MUL	NULL	
+os_collection	date	date	YES		NULL	
+os_collection	amount	double	YES		NULL	
+os_collection	notes	text	YES		NULL	
+os_collection	created_at	int(11)	YES		NULL	
+os_collection	updated_at	int(11)	YES		NULL	
+os_collection	created_by	int(11)	YES	MUL	NULL	
+os_collection	last_updated_by	int(11)	YES	MUL	NULL	
+os_collection	is_deleted	int(11)	YES		0	
+os_collection	custamers_id	int(11)	YES		NULL	
+os_collection	judiciary_id	int(11)	YES		NULL	
+os_collection	total_amount	double	YES		NULL	
+os_companies	id	int(11)	NO	PRI	NULL	auto_increment
+os_companies	name	varchar(50)	NO		NULL	
+os_companies	phone_number	varchar(50)	NO		NULL	
+os_companies	logo	text	YES		NULL	
+os_companies	created_by	int(11)	NO		NULL	
+os_companies	created_at	int(11)	NO		NULL	
+os_companies	updated_at	int(11)	YES		NULL	
+os_companies	is_deleted	int(11)	NO		0	
+os_companies	is_primary_company	tinyint(1)	YES		0	
+os_companies	last_updated_by	int(11)	YES		NULL	
+os_companies	company_social_security_number	varchar(255)	YES		NULL	
+os_companies	company_tax_number	varchar(255)	YES		NULL	
+os_companies	company_email	varchar(255)	YES		NULL	
+os_companies	company_address	varchar(255)	YES		NULL	
+os_companies	commercial_register	text	YES		NULL	
+os_companies	trade_license	text	YES		NULL	
+os_companies	total_shares	int(11)	YES		NULL	
+os_companies	invested_capital	decimal(15,2)	YES		0.00	
+os_companies	profit_share_ratio	decimal(5,2)	YES		NULL	
+os_companies	parent_share_ratio	decimal(5,2)	YES		NULL	
+os_companies	capital_refundable	tinyint(3)	YES		0	
+os_companies	portfolio_status	enum('نشط','مجمّد','مُغلق')	YES		'نشط'	
+os_companies	agreement_date	date	YES		NULL	
+os_companies	agreement_notes	text	YES		NULL	
+os_company_banks	id	int(11)	NO	PRI	NULL	auto_increment
+os_company_banks	company_id	int(11)	YES		NULL	
+os_company_banks	bank_id	int(11)	YES		NULL	
+os_company_banks	bank_number	varchar(255)	NO		NULL	
+os_company_banks	created_at	int(11)	YES		NULL	
+os_company_banks	updated_at	int(11)	YES		NULL	
+os_company_banks	created_by	int(11)	YES		NULL	
+os_company_banks	last_updated_by	int(11)	YES		NULL	
+os_company_banks	is_deleted	int(11)	YES		0	
+os_company_banks	iban_number	varchar(255)	YES		NULL	
+os_connection_response	id	int(11)	NO	PRI	NULL	auto_increment
+os_connection_response	name	varchar(255)	NO		NULL	
+os_connection_response	created_at	int(11)	YES		NULL	
+os_connection_response	updated_at	int(11)	YES		NULL	
+os_connection_response	created_by	int(11)	YES		NULL	
+os_connection_response	last_updated_by	int(11)	YES		NULL	
+os_connection_response	is_deleted	int(11)	YES		0	
+os_contact_type	id	int(11)	NO	PRI	NULL	auto_increment
+os_contact_type	name	varchar(255)	NO		NULL	
+os_contact_type	created_at	int(11)	YES		NULL	
+os_contact_type	updated_at	int(11)	YES		NULL	
+os_contact_type	created_by	int(11)	YES		NULL	
+os_contact_type	last_updated_by	int(11)	YES		NULL	
+os_contact_type	is_deleted	int(11)	YES		0	
+os_contracts	id	int(11)	NO	PRI	NULL	auto_increment
+os_contracts	type	enum('solidarity','normal')	NO		NULL	
+os_contracts	seller_id	int(11)	YES	MUL	NULL	
+os_contracts	Date_of_sale	date	YES	MUL	NULL	
+os_contracts	total_value	double	YES		NULL	
+os_contracts	first_installment_value	double	YES		0	
+os_contracts	first_installment_date	date	YES	MUL	NULL	
+os_contracts	monthly_installment_value	double	YES		0	
+os_contracts	notes	text	YES		NULL	
+os_contracts	status	enum('pending','active','reconciliation','judiciary','canceled','refused','legal_department','finished','settlement')	NO	MUL	NULL	
+os_contracts	updated_at	timestamp	YES		NULL	
+os_contracts	is_deleted	int(1)	YES		0	
+os_contracts	selected_image	varchar(255)	YES		NULL	
+os_contracts	company_id	int(11)	NO	MUL	NULL	
+os_contracts	commitment_discount	double	YES		0	
+os_contracts	loss_commitment	int(11)	YES		0	
+os_contracts	created_by	int(11)	NO		NULL	
+os_contracts	updated_by	int(11)	NO		NULL	
+os_contracts	created_at	timestamp	NO		current_timestamp()	
+os_contracts	follow_up_lock_by	int(11)	YES		NULL	
+os_contracts	follow_up_lock_at	timestamp	YES		NULL	
+os_contracts	followed_by	int(11)	YES	MUL	1	
+os_contracts	is_can_not_contact	tinyint(1)	YES		0	
+os_contracts_customers	id	int(11)	NO	PRI	NULL	auto_increment
+os_contracts_customers	contract_id	int(11)	NO	MUL	NULL	
+os_contracts_customers	customer_id	int(11)	NO	MUL	NULL	
+os_contracts_customers	customer_type	enum('client','guarantor')	NO		NULL	
+os_contracts_customers	loan_number	int(11)	YES		NULL	
+os_contract_document_file	id	int(11)	NO	PRI	NULL	auto_increment
+os_contract_document_file	document_type	varchar(255)	YES		NULL	
+os_contract_document_file	contract_id	int(11)	YES		NULL	
+os_contract_inventory_item	id	int(11)	NO	PRI	NULL	auto_increment
+os_contract_inventory_item	contract_id	int(11)	NO	MUL	NULL	
+os_contract_inventory_item	item_id	int(11)	NO	MUL	NULL	
+os_contract_inventory_item	serial_number_id	int(11)	YES	MUL	NULL	
+os_contract_inventory_item	code	varchar(250)	YES		NULL	
+os_contract_inventory_item	notes	varchar(500)	YES		NULL	
+os_countries	id	int(11)	NO		NULL	
+os_countries	country_code	varchar(2)	NO		''	
+os_countries	country_name	varchar(100)	NO		''	
+os_court	id	int(11)	NO	PRI	NULL	auto_increment
+os_court	name	varchar(255)	NO		NULL	
+os_court	city	int(11)	NO		NULL	
+os_court	adress	varchar(255)	YES		NULL	
+os_court	phone_number	varchar(255)	YES		NULL	
+os_court	created_by	int(11)	NO		NULL	
+os_court	created_at	int(11)	NO		NULL	
+os_court	is_deleted	int(1)	YES		0	
+os_court	updated_at	int(11)	NO		NULL	
+os_court	last_updated_by	int(11)	NO		NULL	
+os_cousins	id	int(11)	NO	PRI	NULL	auto_increment
+os_cousins	name	varchar(255)	NO		NULL	
+os_cousins	created_at	int(11)	YES		NULL	
+os_cousins	updated_at	int(11)	YES		NULL	
+os_cousins	created_by	int(11)	YES		NULL	
+os_cousins	last_updated_by	int(11)	YES		NULL	
+os_cousins	is_deleted	int(11)	YES		0	
+os_customers	id	int(11)	NO	PRI	NULL	auto_increment
+os_customers	name	varchar(250)	NO	MUL	NULL	
+os_customers	status	tinyint(1)	NO	MUL	0	
+os_customers	city	varchar(255)	YES		'0'	
+os_customers	id_number	varchar(255)	YES	MUL	NULL	
+os_customers	birth_date	date	YES		NULL	
+os_customers	job_number	varchar(20)	YES		NULL	
+os_customers	email	varchar(50)	YES		NULL	
+os_customers	sex	int(11)	YES		0	
+os_customers	citizen	varchar(255)	YES		'0'	
+os_customers	hear_about_us	varchar(255)	YES		'0'	
+os_customers	selected_image	varchar(255)	YES		NULL	
+os_customers	bank_branch	varchar(100)	YES		NULL	
+os_customers	account_number	varchar(50)	YES		NULL	
+os_customers	is_social_security	int(11)	YES		0	
+os_customers	social_security_number	varchar(50)	YES		NULL	
+os_customers	do_have_any_property	int(11)	YES		0	
+os_customers	property_name	varchar(50)	YES		NULL	
+os_customers	property_number	varchar(20)	YES		NULL	
+os_customers	notes	varchar(500)	YES		NULL	
+os_customers	primary_phone_number	varchar(255)	YES	MUL	'0'	
+os_customers	facebook_account	text	YES		NULL	
+os_customers	bank_name	int(11)	YES		NULL	
+os_customers	updated_at	int(11)	YES		NULL	
+os_customers	is_deleted	int(11)	YES	MUL	0	
+os_customers	created_at	int(11)	YES		0	
+os_customers	last_updated_by	int(11)	YES		0	
+os_customers	created_by	int(11)	YES		0	
+os_customers	job_title	int(11)	YES	MUL	NULL	
+os_customers	has_social_security_salary	varchar(255)	YES		NULL	
+os_customers	social_security_salary_source	varchar(255)	YES		NULL	
+os_customers	retirement_status	varchar(255)	YES		NULL	
+os_customers	total_retirement_income	decimal(10,0)	YES		NULL	
+os_customers	last_income_query_date	date	YES		NULL	
+os_customers	last_job_query_date	date	YES		NULL	
+os_customers	total_salary	decimal(10,0)	YES		NULL	
+os_customers_document	id	int(11)	NO	PRI	NULL	auto_increment
+os_customers_document	customer_id	int(11)	NO	MUL	NULL	
+os_customers_document	document_type	varchar(100)	NO		NULL	
+os_customers_document	document_image	varchar(255)	YES		NULL	
+os_customers_document	document_number	varchar(100)	NO		NULL	
+os_customers_document	created_at	int(11)	NO		NULL	
+os_customers_document	updated_at	int(11)	NO		NULL	
+os_customers_document	created_by	int(11)	NO		NULL	
+os_customers_document	images	varchar(255)	YES		'0'	
+os_customers_document	file_path	varchar(500)	YES		NULL	
+os_customers_document	file_size	int(10) unsigned	YES		0	
+os_customers_document	mime_type	varchar(100)	YES		NULL	
+os_customers_document	capture_method	enum('upload','webcam','scan')	YES		'upload'	
+os_customers_document	ai_classification	varchar(100)	YES		NULL	
+os_customers_document	ai_confidence	decimal(5,2)	YES		NULL	
+os_customers_document	ai_extracted_data	longtext	YES		NULL	
+os_customers_document	is_verified	tinyint(1)	YES		0	
+os_customers_document	verified_by	int(10) unsigned	YES		NULL	
+os_customers_document	verified_at	datetime	YES		NULL	
+os_customer_documents	id	int(11)	NO	PRI	NULL	auto_increment
+os_customer_documents	customer_id	int(11)	YES	MUL	NULL	
+os_customer_documents	file_path	varchar(500)	NO		NULL	
+os_customer_documents	file_name	varchar(255)	NO		NULL	
+os_customer_documents	file_size	int(11)	YES		0	
+os_customer_documents	mime_type	varchar(100)	YES		NULL	
+os_customer_documents	capture_method	varchar(20)	YES		'upload'	
+os_customer_documents	thumb_path	varchar(500)	YES		NULL	
+os_customer_documents	document_type	varchar(50)	YES	MUL	NULL	
+os_customer_documents	ai_classification	varchar(50)	YES		NULL	
+os_customer_documents	ai_confidence	decimal(5,2)	YES		0.00	
+os_customer_documents	ai_text	text	YES		NULL	
+os_customer_documents	ai_labels	text	YES		NULL	
+os_customer_documents	created_by	int(11)	YES		NULL	
+os_customer_documents	created_at	datetime	YES		current_timestamp()	
+os_customer_documents	updated_at	datetime	YES		current_timestamp()	on update current_timestamp()
+os_customer_documents	legacy_image_manager_id	int(11)	YES	MUL	NULL	
+os_customer_financials	id	int(10) unsigned	NO	PRI	NULL	auto_increment
+os_customer_financials	customer_id	int(11)	NO	UNI	NULL	
+os_customer_financials	monthly_income	decimal(10,2)	YES		0.00	
+os_customer_financials	additional_income	decimal(10,2)	YES		0.00	
+os_customer_financials	income_source	varchar(100)	YES		NULL	
+os_customer_financials	monthly_obligations	decimal(10,2)	YES		0.00	
+os_customer_financials	obligation_details	text	YES		NULL	
+os_customer_financials	dependents_count	tinyint(3) unsigned	YES		0	
+os_customer_financials	years_at_current_job	decimal(4,1)	YES		NULL	
+os_customer_financials	employment_type	enum('government','private','self_employed','retired','military','unemployed','other')	YES		NULL	
+os_customer_financials	employer_name	varchar(255)	YES		NULL	
+os_customer_financials	created_at	datetime	NO		current_timestamp()	
+os_customer_financials	updated_at	datetime	YES		NULL	on update current_timestamp()
+os_customer_photos	id	int(11)	NO	PRI	NULL	auto_increment
+os_customer_photos	customer_id	int(11)	NO	MUL	0	
+os_customer_photos	photo_type	varchar(30)	YES	MUL	'webcam'	
+os_customer_photos	file_path	varchar(500)	NO		NULL	
+os_customer_photos	thumbnail_path	varchar(500)	YES		NULL	
+os_customer_photos	file_size	int(11)	YES		0	
+os_customer_photos	mime_type	varchar(50)	YES		'image/jpeg'	
+os_customer_photos	capture_method	varchar(20)	YES		'webcam'	
+os_customer_photos	is_primary	tinyint(1)	YES		0	
+os_customer_photos	created_by	int(11)	YES		NULL	
+os_customer_photos	created_at	datetime	NO		current_timestamp()	
+os_deduction_document	id	int(11)	NO	PRI	NULL	auto_increment
+os_deduction_document	judiciary_id	int(11)	NO		NULL	
+os_deduction_document	document_date	date	NO		NULL	
+os_deduction_document	document_number	varchar(255)	NO		NULL	
+os_deduction_document	document_type	tinyint(3)	NO		NULL	
+os_deduction_document	document_status	varchar(255)	NO		NULL	
+os_deduction_document	document_notes	text	YES		NULL	
+os_deduction_document	document_image	varchar(255)	YES		NULL	
+os_deduction_document	created_at	datetime	NO		NULL	
+os_deduction_document	updated_at	datetime	YES		NULL	
+os_department	id	int(11)	NO	PRI	NULL	auto_increment
+os_department	title	varchar(50)	NO		NULL	
+os_department	description	varchar(250)	YES		NULL	
+os_department	lead_by	int(11)	YES		NULL	
+os_department	status	enum('active','unActive')	NO		'active'	
+os_department	created_by	int(11)	NO		NULL	
+os_department	created_at	int(11)	NO		NULL	
+os_department	updated_at	int(11)	YES		NULL	
+os_designation	id	int(11)	NO	PRI	NULL	auto_increment
+os_designation	title	varchar(50)	NO		NULL	
+os_designation	description	varchar(250)	YES		NULL	
+os_designation	department_id	int(11)	YES		NULL	
+os_designation	status	enum('active','unActive')	NO		'active'	
+os_designation	created_by	int(11)	NO		NULL	
+os_designation	created_at	int(11)	NO		NULL	
+os_designation	updated_at	int(11)	YES		NULL	
+os_determination	id	int(11)	NO	PRI	NULL	auto_increment
+os_determination	contract_id	int(11)	YES		NULL	
+os_determination	amount	double	YES		NULL	
+os_determination	date	date	YES		NULL	
+os_determination	created_at	int(11)	YES		NULL	
+os_determination	updated_at	int(11)	YES		NULL	
+os_determination	created_by	int(11)	YES		NULL	
+os_determination	last_updated_by	int(11)	YES		NULL	
+os_determination	is_deleted	int(11)	YES		NULL	
+os_divisions_collection	id	int(11)	NO	PRI	NULL	auto_increment
+os_divisions_collection	collection_id	int(11)	YES		NULL	
+os_divisions_collection	month	int(11)	YES		NULL	
+os_divisions_collection	amount	double	YES		NULL	
+os_divisions_collection	year	int(11)	YES		NULL	
+os_divisions_collection	created_at	int(11)	YES		NULL	
+os_divisions_collection	updated_at	int(11)	YES		NULL	
+os_divisions_collection	created_by	int(11)	YES		NULL	
+os_divisions_collection	last_updated_by	int(11)	YES		NULL	
+os_divisions_collection	is_deleted	int(11)	YES		0	
+os_diwan_document_tracker	id	int(11)	NO	PRI	NULL	auto_increment
+os_diwan_document_tracker	contract_number	varchar(100)	NO	UNI	NULL	
+os_diwan_document_tracker	contract_id	int(11)	YES		NULL	
+os_diwan_document_tracker	current_holder_id	int(11)	YES	MUL	NULL	
+os_diwan_document_tracker	last_transaction_id	int(11)	YES	MUL	NULL	
+os_diwan_document_tracker	status	varchar(50)	YES		'في الأرشيف'	
+os_diwan_document_tracker	updated_at	int(11)	YES		NULL	
+os_diwan_transactions	id	int(11)	NO	PRI	NULL	auto_increment
+os_diwan_transactions	transaction_type	varchar(20)	NO	MUL	NULL	
+os_diwan_transactions	from_employee_id	int(11)	NO	MUL	NULL	
+os_diwan_transactions	to_employee_id	int(11)	NO	MUL	NULL	
+os_diwan_transactions	receipt_number	varchar(50)	YES	UNI	NULL	
+os_diwan_transactions	notes	text	YES		NULL	
+os_diwan_transactions	transaction_date	datetime	NO	MUL	NULL	
+os_diwan_transactions	created_by	int(11)	YES	MUL	NULL	
+os_diwan_transactions	updated_by	int(11)	YES		NULL	
+os_diwan_transactions	created_at	int(11)	YES		NULL	
+os_diwan_transactions	updated_at	int(11)	YES		NULL	
+os_diwan_transaction_details	id	int(11)	NO	PRI	NULL	auto_increment
+os_diwan_transaction_details	transaction_id	int(11)	NO	MUL	NULL	
+os_diwan_transaction_details	contract_number	varchar(100)	NO	MUL	NULL	
+os_diwan_transaction_details	contract_id	int(11)	YES	MUL	NULL	
+os_diwan_transaction_details	created_at	int(11)	YES		NULL	
+os_document_holder	id	int(11)	NO	PRI	NULL	auto_increment
+os_document_holder	created_by	int(11)	NO		NULL	
+os_document_holder	updated_by	int(11)	NO		NULL	
+os_document_holder	created_at	int(11)	YES		NULL	
+os_document_holder	updated_at	int(11)	YES		NULL	
+os_document_holder	approved_by_manager	int(11)	YES		NULL	
+os_document_holder	approved_by_employee	int(11)	YES		NULL	
+os_document_holder	approved_at	date	YES		NULL	
+os_document_holder	reason	text	YES		NULL	
+os_document_holder	contract_id	int(11)	NO		NULL	
+os_document_holder	status	varchar(255)	YES		NULL	
+os_document_holder	type	varchar(255)	YES		NULL	
+os_document_holder	approved	int(11)	YES		0	
+os_document_holder	manager_approved	int(11)	YES		NULL	
+os_document_status	id	int(11)	NO	PRI	NULL	auto_increment
+os_document_status	name	varchar(255)	NO		NULL	
+os_document_status	created_at	int(11)	YES		NULL	
+os_document_status	updated_at	int(11)	YES		NULL	
+os_document_status	created_by	int(11)	YES		NULL	
+os_document_status	last_updated_by	int(11)	YES		NULL	
+os_document_status	is_deleted	int(11)	YES		0	
+os_document_type	id	int(11)	NO	PRI	NULL	auto_increment
+os_document_type	name	varchar(255)	NO		NULL	
+os_document_type	created_at	int(11)	YES		NULL	
+os_document_type	updated_at	int(11)	YES		NULL	
+os_document_type	created_by	int(11)	YES		NULL	
+os_document_type	last_updated_by	int(11)	YES		NULL	
+os_document_type	is_deleted	int(11)	YES		0	
+os_employee_files	id	int(11)	NO	PRI	NULL	auto_increment
+os_employee_files	user_id	int(11)	NO		NULL	
+os_employee_files	type	tinyint(1)	NO		NULL	
+os_employee_files	file_name	varchar(255)	NO		NULL	
+os_employee_files	path	varchar(255)	NO		NULL	
+os_expenses	id	int(11)	NO	PRI	NULL	auto_increment
+os_expenses	category_id	int(11)	YES		NULL	
+os_expenses	created_at	int(11)	NO		NULL	
+os_expenses	created_by	int(11)	NO		NULL	
+os_expenses	updated_at	int(11)	NO		NULL	
+os_expenses	last_updated_by	int(11)	NO		NULL	
+os_expenses	is_deleted	int(1)	YES		0	
+os_expenses	description	text	NO		NULL	
+os_expenses	amount	float	NO		NULL	
+os_expenses	receiver_number	int(11)	NO		NULL	
+os_expenses	financial_transaction_id	int(11)	YES		NULL	
+os_expenses	expenses_date	date	YES		NULL	
+os_expenses	notes	text	YES		NULL	
+os_expenses	document_number	int(11)	YES		NULL	
+os_expenses	contract_id	int(11)	YES	MUL	NULL	
+os_expense_categories	id	int(11)	NO	PRI	NULL	auto_increment
+os_expense_categories	name	varchar(250)	NO		NULL	
+os_expense_categories	created_at	int(11)	NO		NULL	
+os_expense_categories	created_by	int(11)	NO		NULL	
+os_expense_categories	updated_at	int(11)	NO		NULL	
+os_expense_categories	last_updated_by	int(11)	NO		NULL	
+os_expense_categories	is_deleted	int(1)	YES		0	
+os_expense_categories	description	text	NO		NULL	
+os_feelings	id	int(11)	NO	PRI	NULL	auto_increment
+os_feelings	name	varchar(255)	NO		NULL	
+os_feelings	created_at	int(11)	YES		NULL	
+os_feelings	updated_at	int(11)	YES		NULL	
+os_feelings	created_by	int(11)	YES		NULL	
+os_feelings	last_updated_by	int(11)	YES		NULL	
+os_feelings	is_deleted	int(11)	YES		0	
+os_financial_transaction	id	int(11)	NO	PRI	NULL	auto_increment
+os_financial_transaction	date	date	YES		NULL	
+os_financial_transaction	category_id	int(11)	YES	MUL	NULL	
+os_financial_transaction	created_at	int(11)	NO		NULL	
+os_financial_transaction	created_by	int(11)	NO	MUL	NULL	
+os_financial_transaction	updated_at	int(11)	NO		NULL	
+os_financial_transaction	last_updated_by	int(11)	NO	MUL	NULL	
+os_financial_transaction	is_deleted	int(1)	YES		0	
+os_financial_transaction	bank_description	text	YES		NULL	
+os_financial_transaction	description	text	YES		NULL	
+os_financial_transaction	receiver_number	int(11)	YES		NULL	
+os_financial_transaction	document_number	int(11)	YES		NULL	
+os_financial_transaction	type	int(11)	YES		NULL	
+os_financial_transaction	income_type	int(11)	YES		NULL	
+os_financial_transaction	contract_id	int(11)	YES	MUL	NULL	
+os_financial_transaction	amount	double	NO		NULL	
+os_financial_transaction	company_id	int(11)	YES	MUL	NULL	
+os_financial_transaction	is_transfer	int(11)	NO		NULL	
+os_financial_transaction	notes	text	YES		NULL	
+os_financial_transaction	bank_id	int(11)	NO		NULL	
+os_financial_transaction	bank_number	varchar(255)	YES		NULL	
+os_follow_up	id	int(11)	NO	PRI	NULL	auto_increment
+os_follow_up	contract_id	int(11)	NO	MUL	NULL	
+os_follow_up	date_time	datetime	NO	MUL	current_timestamp()	
+os_follow_up	notes	text	YES		NULL	
+os_follow_up	feeling	varchar(255)	YES		NULL	
+os_follow_up	created_by	int(11)	NO		NULL	
+os_follow_up	connection_goal	tinyint(3)	YES		NULL	
+os_follow_up	reminder	date	YES		NULL	
+os_follow_up	promise_to_pay_at	date	YES		NULL	
+os_follow_up_connection_reports	id	int(11)	NO	PRI	NULL	auto_increment
+os_follow_up_connection_reports	os_follow_up_id	int(11)	NO	MUL	NULL	
+os_follow_up_connection_reports	customer_name	varchar(255)	YES		NULL	
+os_follow_up_connection_reports	connection_type	varchar(255)	YES		NULL	
+os_follow_up_connection_reports	connection_response	varchar(255)	YES		NULL	
+os_follow_up_connection_reports	note	varchar(255)	YES		NULL	
+os_follow_up_report	id	int(11)	NO		0	
+os_follow_up_report	type	enum('solidarity','normal')	NO		NULL	
+os_follow_up_report	seller_id	int(11)	YES		NULL	
+os_follow_up_report	Date_of_sale	date	YES		NULL	
+os_follow_up_report	total_value	double	YES		NULL	
+os_follow_up_report	first_installment_value	double	YES		0	
+os_follow_up_report	first_installment_date	date	YES		NULL	
+os_follow_up_report	monthly_installment_value	double	YES		0	
+os_follow_up_report	notes	text	YES		NULL	
+os_follow_up_report	status	enum('pending','active','reconciliation','judiciary','canceled','refused','legal_department','finished','settlement')	NO		NULL	
+os_follow_up_report	updated_at	timestamp	YES		NULL	
+os_follow_up_report	is_deleted	int(1)	YES		0	
+os_follow_up_report	selected_image	varchar(255)	YES		NULL	
+os_follow_up_report	company_id	int(11)	NO		NULL	
+os_follow_up_report	commitment_discount	double	YES		0	
+os_follow_up_report	loss_commitment	int(11)	YES		0	
+os_follow_up_report	created_by	int(11)	NO		NULL	
+os_follow_up_report	updated_by	int(11)	NO		NULL	
+os_follow_up_report	created_at	timestamp	NO		current_timestamp()	
+os_follow_up_report	follow_up_lock_by	int(11)	YES		NULL	
+os_follow_up_report	follow_up_lock_at	timestamp	YES		NULL	
+os_follow_up_report	followed_by	int(11)	YES		1	
+os_follow_up_report	is_can_not_contact	tinyint(1)	YES		0	
+os_follow_up_report	last_follow_up	datetime	YES		current_timestamp()	
+os_follow_up_report	promise_to_pay_at	date	YES		NULL	
+os_follow_up_report	reminder	date	YES		NULL	
+os_follow_up_report	total_paid	double	NO		0	
+os_follow_up_report	effective_installment	double	YES		NULL	
+os_follow_up_report	due_installments	int(7)	YES		NULL	
+os_follow_up_report	due_amount	double	YES		NULL	
+os_follow_up_report	never_followed	int(1)	NO		0	
+os_follow_up_tasks	id	int(11)	NO	PRI	NULL	auto_increment
+os_follow_up_tasks	contract_id	int(11)	NO	MUL	NULL	
+os_follow_up_tasks	title	varchar(255)	NO		NULL	
+os_follow_up_tasks	description	text	YES		NULL	
+os_follow_up_tasks	stage	enum('new','first_call','promise','post_promise','late','escalation','legal','closed')	NO	MUL	'new'	
+os_follow_up_tasks	priority	enum('low','medium','high','critical')	NO		'medium'	
+os_follow_up_tasks	due_date	date	YES	MUL	NULL	
+os_follow_up_tasks	assigned_to	int(11)	YES	MUL	NULL	
+os_follow_up_tasks	action_type	varchar(50)	YES		NULL	
+os_follow_up_tasks	status	enum('pending','in_progress','done','overdue','cancelled')	NO	MUL	'pending'	
+os_follow_up_tasks	sort_order	int(11)	YES		0	
+os_follow_up_tasks	escalation_reason	text	YES		NULL	
+os_follow_up_tasks	escalation_type	varchar(50)	YES		NULL	
+os_follow_up_tasks	requires_approval	tinyint(1)	YES		0	
+os_follow_up_tasks	approved_by	int(11)	YES		NULL	
+os_follow_up_tasks	approved_at	datetime	YES		NULL	
+os_follow_up_tasks	completed_at	datetime	YES		NULL	
+os_follow_up_tasks	created_by	int(11)	NO		NULL	
+os_follow_up_tasks	created_at	datetime	NO		current_timestamp()	
+os_follow_up_tasks	updated_at	datetime	YES		NULL	on update current_timestamp()
+os_gallery_image	id	int(10) unsigned	NO	PRI	NULL	auto_increment
+os_gallery_image	type	varchar(128)	NO		NULL	
+os_gallery_image	ownerId	varchar(128)	NO		NULL	
+os_gallery_image	rank	int(10)	NO		0	
+os_gallery_image	name	varchar(128)	YES		NULL	
+os_gallery_image	description	text	YES		NULL	
+os_hear_about_us	id	int(11)	NO	PRI	NULL	auto_increment
+os_hear_about_us	name	varchar(255)	NO		NULL	
+os_hear_about_us	created_at	int(11)	YES		NULL	
+os_hear_about_us	updated_at	int(11)	YES		NULL	
+os_hear_about_us	created_by	int(11)	YES		NULL	
+os_hear_about_us	last_updated_by	int(11)	YES		NULL	
+os_hear_about_us	is_deleted	int(11)	YES		0	
+os_holidays	id	int(11)	NO		NULL	
+os_holidays	title	varchar(50)	NO		NULL	
+os_holidays	start_at	date	NO		NULL	
+os_holidays	end_at	date	NO		NULL	
+os_holidays	created_by	int(11)	NO		NULL	
+os_holidays	created_at	int(11)	NO		NULL	
+os_holidays	updated_at	int(11)	YES		NULL	
+os_hr_annual_increment	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_annual_increment	user_id	int(11)	NO	MUL	NULL	
+os_hr_annual_increment	service_year	int(11)	YES		NULL	
+os_hr_annual_increment	increment_year	int(11)	YES		NULL	
+os_hr_annual_increment	increment_type	enum('fixed','percentage')	NO		'fixed'	
+os_hr_annual_increment	amount	decimal(12,2)	NO		0.00	
+os_hr_annual_increment	calculated_amount	decimal(12,2)	YES		NULL	
+os_hr_annual_increment	previous_salary	decimal(12,2)	YES		NULL	
+os_hr_annual_increment	new_salary	decimal(12,2)	YES		NULL	
+os_hr_annual_increment	effective_date	date	NO	MUL	NULL	
+os_hr_annual_increment	status	enum('pending','approved','applied','cancelled')	NO	MUL	'pending'	
+os_hr_annual_increment	approved_by	int(11)	YES		NULL	
+os_hr_annual_increment	approved_at	int(11)	YES		NULL	
+os_hr_annual_increment	applied_at	int(11)	YES		NULL	
+os_hr_annual_increment	notes	text	YES		NULL	
+os_hr_annual_increment	is_deleted	tinyint(1)	NO		0	
+os_hr_annual_increment	created_at	int(11)	YES		NULL	
+os_hr_annual_increment	created_by	int(11)	YES		NULL	
+os_hr_annual_increment	updated_at	int(11)	YES		NULL	
+os_hr_annual_increment	updated_by	int(11)	YES		NULL	
+os_hr_attendance	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_attendance	user_id	int(11)	NO	MUL	NULL	
+os_hr_attendance	attendance_date	date	NO	MUL	NULL	
+os_hr_attendance	shift_id	int(11)	YES		NULL	
+os_hr_attendance	check_in_time	datetime	YES		NULL	
+os_hr_attendance	check_in_method	enum('manual','gps','qr','biometric','system')	YES		'manual'	
+os_hr_attendance	check_in_lat	decimal(10,7)	YES		NULL	
+os_hr_attendance	check_in_lng	decimal(10,7)	YES		NULL	
+os_hr_attendance	check_in_note	varchar(300)	YES		NULL	
+os_hr_attendance	check_out_time	datetime	YES		NULL	
+os_hr_attendance	check_out_method	enum('manual','gps','qr','biometric','system')	YES		'manual'	
+os_hr_attendance	check_out_lat	decimal(10,7)	YES		NULL	
+os_hr_attendance	check_out_lng	decimal(10,7)	YES		NULL	
+os_hr_attendance	check_out_note	varchar(300)	YES		NULL	
+os_hr_attendance	total_hours	decimal(5,2)	YES		NULL	
+os_hr_attendance	overtime_hours	decimal(5,2)	YES		0.00	
+os_hr_attendance	late_minutes	int(11)	YES		0	
+os_hr_attendance	early_leave_minutes	int(11)	YES		0	
+os_hr_attendance	status	enum('present','absent','leave','holiday','half_day','remote')	YES	MUL	'present'	
+os_hr_attendance	is_adjusted	tinyint(1)	YES		0	
+os_hr_attendance	adjusted_by	int(11)	YES		NULL	
+os_hr_attendance	adjustment_reason	text	YES		NULL	
+os_hr_attendance	notes	text	YES		NULL	
+os_hr_attendance	created_at	int(11)	NO		NULL	
+os_hr_attendance	updated_at	int(11)	NO		NULL	
+os_hr_attendance	created_by	int(11)	YES		NULL	
+os_hr_attendance	updated_by	int(11)	YES		NULL	
+os_hr_attendance	is_deleted	tinyint(1)	YES		0	
+os_hr_attendance_log	id	bigint(20)	NO	PRI	NULL	auto_increment
+os_hr_attendance_log	company_id	int(11)	YES	MUL	NULL	
+os_hr_attendance_log	user_id	int(11)	NO	MUL	NULL	
+os_hr_attendance_log	attendance_date	date	NO		NULL	
+os_hr_attendance_log	shift_id	int(11)	YES		NULL	
+os_hr_attendance_log	clock_in_at	datetime	YES		NULL	
+os_hr_attendance_log	clock_out_at	datetime	YES		NULL	
+os_hr_attendance_log	clock_in_method	enum('geofence_auto','manual','wifi','qr','biometric','admin')	NO		'manual'	
+os_hr_attendance_log	clock_out_method	enum('geofence_auto','manual','wifi','shift_end','admin','timeout')	YES		NULL	
+os_hr_attendance_log	clock_in_lat	decimal(10,7)	YES		NULL	
+os_hr_attendance_log	clock_in_lng	decimal(10,7)	YES		NULL	
+os_hr_attendance_log	clock_out_lat	decimal(10,7)	YES		NULL	
+os_hr_attendance_log	clock_out_lng	decimal(10,7)	YES		NULL	
+os_hr_attendance_log	clock_in_zone_id	int(11)	YES		NULL	
+os_hr_attendance_log	clock_out_zone_id	int(11)	YES		NULL	
+os_hr_attendance_log	clock_in_accuracy	float	YES		NULL	
+os_hr_attendance_log	clock_in_wifi_verified	tinyint(1)	YES		0	
+os_hr_attendance_log	is_mock_location	tinyint(1)	YES		0	
+os_hr_attendance_log	status	enum('present','late','absent','half_day','on_leave','holiday','weekend','field_duty')	NO		'present'	
+os_hr_attendance_log	total_minutes	int(11)	YES		0	
+os_hr_attendance_log	overtime_minutes	int(11)	YES		0	
+os_hr_attendance_log	late_minutes	int(11)	YES		0	
+os_hr_attendance_log	early_leave_minutes	int(11)	YES		0	
+os_hr_attendance_log	break_minutes	int(11)	YES		0	
+os_hr_attendance_log	notes	text	YES		NULL	
+os_hr_attendance_log	admin_adjusted	tinyint(1)	YES		0	
+os_hr_attendance_log	adjustment_reason	text	YES		NULL	
+os_hr_attendance_log	created_at	datetime	YES		current_timestamp()	
+os_hr_audit_log	id	bigint(20)	NO	PRI	NULL	auto_increment
+os_hr_audit_log	user_id	int(11)	NO	MUL	NULL	
+os_hr_audit_log	action	enum('create','update','delete','view','export','approve','reject')	NO		NULL	
+os_hr_audit_log	entity_type	varchar(100)	NO	MUL	NULL	
+os_hr_audit_log	entity_id	int(11)	NO		NULL	
+os_hr_audit_log	old_values	text	YES		NULL	
+os_hr_audit_log	new_values	text	YES		NULL	
+os_hr_audit_log	ip_address	varchar(45)	YES		NULL	
+os_hr_audit_log	user_agent	varchar(500)	YES		NULL	
+os_hr_audit_log	description	varchar(500)	YES		NULL	
+os_hr_audit_log	created_at	int(11)	NO		NULL	
+os_hr_disciplinary	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_disciplinary	user_id	int(11)	NO	MUL	NULL	
+os_hr_disciplinary	action_type	enum('verbal_warning','written_warning','suspension','termination','fine','other')	NO		NULL	
+os_hr_disciplinary	reason	text	NO		NULL	
+os_hr_disciplinary	incident_date	date	NO		NULL	
+os_hr_disciplinary	action_date	date	NO		NULL	
+os_hr_disciplinary	duration_days	int(11)	YES		NULL	
+os_hr_disciplinary	fine_amount	decimal(10,2)	YES		NULL	
+os_hr_disciplinary	document_path	varchar(500)	YES		NULL	
+os_hr_disciplinary	response	text	YES		NULL	
+os_hr_disciplinary	issued_by	int(11)	NO		NULL	
+os_hr_disciplinary	approved_by	int(11)	YES		NULL	
+os_hr_disciplinary	approved_at	int(11)	YES		NULL	
+os_hr_disciplinary	status	enum('pending','approved','appealed','cancelled')	YES		'pending'	
+os_hr_disciplinary	created_at	int(11)	NO		NULL	
+os_hr_disciplinary	updated_at	int(11)	NO		NULL	
+os_hr_disciplinary	created_by	int(11)	YES		NULL	
+os_hr_disciplinary	updated_by	int(11)	YES		NULL	
+os_hr_disciplinary	is_deleted	tinyint(1)	YES		0	
+os_hr_emergency_contact	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_emergency_contact	user_id	int(11)	NO	MUL	NULL	
+os_hr_emergency_contact	contact_name	varchar(100)	NO		NULL	
+os_hr_emergency_contact	relationship	varchar(50)	YES		NULL	
+os_hr_emergency_contact	phone	varchar(20)	NO		NULL	
+os_hr_emergency_contact	phone2	varchar(20)	YES		NULL	
+os_hr_emergency_contact	address	varchar(300)	YES		NULL	
+os_hr_emergency_contact	is_primary	tinyint(1)	YES		0	
+os_hr_emergency_contact	created_at	int(11)	NO		NULL	
+os_hr_emergency_contact	updated_at	int(11)	NO		NULL	
+os_hr_emergency_contact	created_by	int(11)	YES		NULL	
+os_hr_emergency_contact	updated_by	int(11)	YES		NULL	
+os_hr_emergency_contact	is_deleted	tinyint(1)	YES		0	
+os_hr_employee_document	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_employee_document	user_id	int(11)	NO	MUL	NULL	
+os_hr_employee_document	doc_type	enum('national_id','passport','driving_license','contract','certificate','medical','other')	NO		NULL	
+os_hr_employee_document	doc_name	varchar(200)	NO		NULL	
+os_hr_employee_document	file_path	varchar(500)	NO		NULL	
+os_hr_employee_document	file_size	int(11)	YES		NULL	
+os_hr_employee_document	mime_type	varchar(100)	YES		NULL	
+os_hr_employee_document	issue_date	date	YES		NULL	
+os_hr_employee_document	expiry_date	date	YES	MUL	NULL	
+os_hr_employee_document	is_verified	tinyint(1)	YES		0	
+os_hr_employee_document	verified_by	int(11)	YES		NULL	
+os_hr_employee_document	verified_at	int(11)	YES		NULL	
+os_hr_employee_document	notes	text	YES		NULL	
+os_hr_employee_document	created_at	int(11)	NO		NULL	
+os_hr_employee_document	updated_at	int(11)	NO		NULL	
+os_hr_employee_document	created_by	int(11)	YES		NULL	
+os_hr_employee_document	updated_by	int(11)	YES		NULL	
+os_hr_employee_document	is_deleted	tinyint(1)	YES		0	
+os_hr_employee_extended	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_employee_extended	user_id	int(11)	NO	UNI	NULL	
+os_hr_employee_extended	employee_code	varchar(20)	YES	MUL	NULL	
+os_hr_employee_extended	national_id	varchar(20)	YES		NULL	
+os_hr_employee_extended	date_of_birth	date	YES		NULL	
+os_hr_employee_extended	blood_type	enum('A+','A-','B+','B-','AB+','AB-','O+','O-')	YES		NULL	
+os_hr_employee_extended	address_text	varchar(500)	YES		NULL	
+os_hr_employee_extended	city_id	int(11)	YES		NULL	
+os_hr_employee_extended	bank_id	int(11)	YES		NULL	
+os_hr_employee_extended	bank_account_no	varchar(30)	YES		NULL	
+os_hr_employee_extended	iban	varchar(34)	YES		NULL	
+os_hr_employee_extended	social_security_no	varchar(20)	YES		NULL	
+os_hr_employee_extended	tax_number	varchar(20)	YES		NULL	
+os_hr_employee_extended	basic_salary	decimal(10,2)	YES		0.00	
+os_hr_employee_extended	grade_id	int(11)	YES		NULL	
+os_hr_employee_extended	branch_id	int(11)	YES		NULL	
+os_hr_employee_extended	shift_id	int(11)	YES		NULL	
+os_hr_employee_extended	employee_type	enum('office','field','sales','hybrid')	NO		'office'	
+os_hr_employee_extended	work_zone_id	int(11)	YES		NULL	
+os_hr_employee_extended	tracking_mode	enum('geofence_only','continuous','on_task','disabled')	NO		'geofence_only'	
+os_hr_employee_extended	contract_type	enum('permanent','contract','probation','freelance')	YES		'permanent'	
+os_hr_employee_extended	contract_start	date	YES		NULL	
+os_hr_employee_extended	contract_end	date	YES		NULL	
+os_hr_employee_extended	probation_end	date	YES		NULL	
+os_hr_employee_extended	termination_reason	text	YES		NULL	
+os_hr_employee_extended	is_field_staff	tinyint(1)	YES	MUL	0	
+os_hr_employee_extended	field_role	enum('collector','inspector','driver','messenger','lawyer','other')	YES		NULL	
+os_hr_employee_extended	notes	text	YES		NULL	
+os_hr_employee_extended	created_at	int(11)	NO		NULL	
+os_hr_employee_extended	updated_at	int(11)	NO		NULL	
+os_hr_employee_extended	created_by	int(11)	YES		NULL	
+os_hr_employee_extended	updated_by	int(11)	YES		NULL	
+os_hr_employee_extended	is_deleted	tinyint(1)	YES		0	
+os_hr_employee_salary	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_employee_salary	user_id	int(11)	NO	MUL	NULL	
+os_hr_employee_salary	component_id	int(11)	NO	MUL	NULL	
+os_hr_employee_salary	amount	decimal(10,2)	NO		NULL	
+os_hr_employee_salary	effective_from	date	NO		NULL	
+os_hr_employee_salary	effective_to	date	YES		NULL	
+os_hr_employee_salary	notes	text	YES		NULL	
+os_hr_employee_salary	created_at	int(11)	NO		NULL	
+os_hr_employee_salary	updated_at	int(11)	NO		NULL	
+os_hr_employee_salary	created_by	int(11)	YES		NULL	
+os_hr_employee_salary	updated_by	int(11)	YES		NULL	
+os_hr_employee_salary	is_deleted	tinyint(1)	YES		0	
+os_hr_evaluation	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_evaluation	user_id	int(11)	NO	MUL	NULL	
+os_hr_evaluation	evaluator_id	int(11)	NO	MUL	NULL	
+os_hr_evaluation	template_id	int(11)	NO		NULL	
+os_hr_evaluation	period_start	date	NO		NULL	
+os_hr_evaluation	period_end	date	NO		NULL	
+os_hr_evaluation	total_score	decimal(5,2)	YES		NULL	
+os_hr_evaluation	grade	enum('A','B','C','D','F')	YES		NULL	
+os_hr_evaluation	summary	text	YES		NULL	
+os_hr_evaluation	status	enum('draft','submitted','reviewed','approved')	YES		'draft'	
+os_hr_evaluation	reviewed_by	int(11)	YES		NULL	
+os_hr_evaluation	reviewed_at	int(11)	YES		NULL	
+os_hr_evaluation	created_at	int(11)	NO		NULL	
+os_hr_evaluation	updated_at	int(11)	NO		NULL	
+os_hr_evaluation	created_by	int(11)	YES		NULL	
+os_hr_evaluation	updated_by	int(11)	YES		NULL	
+os_hr_evaluation	is_deleted	tinyint(1)	YES		0	
+os_hr_evaluation_score	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_evaluation_score	evaluation_id	int(11)	NO	MUL	NULL	
+os_hr_evaluation_score	kpi_item_id	int(11)	NO		NULL	
+os_hr_evaluation_score	score	decimal(5,2)	YES		NULL	
+os_hr_evaluation_score	actual_value	decimal(10,2)	YES		NULL	
+os_hr_evaluation_score	comment	text	YES		NULL	
+os_hr_field_config	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_field_config	tracking_mode	enum('realtime','periodic','manual')	YES		'periodic'	
+os_hr_field_config	location_interval_seconds	int(11)	YES		300	
+os_hr_field_config	min_accuracy_meters	int(11)	YES		50	
+os_hr_field_config	retention_days	int(11)	YES		90	
+os_hr_field_config	require_consent	tinyint(1)	YES		1	
+os_hr_field_config	geofence_enabled	tinyint(1)	YES		1	
+os_hr_field_config	photo_required_on_arrival	tinyint(1)	YES		0	
+os_hr_field_config	spoofing_detection	tinyint(1)	YES		1	
+os_hr_field_config	created_at	int(11)	NO		NULL	
+os_hr_field_config	updated_at	int(11)	NO		NULL	
+os_hr_field_config	created_by	int(11)	YES		NULL	
+os_hr_field_config	updated_by	int(11)	YES		NULL	
+os_hr_field_consent	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_field_consent	user_id	int(11)	NO	MUL	NULL	
+os_hr_field_consent	consent_version	varchar(10)	NO		'1.0'	
+os_hr_field_consent	consented	tinyint(1)	NO		0	
+os_hr_field_consent	consented_at	datetime	YES		NULL	
+os_hr_field_consent	ip_address	varchar(45)	YES		NULL	
+os_hr_field_consent	device_info	varchar(300)	YES		NULL	
+os_hr_field_consent	revoked_at	datetime	YES		NULL	
+os_hr_field_consent	revoke_reason	text	YES		NULL	
+os_hr_field_consent	created_at	int(11)	NO		NULL	
+os_hr_field_event	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_field_event	user_id	int(11)	NO	MUL	NULL	
+os_hr_field_event	session_id	int(11)	YES	MUL	NULL	
+os_hr_field_event	task_id	int(11)	YES	MUL	NULL	
+os_hr_field_event	event_type	enum('check_in','check_out','collection','delivery','photo','note','incident')	NO		NULL	
+os_hr_field_event	latitude	decimal(10,7)	YES		NULL	
+os_hr_field_event	longitude	decimal(10,7)	YES		NULL	
+os_hr_field_event	captured_at	datetime	NO		NULL	
+os_hr_field_event	photo_path	varchar(500)	YES		NULL	
+os_hr_field_event	document_path	varchar(500)	YES		NULL	
+os_hr_field_event	note	text	YES		NULL	
+os_hr_field_event	amount_collected	decimal(10,2)	YES		NULL	
+os_hr_field_event	created_at	int(11)	NO		NULL	
+os_hr_field_event	updated_at	int(11)	NO		NULL	
+os_hr_field_event	created_by	int(11)	YES		NULL	
+os_hr_field_event	updated_by	int(11)	YES		NULL	
+os_hr_field_event	is_deleted	tinyint(1)	YES		0	
+os_hr_field_session	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_field_session	user_id	int(11)	NO	MUL	NULL	
+os_hr_field_session	started_at	datetime	NO	MUL	NULL	
+os_hr_field_session	ended_at	datetime	YES		NULL	
+os_hr_field_session	start_lat	decimal(10,7)	YES		NULL	
+os_hr_field_session	start_lng	decimal(10,7)	YES		NULL	
+os_hr_field_session	end_lat	decimal(10,7)	YES		NULL	
+os_hr_field_session	end_lng	decimal(10,7)	YES		NULL	
+os_hr_field_session	total_distance_km	decimal(8,2)	YES		NULL	
+os_hr_field_session	total_visits	int(11)	YES		0	
+os_hr_field_session	status	enum('active','ended','cancelled')	YES		'active'	
+os_hr_field_session	device_hash	varchar(64)	YES		NULL	
+os_hr_field_session	created_at	int(11)	NO		NULL	
+os_hr_field_session	updated_at	int(11)	NO		NULL	
+os_hr_field_task	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_field_task	assigned_to	int(11)	NO	MUL	NULL	
+os_hr_field_task	task_type	enum('collection','delivery','inspection','court_visit','customer_visit','other')	NO		NULL	
+os_hr_field_task	customer_id	int(11)	YES		NULL	
+os_hr_field_task	contract_id	int(11)	YES		NULL	
+os_hr_field_task	judiciary_id	int(11)	YES		NULL	
+os_hr_field_task	title	varchar(300)	NO		NULL	
+os_hr_field_task	description	text	YES		NULL	
+os_hr_field_task	priority	enum('low','normal','high','urgent')	YES		'normal'	
+os_hr_field_task	due_date	date	YES	MUL	NULL	
+os_hr_field_task	target_lat	decimal(10,7)	YES		NULL	
+os_hr_field_task	target_lng	decimal(10,7)	YES		NULL	
+os_hr_field_task	target_address	varchar(500)	YES		NULL	
+os_hr_field_task	status	enum('pending','accepted','en_route','arrived','completed','failed','cancelled')	YES	MUL	'pending'	
+os_hr_field_task	accepted_at	datetime	YES		NULL	
+os_hr_field_task	arrived_at	datetime	YES		NULL	
+os_hr_field_task	completed_at	datetime	YES		NULL	
+os_hr_field_task	result	text	YES		NULL	
+os_hr_field_task	failure_reason	text	YES		NULL	
+os_hr_field_task	amount_collected	decimal(10,2)	YES		NULL	
+os_hr_field_task	notes	text	YES		NULL	
+os_hr_field_task	created_at	int(11)	NO		NULL	
+os_hr_field_task	updated_at	int(11)	NO		NULL	
+os_hr_field_task	created_by	int(11)	YES		NULL	
+os_hr_field_task	updated_by	int(11)	YES		NULL	
+os_hr_field_task	is_deleted	tinyint(1)	YES		0	
+os_hr_geofence_event	id	bigint(20)	NO	PRI	NULL	auto_increment
+os_hr_geofence_event	company_id	int(11)	YES		NULL	
+os_hr_geofence_event	user_id	int(11)	NO	MUL	NULL	
+os_hr_geofence_event	zone_id	int(11)	NO	MUL	NULL	
+os_hr_geofence_event	event_type	enum('enter','exit','dwell')	NO		NULL	
+os_hr_geofence_event	latitude	decimal(10,7)	NO		NULL	
+os_hr_geofence_event	longitude	decimal(10,7)	NO		NULL	
+os_hr_geofence_event	accuracy	float	YES		NULL	
+os_hr_geofence_event	triggered_at	datetime	NO		NULL	
+os_hr_geofence_event	processed	tinyint(1)	YES	MUL	0	
+os_hr_geofence_event	attendance_log_id	bigint(20)	YES		NULL	
+os_hr_grade	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_grade	name	varchar(100)	NO		NULL	
+os_hr_grade	level	int(11)	YES		1	
+os_hr_grade	min_salary	decimal(10,2)	YES		NULL	
+os_hr_grade	max_salary	decimal(10,2)	YES		NULL	
+os_hr_grade	description	text	YES		NULL	
+os_hr_grade	status	enum('active','inactive')	YES		'active'	
+os_hr_grade	created_at	int(11)	NO		NULL	
+os_hr_grade	updated_at	int(11)	NO		NULL	
+os_hr_grade	created_by	int(11)	YES		NULL	
+os_hr_grade	updated_by	int(11)	YES		NULL	
+os_hr_grade	is_deleted	tinyint(1)	YES		0	
+os_hr_kpi_item	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_kpi_item	template_id	int(11)	NO	MUL	NULL	
+os_hr_kpi_item	name	varchar(200)	NO		NULL	
+os_hr_kpi_item	description	text	YES		NULL	
+os_hr_kpi_item	weight	int(11)	YES		10	
+os_hr_kpi_item	target_value	decimal(10,2)	YES		NULL	
+os_hr_kpi_item	unit	varchar(50)	YES		NULL	
+os_hr_kpi_item	sort_order	int(11)	YES		0	
+os_hr_kpi_template	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_kpi_template	name	varchar(150)	NO		NULL	
+os_hr_kpi_template	description	text	YES		NULL	
+os_hr_kpi_template	applicable_to	enum('all','department','designation')	YES		'all'	
+os_hr_kpi_template	department_id	int(11)	YES		NULL	
+os_hr_kpi_template	designation_id	int(11)	YES		NULL	
+os_hr_kpi_template	weight_total	int(11)	YES		100	
+os_hr_kpi_template	status	enum('active','inactive')	YES		'active'	
+os_hr_kpi_template	created_at	int(11)	NO		NULL	
+os_hr_kpi_template	updated_at	int(11)	NO		NULL	
+os_hr_kpi_template	created_by	int(11)	YES		NULL	
+os_hr_kpi_template	updated_by	int(11)	YES		NULL	
+os_hr_kpi_template	is_deleted	tinyint(1)	YES		0	
+os_hr_loan	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_loan	user_id	int(11)	NO	MUL	NULL	
+os_hr_loan	loan_type	enum('advance','loan','penalty')	YES		'advance'	
+os_hr_loan	amount	decimal(10,2)	NO		NULL	
+os_hr_loan	repaid	decimal(10,2)	YES		0.00	
+os_hr_loan	monthly_deduction	decimal(10,2)	NO		NULL	
+os_hr_loan	installments	int(11)	NO		NULL	
+os_hr_loan	remaining_installments	int(11)	NO		NULL	
+os_hr_loan	start_date	date	NO		NULL	
+os_hr_loan	status	enum('pending','active','completed','cancelled')	YES	MUL	'pending'	
+os_hr_loan	approved_by	int(11)	YES		NULL	
+os_hr_loan	approved_at	int(11)	YES		NULL	
+os_hr_loan	notes	text	YES		NULL	
+os_hr_loan	created_at	int(11)	NO		NULL	
+os_hr_loan	updated_at	int(11)	NO		NULL	
+os_hr_loan	created_by	int(11)	YES		NULL	
+os_hr_loan	updated_by	int(11)	YES		NULL	
+os_hr_loan	is_deleted	tinyint(1)	YES		0	
+os_hr_location_point	id	bigint(20)	NO	PRI	NULL	auto_increment
+os_hr_location_point	user_id	int(11)	NO	MUL	NULL	
+os_hr_location_point	session_id	int(11)	YES	MUL	NULL	
+os_hr_location_point	captured_at	datetime	NO		NULL	
+os_hr_location_point	latitude	decimal(10,7)	NO		NULL	
+os_hr_location_point	longitude	decimal(10,7)	NO		NULL	
+os_hr_location_point	accuracy	float	YES		NULL	
+os_hr_location_point	altitude	float	YES		NULL	
+os_hr_location_point	speed	float	YES		NULL	
+os_hr_location_point	battery_level	tinyint(3)	YES		NULL	
+os_hr_location_point	is_mock	tinyint(1)	YES		0	
+os_hr_location_point	created_at	int(11)	NO		NULL	
+os_hr_payroll_run	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_payroll_run	run_code	varchar(20)	NO		NULL	
+os_hr_payroll_run	period_month	tinyint(2)	NO		NULL	
+os_hr_payroll_run	period_year	smallint(4)	NO		NULL	
+os_hr_payroll_run	branch_id	int(11)	YES		NULL	
+os_hr_payroll_run	total_employees	int(11)	YES		0	
+os_hr_payroll_run	total_gross	decimal(12,2)	YES		0.00	
+os_hr_payroll_run	total_deductions	decimal(12,2)	YES		0.00	
+os_hr_payroll_run	total_net	decimal(12,2)	YES		0.00	
+os_hr_payroll_run	status	enum('draft','calculated','reviewed','approved','paid','cancelled')	YES	MUL	'draft'	
+os_hr_payroll_run	approved_by	int(11)	YES		NULL	
+os_hr_payroll_run	approved_at	int(11)	YES		NULL	
+os_hr_payroll_run	notes	text	YES		NULL	
+os_hr_payroll_run	created_at	int(11)	NO		NULL	
+os_hr_payroll_run	updated_at	int(11)	NO		NULL	
+os_hr_payroll_run	created_by	int(11)	YES		NULL	
+os_hr_payroll_run	updated_by	int(11)	YES		NULL	
+os_hr_payroll_run	is_deleted	tinyint(1)	YES		0	
+os_hr_payslip	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_payslip	payroll_run_id	int(11)	NO	MUL	NULL	
+os_hr_payslip	user_id	int(11)	NO	MUL	NULL	
+os_hr_payslip	basic_salary	decimal(10,2)	YES		0.00	
+os_hr_payslip	total_earnings	decimal(10,2)	YES		0.00	
+os_hr_payslip	total_deductions	decimal(10,2)	YES		0.00	
+os_hr_payslip	net_salary	decimal(10,2)	YES		0.00	
+os_hr_payslip	working_days	int(11)	YES		0	
+os_hr_payslip	present_days	int(11)	YES		0	
+os_hr_payslip	absent_days	int(11)	YES		0	
+os_hr_payslip	leave_days	int(11)	YES		0	
+os_hr_payslip	overtime_hours	decimal(5,2)	YES		0.00	
+os_hr_payslip	late_deduction	decimal(10,2)	YES		0.00	
+os_hr_payslip	status	enum('draft','confirmed','paid')	YES		'draft'	
+os_hr_payslip	created_at	int(11)	NO		NULL	
+os_hr_payslip	updated_at	int(11)	NO		NULL	
+os_hr_payslip	created_by	int(11)	YES		NULL	
+os_hr_payslip	updated_by	int(11)	YES		NULL	
+os_hr_payslip	is_deleted	tinyint(1)	YES		0	
+os_hr_payslip_line	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_payslip_line	payslip_id	int(11)	NO	MUL	NULL	
+os_hr_payslip_line	component_id	int(11)	NO		NULL	
+os_hr_payslip_line	component_type	enum('earning','deduction')	NO		NULL	
+os_hr_payslip_line	description	varchar(200)	YES		NULL	
+os_hr_payslip_line	amount	decimal(10,2)	NO		NULL	
+os_hr_payslip_line	sort_order	int(11)	YES		0	
+os_hr_salary_component	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_salary_component	code	varchar(20)	NO	UNI	NULL	
+os_hr_salary_component	name	varchar(100)	NO		NULL	
+os_hr_salary_component	name_en	varchar(100)	YES		NULL	
+os_hr_salary_component	component_type	enum('earning','deduction')	NO		NULL	
+os_hr_salary_component	calculation	enum('fixed','percentage','formula')	YES		'fixed'	
+os_hr_salary_component	percentage_of	int(11)	YES		NULL	
+os_hr_salary_component	default_amount	decimal(10,2)	YES		0.00	
+os_hr_salary_component	is_taxable	tinyint(1)	YES		1	
+os_hr_salary_component	is_mandatory	tinyint(1)	YES		0	
+os_hr_salary_component	sort_order	int(11)	YES		0	
+os_hr_salary_component	status	enum('active','inactive')	YES		'active'	
+os_hr_salary_component	created_at	int(11)	NO		NULL	
+os_hr_salary_component	updated_at	int(11)	NO		NULL	
+os_hr_salary_component	created_by	int(11)	YES		NULL	
+os_hr_salary_component	updated_by	int(11)	YES		NULL	
+os_hr_salary_component	is_deleted	tinyint(1)	YES		0	
+os_hr_tracking_point	id	bigint(20)	NO	PRI	NULL	auto_increment
+os_hr_tracking_point	company_id	int(11)	YES		NULL	
+os_hr_tracking_point	user_id	int(11)	NO	MUL	NULL	
+os_hr_tracking_point	session_id	bigint(20)	YES	MUL	NULL	
+os_hr_tracking_point	latitude	decimal(10,7)	NO		NULL	
+os_hr_tracking_point	longitude	decimal(10,7)	NO		NULL	
+os_hr_tracking_point	accuracy	float	YES		NULL	
+os_hr_tracking_point	speed	float	YES		NULL	
+os_hr_tracking_point	heading	float	YES		NULL	
+os_hr_tracking_point	altitude	float	YES		NULL	
+os_hr_tracking_point	battery_level	int(11)	YES		NULL	
+os_hr_tracking_point	is_moving	tinyint(1)	YES		NULL	
+os_hr_tracking_point	is_mock	tinyint(1)	YES		0	
+os_hr_tracking_point	activity_type	enum('still','walking','driving','unknown')	YES		'unknown'	
+os_hr_tracking_point	captured_at	datetime	NO		NULL	
+os_hr_work_zone	id	int(11)	NO	PRI	NULL	auto_increment
+os_hr_work_zone	company_id	int(11)	YES	MUL	NULL	
+os_hr_work_zone	name	varchar(150)	NO		NULL	
+os_hr_work_zone	zone_type	enum('office','branch','client_site','field_area','restricted')	NO		'office'	
+os_hr_work_zone	latitude	decimal(10,7)	NO	MUL	NULL	
+os_hr_work_zone	longitude	decimal(10,7)	NO		NULL	
+os_hr_work_zone	radius_meters	int(11)	NO		100	
+os_hr_work_zone	address	varchar(500)	YES		NULL	
+os_hr_work_zone	wifi_ssid	varchar(100)	YES		NULL	
+os_hr_work_zone	wifi_bssid	varchar(50)	YES		NULL	
+os_hr_work_zone	is_active	tinyint(1)	YES		1	
+os_hr_work_zone	created_at	datetime	YES		current_timestamp()	
+os_hr_work_zone	created_by	int(11)	YES		NULL	
+os_hr_work_zone	updated_at	datetime	YES		NULL	
+os_ImageManager	id	int(10) unsigned	NO	PRI	NULL	auto_increment
+os_ImageManager	fileName	varchar(128)	NO		NULL	
+os_ImageManager	fileHash	varchar(32)	NO		NULL	
+os_ImageManager	contractId	varchar(50)	YES		NULL	
+os_ImageManager	customer_id	int(11)	YES	MUL	NULL	
+os_ImageManager	groupName	varchar(50)	YES		NULL	
+os_ImageManager	created	datetime	NO		NULL	
+os_ImageManager	modified	datetime	YES		NULL	
+os_ImageManager	createdBy	int(10) unsigned	YES		NULL	
+os_ImageManager	modifiedBy	int(10) unsigned	YES		NULL	
+os_income	id	int(11)	NO	PRI	NULL	auto_increment
+os_income	contract_id	int(11)	YES	MUL	NULL	
+os_income	date	date	NO		NULL	
+os_income	amount	double	NO		NULL	
+os_income	created_by	int(11)	YES	MUL	NULL	
+os_income	payment_type	varchar(255)	NO	MUL	NULL	
+os_income	_by	varchar(255)	YES	MUL	NULL	
+os_income	receipt_bank	varchar(255)	YES		NULL	
+os_income	payment_purpose	varchar(255)	YES		NULL	
+os_income	financial_transaction_id	int(11)	YES		NULL	
+os_income	type	int(11)	YES	MUL	1	
+os_income	notes	text	YES		NULL	
+os_income	document_number	int(11)	YES		NULL	
+os_income	bank_number	varchar(255)	YES		NULL	
+os_income_category	id	int(11)	NO	PRI	NULL	auto_increment
+os_income_category	name	varchar(100)	YES		NULL	
+os_income_category	created_at	int(11)	NO		NULL	
+os_income_category	created_by	int(11)	NO	MUL	NULL	
+os_income_category	updated_at	int(11)	NO		NULL	
+os_income_category	last_updated_by	int(11)	NO		NULL	
+os_income_category	is_deleted	int(1)	NO		NULL	
+os_income_category	description	text	NO		NULL	
+os_inventory_dashboard_company1	item_id	int(11)	NO		0	
+os_inventory_dashboard_company1	item_name	varchar(50)	NO		NULL	
+os_inventory_dashboard_company1	item_barcode	varchar(30)	NO		NULL	
+os_inventory_dashboard_company1	available_qty	decimal(32,0)	NO		0	
+os_inventory_dashboard_company1	available_serials	decimal(22,0)	NO		0	
+os_inventory_dashboard_company1	sold_serials	decimal(22,0)	NO		0	
+os_inventory_dashboard_company1	legacy_dummy_serials	decimal(22,0)	NO		0	
+os_inventory_dashboard_company1	qty_vs_serials_diff	decimal(33,0)	NO		0	
+os_inventory_invoices	id	int(11)	NO	PRI	NULL	auto_increment
+os_inventory_invoices	invoice_number	varchar(50)	YES		NULL	
+os_inventory_invoices	inventory_items_id	int(11)	YES		NULL	
+os_inventory_invoices	company_id	int(11)	YES		NULL	
+os_inventory_invoices	total_amount	double	YES		NULL	
+os_inventory_invoices	discount_amount	decimal(14,2)	NO		0.00	
+os_inventory_invoices	type	int(11)	YES		NULL	
+os_inventory_invoices	suppliers_id	int(11)	YES		NULL	
+os_inventory_invoices	created_at	int(11)	YES		NULL	
+os_inventory_invoices	updated_at	int(11)	YES		NULL	
+os_inventory_invoices	created_by	int(11)	YES		NULL	
+os_inventory_invoices	last_updated_by	int(11)	YES		NULL	
+os_inventory_invoices	is_deleted	int(11)	YES		0	
+os_inventory_invoices	status	varchar(30)	NO		'draft'	
+os_inventory_invoices	approved_by	int(11)	YES		NULL	
+os_inventory_invoices	approved_at	int(11)	YES		NULL	
+os_inventory_invoices	rejection_reason	varchar(500)	YES		NULL	
+os_inventory_invoices	invoice_notes	text	YES		NULL	
+os_inventory_invoices	date	date	YES		NULL	
+os_inventory_invoices	branch_id	int(11)	YES	MUL	NULL	
+os_inventory_invoices	posted_at	datetime	YES		NULL	
+os_inventory_items	id	int(11)	NO	PRI	NULL	auto_increment
+os_inventory_items	item_name	varchar(50)	NO		NULL	
+os_inventory_items	item_barcode	varchar(30)	NO		NULL	
+os_inventory_items	serial_number	varchar(100)	YES		NULL	
+os_inventory_items	description	varchar(500)	YES		NULL	
+os_inventory_items	category	varchar(100)	YES	MUL	NULL	
+os_inventory_items	unit_price	double	YES		NULL	
+os_inventory_items	min_stock_level	int(11)	NO		0	
+os_inventory_items	unit	varchar(30)	YES		'قطعة'	
+os_inventory_items	supplier_id	int(11)	YES	MUL	NULL	
+os_inventory_items	company_id	int(11)	YES		NULL	
+os_inventory_items	created_at	int(11)	NO		NULL	
+os_inventory_items	updated_at	int(11)	NO		NULL	
+os_inventory_items	created_by	int(11)	NO		NULL	
+os_inventory_items	last_update_by	int(11)	YES		NULL	
+os_inventory_items	is_deleted	int(11)	NO		0	
+os_inventory_items	status	enum('draft','pending','approved','rejected')	NO	MUL	'approved'	
+os_inventory_items	approved_by	int(11)	YES		NULL	
+os_inventory_items	approved_at	int(11)	YES		NULL	
+os_inventory_items	rejection_reason	varchar(500)	YES		NULL	
+os_inventory_item_quantities	id	int(11)	NO	PRI	NULL	auto_increment
+os_inventory_item_quantities	item_id	int(11)	NO		NULL	
+os_inventory_item_quantities	locations_id	int(11)	NO		NULL	
+os_inventory_item_quantities	suppliers_id	int(11)	NO		NULL	
+os_inventory_item_quantities	quantity	int(11)	NO		NULL	
+os_inventory_item_quantities	created_at	int(11)	NO		NULL	
+os_inventory_item_quantities	created_by	int(11)	NO		NULL	
+os_inventory_item_quantities	last_updated_by	int(11)	NO		NULL	
+os_inventory_item_quantities	updated_at	int(11)	NO		NULL	
+os_inventory_item_quantities	is_deleted	int(11)	NO		0	
+os_inventory_item_quantities	company_id	int(11)	YES		NULL	
+os_inventory_serial_numbers	id	int(11)	NO	PRI	NULL	auto_increment
+os_inventory_serial_numbers	company_id	int(11)	NO	MUL	NULL	
+os_inventory_serial_numbers	item_id	int(11)	NO	MUL	NULL	
+os_inventory_serial_numbers	serial_number	varchar(50)	NO	UNI	NULL	
+os_inventory_serial_numbers	status	enum('available','reserved','sold','returned','defective')	NO	MUL	'available'	
+os_inventory_serial_numbers	supplier_id	int(11)	YES		NULL	
+os_inventory_serial_numbers	location_id	int(11)	YES		NULL	
+os_inventory_serial_numbers	contract_id	int(11)	YES	MUL	NULL	
+os_inventory_serial_numbers	received_at	int(11)	YES		NULL	
+os_inventory_serial_numbers	sold_at	int(11)	YES		NULL	
+os_inventory_serial_numbers	note	varchar(255)	YES		NULL	
+os_inventory_serial_numbers	created_at	int(11)	YES		NULL	
+os_inventory_serial_numbers	created_by	int(11)	YES		NULL	
+os_inventory_serial_numbers	updated_at	int(11)	YES		NULL	
+os_inventory_serial_numbers	last_updated_by	int(11)	YES		NULL	
+os_inventory_serial_numbers	is_deleted	tinyint(1)	NO		0	
+os_inventory_stock_locations	id	int(11)	NO	PRI	NULL	auto_increment
+os_inventory_stock_locations	locations_name	varchar(250)	NO		NULL	
+os_inventory_stock_locations	company_id	int(11)	NO		NULL	
+os_inventory_stock_locations	created_by	int(11)	NO		NULL	
+os_inventory_stock_locations	created_at	int(11)	NO		NULL	
+os_inventory_stock_locations	updated_at	int(11)	NO		NULL	
+os_inventory_stock_locations	last_update_by	int(11)	YES		NULL	
+os_inventory_stock_locations	is_deleted	int(11)	NO		0	
+os_inventory_suppliers	id	int(11)	NO	PRI	NULL	auto_increment
+os_inventory_suppliers	company_id	int(11)	NO		NULL	
+os_inventory_suppliers	name	varchar(250)	NO		NULL	
+os_inventory_suppliers	adress	varchar(250)	NO		NULL	
+os_inventory_suppliers	phone_number	varchar(50)	NO		NULL	
+os_inventory_suppliers	created_by	int(11)	NO		NULL	
+os_inventory_suppliers	created_at	int(11)	NO		NULL	
+os_inventory_suppliers	updated_at	int(11)	NO		NULL	
+os_inventory_suppliers	last_update_by	int(11)	YES		NULL	
+os_inventory_suppliers	is_deleted	int(11)	NO		0	
+os_inventory_suppliers	user_id	int(11)	YES	UNI	NULL	
+os_invoice	id	int(11)	NO		NULL	
+os_invoice	title	varchar(250)	NO		NULL	
+os_invoice	number	int(11)	NO		NULL	
+os_invoice	date	date	YES		NULL	
+os_invoice	total	int(11)	NO		NULL	
+os_items	id	int(11)	NO		NULL	
+os_items	name	varchar(50)	NO		NULL	
+os_items	cost	int(11)	NO		NULL	
+os_items	price	int(11)	NO		NULL	
+os_items	invoice_number	int(11)	NO		NULL	
+os_items	notes	varchar(250)	YES		NULL	
+os_items	is_sold	int(11)	YES		NULL	
+os_items	sold_to	int(11)	NO		NULL	
+os_items_inventory_invoices	id	int(11)	NO	PRI	NULL	auto_increment
+os_items_inventory_invoices	number	int(11)	YES		NULL	
+os_items_inventory_invoices	single_price	double	YES		NULL	
+os_items_inventory_invoices	created_at	int(11)	YES		NULL	
+os_items_inventory_invoices	updated_at	int(11)	YES		NULL	
+os_items_inventory_invoices	created_by	int(11)	YES		NULL	
+os_items_inventory_invoices	inventory_items_id	int(11)	YES		NULL	
+os_items_inventory_invoices	total_amount	int(11)	YES		NULL	
+os_items_inventory_invoices	inventory_invoices_id	int(11)	YES	MUL	NULL	
+os_items_inventory_invoices	last_updated_by	int(11)	YES		NULL	
+os_items_inventory_invoices	is_deleted	int(11)	YES		0	
+os_items_inventory_invoices	status	enum('draft','pending','approved','rejected')	NO		'approved'	
+os_items_inventory_invoices	approved_by	int(11)	YES		NULL	
+os_items_inventory_invoices	approved_at	int(11)	YES		NULL	
+os_items_inventory_invoices	rejection_reason	varchar(500)	YES		NULL	
+os_jobs	id	int(11)	NO	PRI	NULL	auto_increment
+os_jobs	name	varchar(255)	NO		NULL	
+os_jobs	job_type	int(11)	NO	MUL	NULL	
+os_jobs	address_city	varchar(255)	YES		NULL	
+os_jobs	address_area	varchar(255)	YES		NULL	
+os_jobs	address_street	varchar(500)	YES		NULL	
+os_jobs	address_building	varchar(255)	YES		NULL	
+os_jobs	postal_code	varchar(20)	YES		NULL	
+os_jobs	plus_code	varchar(20)	YES		NULL	
+os_jobs	latitude	decimal(10,8)	YES		NULL	
+os_jobs	longitude	decimal(11,8)	YES		NULL	
+os_jobs	email	varchar(255)	YES		NULL	
+os_jobs	website	varchar(255)	YES		NULL	
+os_jobs	notes	text	YES		NULL	
+os_jobs	status	tinyint(4)	NO	MUL	1	
+os_jobs	created_at	int(11)	YES		NULL	
+os_jobs	updated_at	int(11)	YES		NULL	
+os_jobs	created_by	int(11)	YES		NULL	
+os_jobs	updated_by	int(11)	YES		NULL	
+os_jobs	is_deleted	tinyint(4)	NO	MUL	0	
+os_jobs_phones	id	int(11)	NO	PRI	NULL	auto_increment
+os_jobs_phones	job_id	int(11)	NO	MUL	NULL	
+os_jobs_phones	phone_number	varchar(20)	NO	MUL	NULL	
+os_jobs_phones	phone_type	enum('office','mobile','fax','whatsapp')	NO		'office'	
+os_jobs_phones	employee_name	varchar(255)	YES		NULL	
+os_jobs_phones	employee_position	varchar(255)	YES		NULL	
+os_jobs_phones	department	varchar(255)	YES		NULL	
+os_jobs_phones	is_primary	tinyint(4)	NO		0	
+os_jobs_phones	notes	varchar(500)	YES		NULL	
+os_jobs_phones	created_at	int(11)	YES		NULL	
+os_jobs_phones	updated_at	int(11)	YES		NULL	
+os_jobs_phones	created_by	int(11)	YES		NULL	
+os_jobs_phones	is_deleted	tinyint(4)	NO		0	
+os_jobs_ratings	id	int(11)	NO	PRI	NULL	auto_increment
+os_jobs_ratings	job_id	int(11)	NO	MUL	NULL	
+os_jobs_ratings	rating_type	enum('judicial_response','cooperation','speed','overall')	NO	MUL	NULL	
+os_jobs_ratings	rating_value	tinyint(4)	NO		NULL	
+os_jobs_ratings	contract_id	int(11)	YES	MUL	NULL	
+os_jobs_ratings	judiciary_id	int(11)	YES	MUL	NULL	
+os_jobs_ratings	review_text	text	YES		NULL	
+os_jobs_ratings	rated_by	int(11)	NO		NULL	
+os_jobs_ratings	rated_at	datetime	NO		current_timestamp()	
+os_jobs_ratings	created_at	int(11)	YES		NULL	
+os_jobs_ratings	updated_at	int(11)	YES		NULL	
+os_jobs_ratings	is_deleted	tinyint(4)	NO		0	
+os_jobs_type	id	int(11)	NO	PRI	NULL	auto_increment
+os_jobs_type	name	varchar(255)	YES		NULL	
+os_jobs_working_hours	id	int(11)	NO	PRI	NULL	auto_increment
+os_jobs_working_hours	job_id	int(11)	NO	MUL	NULL	
+os_jobs_working_hours	day_of_week	tinyint(4)	NO		NULL	
+os_jobs_working_hours	opening_time	time	YES		NULL	
+os_jobs_working_hours	closing_time	time	YES		NULL	
+os_jobs_working_hours	is_closed	tinyint(4)	NO		0	
+os_jobs_working_hours	notes	varchar(255)	YES		NULL	
+os_judiciary	id	int(11)	NO	PRI	NULL	auto_increment
+os_judiciary	court_id	int(11)	NO		NULL	
+os_judiciary	type_id	int(11)	NO		NULL	
+os_judiciary	lawyer_cost	double	NO		NULL	
+os_judiciary	lawyer_id	int(11)	NO		NULL	
+os_judiciary	created_at	int(11)	NO		NULL	
+os_judiciary	updated_at	int(11)	NO		NULL	
+os_judiciary	created_by	int(11)	NO		NULL	
+os_judiciary	last_update_by	int(11)	NO		NULL	
+os_judiciary	is_deleted	int(1)	YES	MUL	0	
+os_judiciary	contract_id	int(11)	NO	MUL	NULL	
+os_judiciary	year	varchar(255)	YES		NULL	
+os_judiciary	judiciary_inform_address_id	int(11)	YES		NULL	
+os_judiciary	income_date	date	YES		NULL	
+os_judiciary	judiciary_number	int(11)	YES		NULL	
+os_judiciary	case_cost	int(11)	YES		NULL	
+os_judiciary	company_id	int(11)	YES	MUL	NULL	
+os_judiciary	case_status	enum('تجهيز','ترسيم','قيد التنفيذ','وقف سير','فصل','متروكه')	YES		'قيد التنفيذ'	
+os_judiciary	last_check_date	date	YES		NULL	
+os_judiciary_actions	id	int(11)	NO	PRI	NULL	auto_increment
+os_judiciary_actions	name	varchar(255)	NO		NULL	
+os_judiciary_actions	action_type	varchar(50)	YES		'general'	
+os_judiciary_actions	action_nature	enum('request','document','doc_status','process')	YES		NULL	
+os_judiciary_actions	allowed_documents	varchar(500)	YES		NULL	
+os_judiciary_actions	allowed_statuses	varchar(500)	YES		NULL	
+os_judiciary_actions	parent_request_ids	varchar(500)	YES		NULL	
+os_judiciary_actions	is_deleted	tinyint(1)	YES		0	
+os_judiciary_actions_backup	id	int(11)	NO		0	
+os_judiciary_actions_backup	name	varchar(255)	NO		NULL	
+os_judiciary_actions_backup	action_type	enum('request','court_letter','judge_decision','party_petition','incoming_info')	NO		'request'	
+os_judiciary_actions_backup	action_nature	enum('request','document','doc_status','process')	YES		NULL	
+os_judiciary_actions_backup	allowed_documents	varchar(500)	YES		NULL	
+os_judiciary_actions_backup	allowed_statuses	varchar(500)	YES		NULL	
+os_judiciary_actions_backup	parent_request_ids	varchar(500)	YES		NULL	
+os_judiciary_backup	id	int(11)	NO		0	
+os_judiciary_backup	court_id	int(11)	NO		NULL	
+os_judiciary_backup	type_id	int(11)	NO		NULL	
+os_judiciary_backup	lawyer_cost	double	NO		NULL	
+os_judiciary_backup	lawyer_id	int(11)	NO		NULL	
+os_judiciary_backup	created_at	int(11)	NO		NULL	
+os_judiciary_backup	updated_at	int(11)	NO		NULL	
+os_judiciary_backup	created_by	int(11)	NO		NULL	
+os_judiciary_backup	last_update_by	int(11)	NO		NULL	
+os_judiciary_backup	is_deleted	int(1)	YES		0	
+os_judiciary_backup	contract_id	int(11)	NO		NULL	
+os_judiciary_backup	year	varchar(255)	YES		NULL	
+os_judiciary_backup	judiciary_inform_address_id	int(11)	YES		NULL	
+os_judiciary_backup	income_date	date	YES		NULL	
+os_judiciary_backup	judiciary_number	int(11)	YES		NULL	
+os_judiciary_backup	case_cost	int(11)	YES		NULL	
+os_judiciary_backup	company_id	int(11)	YES		NULL	
+os_judiciary_cost	id	int(11)	NO	PRI	NULL	auto_increment
+os_judiciary_cost	lawyer_cost	int(11)	YES		NULL	
+os_judiciary_cost	judiciary_cost	int(11)	YES		NULL	
+os_judiciary_cost	contract_id	int(11)	YES		NULL	
+os_judiciary_customers_actions	id	int(11)	NO	PRI	NULL	auto_increment
+os_judiciary_customers_actions	judiciary_id	int(11)	NO	MUL	NULL	
+os_judiciary_customers_actions	customers_id	int(11)	YES	MUL	NULL	
+os_judiciary_customers_actions	judiciary_actions_id	int(11)	NO	MUL	NULL	
+os_judiciary_customers_actions	note	text	YES		NULL	
+os_judiciary_customers_actions	created_at	int(11)	NO		NULL	
+os_judiciary_customers_actions	updated_at	int(11)	NO		NULL	
+os_judiciary_customers_actions	created_by	int(11)	NO		NULL	
+os_judiciary_customers_actions	last_update_by	int(11)	NO		NULL	
+os_judiciary_customers_actions	is_deleted	int(1)	YES		0	
+os_judiciary_customers_actions	contract_id	int(11)	YES		NULL	
+os_judiciary_customers_actions	parent_id	int(11)	YES	MUL	NULL	
+os_judiciary_customers_actions	request_status	varchar(20)	YES	MUL	NULL	
+os_judiciary_customers_actions	decision_text	text	YES		NULL	
+os_judiciary_customers_actions	decision_file	varchar(255)	YES		NULL	
+os_judiciary_customers_actions	is_current	tinyint(1)	YES	MUL	1	
+os_judiciary_customers_actions	amount	decimal(10,2)	YES		NULL	
+os_judiciary_customers_actions	request_target	varchar(20)	YES		NULL	
+os_judiciary_customers_actions	action_date	datetime	YES	MUL	NULL	
+os_judiciary_customers_actions	image	varchar(255)	YES		NULL	
+os_judiciary_customers_actions_backup	id	int(11)	NO		0	
+os_judiciary_customers_actions_backup	judiciary_id	int(11)	NO		NULL	
+os_judiciary_customers_actions_backup	customers_id	int(11)	YES		NULL	
+os_judiciary_customers_actions_backup	judiciary_actions_id	int(11)	NO		NULL	
+os_judiciary_customers_actions_backup	note	text	YES		NULL	
+os_judiciary_customers_actions_backup	created_at	int(11)	NO		NULL	
+os_judiciary_customers_actions_backup	updated_at	int(11)	NO		NULL	
+os_judiciary_customers_actions_backup	created_by	int(11)	NO		NULL	
+os_judiciary_customers_actions_backup	last_update_by	int(11)	NO		NULL	
+os_judiciary_customers_actions_backup	is_deleted	int(1)	YES		0	
+os_judiciary_customers_actions_backup	contract_id	int(11)	YES		NULL	
+os_judiciary_customers_actions_backup	action_date	datetime	YES		NULL	
+os_judiciary_customers_actions_backup	image	varchar(255)	YES		NULL	
+os_judiciary_inform_address	id	int(11)	NO	PRI	NULL	auto_increment
+os_judiciary_inform_address	address	varchar(255)	YES		NULL	
+os_judiciary_inform_address	created_at	int(11)	YES		NULL	
+os_judiciary_inform_address	updated_at	int(11)	YES		NULL	
+os_judiciary_inform_address	created_by	int(11)	YES		NULL	
+os_judiciary_inform_address	is_deleted	int(11)	YES		0	
+os_judiciary_type	id	int(11)	NO	PRI	NULL	auto_increment
+os_judiciary_type	name	varchar(255)	NO		NULL	
+os_lawyers	id	int(11)	NO	PRI	NULL	auto_increment
+os_lawyers	name	varchar(255)	NO		NULL	
+os_lawyers	address	varchar(255)	YES		NULL	
+os_lawyers	phone_number	varchar(255)	YES		NULL	
+os_lawyers	status	tinyint(1)	NO		NULL	
+os_lawyers	created_at	int(11)	NO		NULL	
+os_lawyers	updated_at	int(11)	NO		NULL	
+os_lawyers	created_by	int(11)	NO		NULL	
+os_lawyers	last_update_by	int(11)	NO		NULL	
+os_lawyers	is_deleted	int(1)	YES		0	
+os_lawyers	notes	text	YES		NULL	
+os_lawyers	type	varchar(255)	YES		NULL	
+os_lawyers_image	id	int(11)	NO	PRI	NULL	auto_increment
+os_lawyers_image	lawyer_id	int(11)	YES		NULL	
+os_lawyers_image	image	varchar(255)	YES		NULL	
+os_leave_policy	id	int(11)	NO		NULL	
+os_leave_policy	title	varchar(50)	NO		NULL	
+os_leave_policy	year	year(4)	NO		NULL	
+os_leave_policy	leave_type	int(11)	NO		NULL	
+os_leave_policy	total_days	int(11)	NO		NULL	
+os_leave_policy	description	varchar(250)	YES		NULL	
+os_leave_policy	department	int(11)	NO		0	
+os_leave_policy	designation	int(11)	NO		0	
+os_leave_policy	location	int(11)	NO		0	
+os_leave_policy	gender	enum('all','Male','Female')	NO		NULL	
+os_leave_policy	marital_status	enum('all','single','married')	NO		NULL	
+os_leave_policy	status	enum('active','unActive')	NO		'active'	
+os_leave_policy	created_by	int(11)	NO		NULL	
+os_leave_policy	created_at	int(11)	NO		NULL	
+os_leave_policy	updated_at	int(11)	YES		NULL	
+os_leave_request	id	int(11)	NO		NULL	
+os_leave_request	reason	varchar(255)	YES		NULL	
+os_leave_request	start_at	date	NO		NULL	
+os_leave_request	end_at	date	NO		NULL	
+os_leave_request	attachment	int(11)	YES		NULL	
+os_leave_request	leave_policy	int(11)	NO		NULL	
+os_leave_request	action_by	int(11)	YES		0	
+os_leave_request	status	enum('under review','approved','rejected','')	NO		'under review'	
+os_leave_request	created_by	int(11)	NO		NULL	
+os_leave_request	created_at	int(11)	NO		NULL	
+os_leave_request	updated_at	int(11)	YES		NULL	
+os_leave_request	proved_at	int(11)	YES		NULL	
+os_leave_types	id	int(11)	NO		NULL	
+os_leave_types	title	varchar(50)	NO		NULL	
+os_leave_types	description	varchar(250)	YES		NULL	
+os_leave_types	status	enum('active','unActive')	NO		'active'	
+os_leave_types	created_by	int(11)	NO		NULL	
+os_leave_types	created_at	int(11)	NO		NULL	
+os_leave_types	updated_at	int(11)	YES		NULL	
+os_loan_scheduling	id	int(11)	NO	PRI	NULL	auto_increment
+os_loan_scheduling	contract_id	int(11)	NO	MUL	NULL	
+os_loan_scheduling	new_installment_date	date	YES		NULL	
+os_loan_scheduling	monthly_installment	double	NO		NULL	
+os_loan_scheduling	first_installment_date	date	NO		NULL	
+os_loan_scheduling	status	varchar(255)	YES		NULL	
+os_loan_scheduling	status_action_by	int(11)	YES	MUL	NULL	
+os_loan_scheduling	created_at	int(11)	NO		NULL	
+os_loan_scheduling	updated_at	int(11)	NO		NULL	
+os_loan_scheduling	created_by	int(11)	NO	MUL	NULL	
+os_loan_scheduling	last_update_by	int(11)	YES	MUL	NULL	
+os_loan_scheduling	settlement_type	varchar(20)	YES		'monthly'	
+os_loan_scheduling	total_debt	double	YES		NULL	
+os_loan_scheduling	remaining_debt	double	YES		NULL	
+os_loan_scheduling	installments_count	int(11)	YES		NULL	
+os_loan_scheduling	first_payment	double	YES		NULL	
+os_loan_scheduling	notes	text	YES		NULL	
+os_loan_scheduling	is_deleted	int(1)	NO		0	
+os_location	id	int(11)	NO		NULL	
+os_location	location	varchar(50)	NO		NULL	
+os_location	description	varchar(250)	YES		NULL	
+os_location	longitude	int(11)	NO		NULL	
+os_location	latitude	int(11)	NO		NULL	
+os_location	radius	int(11)	NO		NULL	
+os_location	status	enum('active','unActive')	NO		'active'	
+os_location	created_by	int(11)	NO		NULL	
+os_location	created_at	int(11)	NO		NULL	
+os_location	updated_at	int(11)	YES		NULL	
+os_menu	id	int(11)	NO		NULL	
+os_menu	name	varchar(128)	NO		NULL	
+os_menu	parent	int(11)	YES		NULL	
+os_menu	route	varchar(255)	YES		NULL	
+os_menu	order	int(11)	YES		NULL	
+os_menu	data	blob	YES		NULL	
+os_migration	version	varchar(180)	NO		NULL	
+os_migration	apply_time	int(11)	YES		NULL	
+os_ml_models	id	int(10) unsigned	NO	PRI	NULL	auto_increment
+os_ml_models	model_name	varchar(100)	NO	MUL	NULL	
+os_ml_models	version	varchar(20)	NO		NULL	
+os_ml_models	model_type	varchar(50)	NO		NULL	
+os_ml_models	features_used	longtext	NO		NULL	
+os_ml_models	metrics	longtext	YES		NULL	
+os_ml_models	threshold	decimal(5,2)	YES		0.50	
+os_ml_models	is_active	tinyint(1)	NO	MUL	0	
+os_ml_models	trained_at	datetime	YES		NULL	
+os_ml_models	training_samples	int(11)	YES		0	
+os_ml_models	model_path	varchar(500)	YES		NULL	
+os_ml_models	notes	text	YES		NULL	
+os_ml_models	created_at	datetime	NO		current_timestamp()	
+os_movment	id	int(11)	NO		NULL	
+os_movment	user_id	int(11)	YES		NULL	
+os_movment	movement_number	int(11)	NO		NULL	
+os_movment	bank_receipt_number	int(11)	NO		NULL	
+os_movment	financial_value	int(11)	NO		NULL	
+os_movment	receipt_image	varchar(255)	NO		NULL	
+os_notification	id	int(11)	NO	PRI	NULL	auto_increment
+os_notification	sender_id	int(11)	YES		NULL	
+os_notification	recipient_id	int(11)	YES		NULL	
+os_notification	type_of_notification	int(11)	YES		NULL	
+os_notification	title_html	varchar(255)	YES		NULL	
+os_notification	body_html	text	YES		NULL	
+os_notification	href	varchar(255)	YES		NULL	
+os_notification	is_unread	varchar(255)	YES		NULL	
+os_notification	is_hidden	varchar(255)	YES		NULL	
+os_notification	created_time	int(11)	YES		NULL	
+os_ocp_audit_log	id	int(11)	NO	PRI	NULL	auto_increment
+os_ocp_audit_log	contract_id	int(11)	NO	MUL	NULL	
+os_ocp_audit_log	event_type	varchar(50)	NO	MUL	NULL	
+os_ocp_audit_log	event_data	text	YES		NULL	
+os_ocp_audit_log	old_value	varchar(255)	YES		NULL	
+os_ocp_audit_log	new_value	varchar(255)	YES		NULL	
+os_ocp_audit_log	performed_by	int(11)	NO		NULL	
+os_ocp_audit_log	created_at	datetime	NO	MUL	current_timestamp()	
+os_outcome_labels	id	int(10) unsigned	NO	PRI	NULL	auto_increment
+os_outcome_labels	customer_id	int(11)	NO	MUL	NULL	
+os_outcome_labels	contract_id	int(11)	YES	MUL	NULL	
+os_outcome_labels	label	enum('good','partial_default','default','write_off')	NO	MUL	'good'	
+os_outcome_labels	label_reason	varchar(255)	YES		NULL	
+os_outcome_labels	days_past_due	int(11)	YES		0	
+os_outcome_labels	missed_payments	int(11)	YES		0	
+os_outcome_labels	label_date	date	NO	MUL	NULL	
+os_outcome_labels	auto_generated	tinyint(1)	NO		1	
+os_outcome_labels	created_at	datetime	NO		current_timestamp()	
+os_payment_type	id	int(11)	NO	PRI	NULL	auto_increment
+os_payment_type	name	varchar(255)	NO		NULL	
+os_payment_type	created_at	int(11)	YES		NULL	
+os_payment_type	updated_at	int(11)	YES		NULL	
+os_payment_type	created_by	int(11)	YES		NULL	
+os_payment_type	last_updated_by	int(11)	YES		NULL	
+os_payment_type	is_deleted	int(11)	YES		0	
+os_phone_numbers	id	int(11)	NO	PRI	NULL	auto_increment
+os_phone_numbers	customers_id	int(11)	YES		NULL	
+os_phone_numbers	phone_number	varchar(255)	NO		NULL	
+os_phone_numbers	fb_account	varchar(255)	YES		NULL	
+os_phone_numbers	created_at	timestamp	YES		NULL	
+os_phone_numbers	updated_at	timestamp	YES		NULL	
+os_phone_numbers	is_deleted	int(1)	YES		0	
+os_phone_numbers	phone_number_owner	varchar(255)	NO		NULL	
+os_phone_numbers	owner_name	varchar(255)	NO		NULL	
+os_playbook_runs	id	int(11)	NO	PRI	NULL	auto_increment
+os_playbook_runs	contract_id	int(11)	NO	MUL	NULL	
+os_playbook_runs	playbook_id	varchar(20)	NO		NULL	
+os_playbook_runs	playbook_name	varchar(100)	NO		NULL	
+os_playbook_runs	current_step	int(11)	YES		1	
+os_playbook_runs	total_steps	int(11)	YES		1	
+os_playbook_runs	status	enum('active','completed','aborted','paused')	NO	MUL	'active'	
+os_playbook_runs	steps_data	text	YES		NULL	
+os_playbook_runs	started_by	int(11)	NO		NULL	
+os_playbook_runs	started_at	datetime	NO		current_timestamp()	
+os_playbook_runs	completed_at	datetime	YES		NULL	
+os_playbook_runs	notes	text	YES		NULL	
+os_profile	user_id	int(11)	NO		NULL	
+os_profile	name	varchar(255)	YES		NULL	
+os_profile	public_email	varchar(255)	YES		NULL	
+os_profile	gravatar_email	varchar(255)	YES		NULL	
+os_profile	gravatar_id	varchar(32)	YES		NULL	
+os_profile	location	int(11)	YES		NULL	
+os_profile	website	varchar(255)	YES		NULL	
+os_profile	bio	text	YES		NULL	
+os_profile	timezone	varchar(40)	YES		NULL	
+os_profile	middle_name	varchar(255)	YES		NULL	
+os_profile	last_name	varchar(255)	YES		NULL	
+os_profile	employee_type	enum('Active','Suspended')	NO		NULL	
+os_profile	employee_status	enum('Full_time','Part_time')	NO		NULL	
+os_profile	date_of_hire	date	YES		NULL	
+os_profile	department	int(11)	YES		NULL	
+os_profile	job_title	int(11)	YES		NULL	
+os_profile	reporting_to	int(11)	YES		NULL	
+os_profile	mobile	varchar(255)	YES		NULL	
+os_profile	nationality	int(11)	YES		NULL	
+os_profile	gender	enum('Female','Male')	NO		NULL	
+os_profile	marital_status	enum('single','married')	NO		NULL	
+os_profit_distributions	id	int(11)	NO	PRI	NULL	auto_increment
+os_profit_distributions	company_id	int(11)	YES	MUL	NULL	
+os_profit_distributions	distribution_type	enum('مساهمين','محفظة')	NO		NULL	
+os_profit_distributions	period_from	date	NO		NULL	
+os_profit_distributions	period_to	date	NO		NULL	
+os_profit_distributions	total_revenue	decimal(15,2)	YES		0.00	
+os_profit_distributions	direct_expenses	decimal(15,2)	YES		0.00	
+os_profit_distributions	shared_expenses	decimal(15,2)	YES		0.00	
+os_profit_distributions	net_profit	decimal(15,2)	YES		0.00	
+os_profit_distributions	investor_share_pct	decimal(5,2)	YES		NULL	
+os_profit_distributions	investor_amount	decimal(15,2)	YES		0.00	
+os_profit_distributions	parent_amount	decimal(15,2)	YES		0.00	
+os_profit_distributions	distribution_amount	decimal(15,2)	YES		0.00	
+os_profit_distributions	status	enum('مسودة','معتمد','موزّع')	YES		'مسودة'	
+os_profit_distributions	notes	text	YES		NULL	
+os_profit_distributions	created_by	int(11)	YES		NULL	
+os_profit_distributions	created_at	int(11)	YES		NULL	
+os_profit_distributions	approved_by	int(11)	YES		NULL	
+os_profit_distributions	approved_at	int(11)	YES		NULL	
+os_profit_distribution_lines	id	int(11)	NO	PRI	NULL	auto_increment
+os_profit_distribution_lines	distribution_id	int(11)	NO	MUL	NULL	
+os_profit_distribution_lines	shareholder_id	int(11)	NO	MUL	NULL	
+os_profit_distribution_lines	share_count_snapshot	int(11)	YES		NULL	
+os_profit_distribution_lines	total_shares_snapshot	int(11)	YES		NULL	
+os_profit_distribution_lines	percentage	decimal(5,4)	YES		NULL	
+os_profit_distribution_lines	amount	decimal(15,2)	YES		NULL	
+os_profit_distribution_lines	payment_status	enum('معلّق','مدفوع')	YES		'معلّق'	
+os_profit_distribution_lines	payment_date	date	YES		NULL	
+os_profit_distribution_lines	payment_method	varchar(100)	YES		NULL	
+os_profit_distribution_lines	payment_reference	varchar(100)	YES		NULL	
+os_promissory_notes	id	int(10) unsigned	NO	PRI	NULL	auto_increment
+os_promissory_notes	contract_id	int(11)	NO	MUL	NULL	
+os_promissory_notes	sequence_number	tinyint(3) unsigned	NO		1	
+os_promissory_notes	amount	decimal(12,2)	NO		0.00	
+os_promissory_notes	due_date	varchar(30)	YES		NULL	
+os_promissory_notes	status	enum('active','executed','cancelled')	NO	MUL	'active'	
+os_promissory_notes	created_at	int(10) unsigned	YES		NULL	
+os_promissory_notes	created_by	int(10) unsigned	YES		NULL	
+os_real_estate	id	int(11)	NO	PRI	NULL	auto_increment
+os_real_estate	customer_id	int(11)	YES		NULL	
+os_real_estate	property_type	varchar(255)	YES		NULL	
+os_real_estate	property_number	varchar(255)	YES		NULL	
+os_real_estate	created_at	int(11)	YES		NULL	
+os_real_estate	updated_at	int(11)	YES		NULL	
+os_real_estate	created_by	int(11)	YES		NULL	
+os_real_estate	updated_by	int(11)	YES		NULL	
+os_real_estate	is_deleted	int(11)	YES		NULL	
+os_rejester_follow_up_type	id	int(11)	NO	PRI	NULL	auto_increment
+os_rejester_follow_up_type	name	varchar(255)	NO		NULL	
+os_risk_assessments	id	int(10) unsigned	NO	PRI	NULL	auto_increment
+os_risk_assessments	customer_id	int(11)	NO	MUL	NULL	
+os_risk_assessments	rule_score	decimal(5,2)	NO		0.00	
+os_risk_assessments	ml_score	decimal(5,2)	YES		NULL	
+os_risk_assessments	final_score	decimal(5,2)	NO		0.00	
+os_risk_assessments	score_weights	longtext	YES		NULL	
+os_risk_assessments	risk_tier	enum('approved','conditional','high_risk','rejected')	NO	MUL	'conditional'	
+os_risk_assessments	decision	enum('approved','conditional','rejected','draft','pending')	NO	MUL	'pending'	
+os_risk_assessments	decision_by	int(10) unsigned	YES		NULL	
+os_risk_assessments	decision_at	datetime	YES		NULL	
+os_risk_assessments	decision_notes	text	YES		NULL	
+os_risk_assessments	top_factors	longtext	YES		NULL	
+os_risk_assessments	all_factors	longtext	YES		NULL	
+os_risk_assessments	reasons	longtext	YES		NULL	
+os_risk_assessments	input_snapshot	longtext	NO		NULL	
+os_risk_assessments	profile_pct	tinyint(3) unsigned	NO		0	
+os_risk_assessments	max_financing	decimal(12,2)	YES		NULL	
+os_risk_assessments	max_installment	decimal(10,2)	YES		NULL	
+os_risk_assessments	max_months	smallint(5) unsigned	YES		NULL	
+os_risk_assessments	rules_version	varchar(20)	NO		'1.0'	
+os_risk_assessments	model_version	varchar(20)	YES		NULL	
+os_risk_assessments	engine_mode	enum('rules_only','ml_only','ensemble')	NO		'rules_only'	
+os_risk_assessments	alerts	longtext	YES		NULL	
+os_risk_assessments	created_by	int(10) unsigned	YES		NULL	
+os_risk_assessments	created_at	datetime	NO	MUL	current_timestamp()	
+os_risk_assessments	updated_at	datetime	YES		NULL	on update current_timestamp()
+os_risk_engine_config	id	int(10) unsigned	NO	PRI	NULL	auto_increment
+os_risk_engine_config	config_key	varchar(100)	NO	UNI	NULL	
+os_risk_engine_config	config_value	longtext	NO		NULL	
+os_risk_engine_config	description_ar	varchar(255)	YES		NULL	
+os_risk_engine_config	updated_by	int(10) unsigned	YES		NULL	
+os_risk_engine_config	updated_at	datetime	YES		NULL	on update current_timestamp()
+os_shared_expense_allocations	id	int(11)	NO	PRI	NULL	auto_increment
+os_shared_expense_allocations	name	varchar(255)	NO		NULL	
+os_shared_expense_allocations	total_amount	decimal(15,2)	NO		NULL	
+os_shared_expense_allocations	allocation_method	enum('عدد_العقود','صافي_الدين','يدوي','بالتساوي')	NO		NULL	
+os_shared_expense_allocations	allocation_date	date	NO		NULL	
+os_shared_expense_allocations	period_from	date	YES		NULL	
+os_shared_expense_allocations	period_to	date	YES		NULL	
+os_shared_expense_allocations	notes	text	YES		NULL	
+os_shared_expense_allocations	status	enum('مسودة','معتمد')	YES		'مسودة'	
+os_shared_expense_allocations	created_by	int(11)	YES		NULL	
+os_shared_expense_allocations	created_at	int(11)	YES		NULL	
+os_shared_expense_allocations	approved_by	int(11)	YES		NULL	
+os_shared_expense_allocations	approved_at	int(11)	YES		NULL	
+os_shared_expense_lines	id	int(11)	NO	PRI	NULL	auto_increment
+os_shared_expense_lines	allocation_id	int(11)	NO	MUL	NULL	
+os_shared_expense_lines	company_id	int(11)	NO	MUL	NULL	
+os_shared_expense_lines	metric_value	decimal(15,2)	YES		NULL	
+os_shared_expense_lines	percentage	decimal(5,2)	YES		NULL	
+os_shared_expense_lines	allocated_amount	decimal(15,2)	YES		NULL	
+os_shareholders	id	int(11)	NO	PRI	NULL	auto_increment
+os_shareholders	name	varchar(250)	NO		NULL	
+os_shareholders	phone	varchar(50)	YES		NULL	
+os_shareholders	email	varchar(255)	YES		NULL	
+os_shareholders	national_id	varchar(50)	YES		NULL	
+os_shareholders	share_count	int(11)	NO		0	
+os_shareholders	join_date	date	YES		NULL	
+os_shareholders	documents	text	YES		NULL	
+os_shareholders	notes	text	YES		NULL	
+os_shareholders	is_active	tinyint(3)	YES		1	
+os_shareholders	is_deleted	int(11)	YES		0	
+os_shareholders	created_at	int(11)	YES		NULL	
+os_shareholders	updated_at	int(11)	YES		NULL	
+os_shareholders	created_by	int(11)	YES		NULL	
+os_sla_status	id	int(11)	NO	PRI	NULL	auto_increment
+os_sla_status	contract_id	int(11)	NO	MUL	NULL	
+os_sla_status	rule_code	varchar(50)	NO	MUL	NULL	
+os_sla_status	rule_description	varchar(255)	YES		NULL	
+os_sla_status	status	enum('compliant','warning','breached')	NO	MUL	'compliant'	
+os_sla_status	due_at	datetime	YES		NULL	
+os_sla_status	breached_at	datetime	YES		NULL	
+os_sla_status	resolved_at	datetime	YES		NULL	
+os_sla_status	resolved_by	int(11)	YES		NULL	
+os_sla_status	resolution_note	text	YES		NULL	
+os_sla_status	created_at	datetime	NO		current_timestamp()	
+os_sms	id	int(11)	NO	PRI	NULL	auto_increment
+os_sms	date	date	YES		NULL	
+os_sms	is_send	tinyint(1)	YES		NULL	
+os_sms	massage	text	YES		NULL	
+os_sms	created_at	int(11)	YES		NULL	
+os_sms	updated_at	int(11)	YES		NULL	
+os_sms	created_by	int(11)	YES		NULL	
+os_sms	last_updated_by	int(11)	YES		NULL	
+os_sms	is_deleted	int(11)	YES		NULL	
+os_sms	type	int(11)	YES		NULL	
+os_sms	customers_id	text	YES		NULL	
+os_sms	contract_id	int(11)	YES		NULL	
+os_social_account	id	int(11)	NO		NULL	
+os_social_account	user_id	int(11)	YES		NULL	
+os_social_account	provider	varchar(255)	NO		NULL	
+os_social_account	client_id	varchar(255)	NO		NULL	
+os_social_account	data	text	YES		NULL	
+os_social_account	code	varchar(32)	YES		NULL	
+os_social_account	created_at	int(11)	YES		NULL	
+os_social_account	email	varchar(255)	YES		NULL	
+os_social_account	username	varchar(255)	YES		NULL	
+os_status	id	int(11)	NO	PRI	NULL	auto_increment
+os_status	name	varchar(255)	NO		NULL	
+os_status	created_at	int(11)	YES		NULL	
+os_status	updated_at	int(11)	YES		NULL	
+os_status	created_by	int(11)	YES		NULL	
+os_status	last_updated_by	int(11)	YES		NULL	
+os_status	is_deleted	int(11)	YES		0	
+os_stock_movements	id	int(11)	NO	PRI	NULL	auto_increment
+os_stock_movements	item_id	int(11)	NO	MUL	NULL	
+os_stock_movements	movement_type	enum('IN','OUT','TRANSFER','ADJUSTMENT','RETURN')	NO	MUL	NULL	
+os_stock_movements	quantity	int(11)	NO		NULL	
+os_stock_movements	from_location_id	int(11)	YES		NULL	
+os_stock_movements	to_location_id	int(11)	YES		NULL	
+os_stock_movements	reference_type	varchar(50)	YES	MUL	NULL	
+os_stock_movements	reference_id	int(11)	YES		NULL	
+os_stock_movements	unit_cost	double	YES		NULL	
+os_stock_movements	notes	varchar(500)	YES		NULL	
+os_stock_movements	supplier_id	int(11)	YES		NULL	
+os_stock_movements	company_id	int(11)	YES		NULL	
+os_stock_movements	created_by	int(11)	NO		NULL	
+os_stock_movements	created_at	int(11)	NO	MUL	NULL	
+os_system_settings	id	int(11)	NO	PRI	NULL	auto_increment
+os_system_settings	setting_group	varchar(50)	NO	MUL	NULL	
+os_system_settings	setting_key	varchar(100)	NO		NULL	
+os_system_settings	setting_value	text	YES		NULL	
+os_system_settings	is_encrypted	tinyint(1)	NO		0	
+os_system_settings	description	varchar(255)	YES		NULL	
+os_system_settings	updated_by	int(11)	YES		NULL	
+os_system_settings	updated_at	datetime	YES		NULL	
+os_token	user_id	int(11)	NO		NULL	
+os_token	code	varchar(32)	NO		NULL	
+os_token	created_at	int(11)	NO		NULL	
+os_token	type	smallint(6)	NO		NULL	
+os_user	id	int(11)	NO	PRI	NULL	auto_increment
+os_user	username	varchar(255)	NO		NULL	
+os_user	email	varchar(255)	NO		NULL	
+os_user	password_hash	varchar(60)	NO		NULL	
+os_user	auth_key	varchar(32)	NO		NULL	
+os_user	confirmed_at	int(11)	YES		NULL	
+os_user	unconfirmed_email	varchar(255)	YES		NULL	
+os_user	blocked_at	int(11)	YES		NULL	
+os_user	registration_ip	varchar(45)	YES		NULL	
+os_user	created_at	int(11)	NO		NULL	
+os_user	updated_at	int(11)	NO		NULL	
+os_user	flags	int(11)	NO		0	
+os_user	last_login_at	int(11)	YES		NULL	
+os_user	verification_token	varchar(255)	YES		NULL	
+os_user	name	varchar(255)	YES		NULL	
+os_user	public_email	varchar(255)	YES		NULL	
+os_user	gravatar_email	varchar(255)	YES		NULL	
+os_user	gravatar_id	varchar(32)	YES		NULL	
+os_user	location	int(11)	YES		NULL	
+os_user	website	varchar(255)	YES		NULL	
+os_user	bio	text	YES		NULL	
+os_user	timezone	varchar(40)	YES		NULL	
+os_user	middle_name	varchar(255)	YES		NULL	
+os_user	last_name	varchar(255)	YES		NULL	
+os_user	employee_type	enum('Active','Suspended')	NO		NULL	
+os_user	employee_status	varchar(50)	NO		'Full_time'	
+os_user	date_of_hire	date	YES		NULL	
+os_user	department	int(11)	YES		NULL	
+os_user	job_title	int(11)	YES		NULL	
+os_user	reporting_to	int(11)	YES		NULL	
+os_user	mobile	varchar(255)	YES		NULL	
+os_user	nationality	int(11)	YES		NULL	
+os_user	gender	enum('Female','Male')	NO		NULL	
+os_user	marital_status	enum('single','married')	NO		NULL	
+os_user	created_by	int(11)	NO		NULL	
+os_user	avatar	varchar(500)	YES		NULL	
+os_user_categories	id	int(11)	NO	PRI	NULL	auto_increment
+os_user_categories	slug	varchar(50)	NO	MUL	NULL	
+os_user_categories	name_ar	varchar(100)	NO		NULL	
+os_user_categories	name_en	varchar(100)	YES		NULL	
+os_user_categories	icon	varchar(50)	YES		'fa-tag'	
+os_user_categories	color	varchar(20)	YES		'#64748B'	
+os_user_categories	sort_order	int(11)	YES		0	
+os_user_categories	company_id	int(11)	YES		NULL	
+os_user_categories	is_system	tinyint(1)	YES		0	
+os_user_categories	is_active	tinyint(1)	YES		1	
+os_user_categories	created_at	datetime	YES		current_timestamp()	
+os_user_category_map	id	int(11)	NO	PRI	NULL	auto_increment
+os_user_category_map	user_id	int(11)	NO	MUL	NULL	
+os_user_category_map	category_id	int(11)	NO	MUL	NULL	
+os_user_category_map	assigned_by	int(11)	YES		NULL	
+os_user_category_map	created_at	datetime	YES		current_timestamp()	
+os_user_leave_policy	id	int(11)	NO		NULL	
+os_user_leave_policy	user_id	int(11)	NO		NULL	
+os_user_leave_policy	leave_policy_id	int(11)	NO		NULL	
+os_vision_api_usage	id	int(11)	NO	PRI	NULL	auto_increment
+os_vision_api_usage	api_feature	varchar(100)	NO	MUL	NULL	
+os_vision_api_usage	customer_id	int(11)	YES	MUL	NULL	
+os_vision_api_usage	document_id	int(11)	YES		NULL	
+os_vision_api_usage	document_table	varchar(100)	YES		NULL	
+os_vision_api_usage	request_status	varchar(20)	NO	MUL	'success'	
+os_vision_api_usage	response_time_ms	int(11)	YES		0	
+os_vision_api_usage	cost_estimate	decimal(10,6)	YES		0.000000	
+os_vision_api_usage	error_message	text	YES		NULL	
+os_vision_api_usage	request_by	int(11)	YES		NULL	
+os_vision_api_usage	created_at	datetime	NO	MUL	current_timestamp()	
+os_workdays	id	int(11)	NO	PRI	NULL	auto_increment
+os_workdays	day_name	enum('Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays','Sundays')	NO		NULL	
+os_workdays	start_at	time	NO		NULL	
+os_workdays	end_at	time	NO		NULL	
+os_workdays	status	enum('working_day','day_off')	NO		'working_day'	
+os_workdays	created_by	int(11)	NO		NULL	
+os_workdays	created_at	int(11)	NO		NULL	
+os_workdays	updated_at	int(11)	YES		NULL	
+os_work_shift	id	int(11)	NO	PRI	NULL	auto_increment
+os_work_shift	company_id	int(11)	YES		NULL	
+os_work_shift	title	varchar(50)	NO		NULL	
+os_work_shift	start_at	time	NO		NULL	
+os_work_shift	end_at	time	NO		NULL	
+os_work_shift	grace_minutes	int(11)	YES		15	
+os_work_shift	early_leave_minutes	int(11)	YES		10	
+os_work_shift	overtime_after_minutes	int(11)	YES		30	
+os_work_shift	working_days	longtext	YES		NULL	
+os_work_shift	is_flexible	tinyint(1)	YES		0	
+os_work_shift	flex_window_minutes	int(11)	YES		60	
+os_work_shift	break_duration_minutes	int(11)	YES		60	
+os_work_shift	is_active	tinyint(1)	YES		1	
+os_work_shift	created_by	int(11)	NO		NULL	
+os_work_shift	created_at	int(11)	NO		NULL	
+os_work_shift	updated_at	int(11)	YES		NULL	
+session	id	char(40)	NO	PRI	NULL	
+session	expire	int(11)	YES		NULL	
+session	data	blob	YES		NULL	
+tbl_persistence_cache	id	int(10) unsigned	NO	PRI	NULL	auto_increment
+tbl_persistence_cache	judiciary_id	int(11)	NO		NULL	
+tbl_persistence_cache	judiciary_number	varchar(50)	YES	MUL	NULL	
+tbl_persistence_cache	case_year	varchar(10)	YES		NULL	
+tbl_persistence_cache	court_name	varchar(255)	YES	MUL	NULL	
+tbl_persistence_cache	contract_id	int(11)	NO		NULL	
+tbl_persistence_cache	customer_name	varchar(255)	YES	MUL	NULL	
+tbl_persistence_cache	last_action_name	varchar(255)	YES		NULL	
+tbl_persistence_cache	last_action_date	date	YES	MUL	NULL	
+tbl_persistence_cache	persistence_status	varchar(100)	YES	MUL	NULL	
+tbl_persistence_cache	last_followup_date	date	YES		NULL	
+tbl_persistence_cache	last_job_check_date	varchar(20)	YES		NULL	
+tbl_persistence_cache	lawyer_name	varchar(255)	YES	MUL	NULL	
+tbl_persistence_cache	job_title	varchar(255)	YES		NULL	
+tbl_persistence_cache	job_type	varchar(255)	YES		NULL	
+tbl_persistence_cache	updated_at	timestamp	NO		current_timestamp()	on update current_timestamp()
+temp	contract_id	double	YES		NULL	
+temp	employee_id	double	YES		NULL	
+vw_contracts_screen	contract_id	int(11)	NO		0	
+vw_contracts_screen	seller_name	text	YES		NULL	
+vw_contracts_screen	followed_by_name	text	YES		NULL	
+vw_contracts_screen	customers_names	mediumtext	YES		NULL	
+vw_contracts_screen	deserved_amount	double	YES		NULL	
+vw_contracts_screen	Date_of_sale	date	YES		NULL	
+vw_contracts_screen	total_value	double	YES		NULL	
+vw_contracts_screen	first_installment_value	double	YES		0	
+vw_contracts_screen	status	enum('pending','active','reconciliation','judiciary','canceled','refused','legal_department','finished','settlement')	NO		NULL	
+vw_contracts_screen	remaining_amount	double	NO		0	
+vw_contracts_screen	followed_by_id	int(11)	YES		1	
+vw_contracts_screen	seller_id	int(11)	YES		NULL	
+vw_persistence_report	judiciary_id	int(11)	NO		0	
+vw_persistence_report	judiciary_number	int(11)	YES		NULL	
+vw_persistence_report	case_year	varchar(255)	YES		NULL	
+vw_persistence_report	court_name	varchar(255)	NO		NULL	
+vw_persistence_report	contract_id	int(11)	NO		0	
+vw_persistence_report	customer_name	mediumtext	YES		NULL	
+vw_persistence_report	last_action_name	mediumtext	YES		NULL	
+vw_persistence_report	last_action_date	date	YES		NULL	
+vw_persistence_report	persistence_status	varchar(40)	YES		NULL	
+vw_persistence_report	last_followup_date	date	YES		NULL	
+vw_persistence_report	last_job_check_date	mediumtext	YES		NULL	
+vw_persistence_report	lawyer_name	varchar(255)	NO		NULL	
+vw_persistence_report	job_title	mediumtext	YES		NULL	
+vw_persistence_report	job_type	mediumtext	YES		NULL	
